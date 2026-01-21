@@ -1,5 +1,5 @@
 import os
-import google.generativeai as genai
+import google.genai as genai
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -10,9 +10,22 @@ class LLMService:
         if not api_key:
             print("Warning: GEMINI_API_KEY not found in environment variables.")
         else:
-            genai.configure(api_key=api_key)
-            # Testing with original model name (user has new API key)
-            self.model = genai.GenerativeModel('gemini-2.0-flash-exp')
+            self.client = genai.Client(api_key=api_key)
+            self.model = self.client.models
+
+    def generate_content(self, prompt: str, generation_config: dict | None = None):
+        """
+        Generates content using the Gemini model based on the provided prompt.
+        """
+        if generation_config is None:
+            generation_config = {}
+
+        response = self.model.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt,
+            **generation_config
+        )
+        return response
 
     async def analyze_content(self, text_content: str):
         """
@@ -51,20 +64,52 @@ class LLMService:
         """
         
         try:
-            response = self.model.generate_content(prompt, generation_config={"response_mime_type": "application/json"})
+            response = self.generate_content(prompt, generation_config={"response_mime_type": "application/json"})
             return response.text
         except Exception as e:
             return {"error": str(e)}
 
     async def generate_reply(self, topic: str):
         prompt = f"Write a polite, professional response to a customer complaining about '{topic}'. Chinese Traditional."
-        response = self.model.generate_content(prompt)
+        response = self.generate_content(prompt)
         return response.text
 
     async def generate_marketing(self, strengths: str):
          prompt = f"Write a Facebook post highlighting these strengths: {strengths}. Include emojis and hashtags. Chinese Traditional."
-         response = self.model.generate_content(prompt)
+         response = self.generate_content(prompt)
          return response.text
+
+    async def generate_root_cause_analysis(self, topic: str):
+        prompt = f"""
+        You are a business consultant. Analyze the root causes of the following issue reported by customers: '{topic}'.
+        Provide a detailed analysis and suggest actionable improvements. Chinese Traditional.
+        """
+        response = self.generate_content(prompt)
+        return response.text
+    
+    async def generate_weekly_plan(self, weaknesses: str):
+        prompt = f"""
+        You are a business strategist. Create a weekly action plan to address the following weaknesses in restaurant operations: {weaknesses}.
+        The plan should include daily tasks and goals. Chinese Traditional.
+        """
+        response = self.generate_content(prompt)
+        return response.text
+
+    async def generate_training_script(self, issue: str):
+        prompt = f"""
+        You are a training expert. Create a training script for restaurant staff on the issue: '{issue}'.
+        The script should be engaging and informative. Chinese Traditional.
+        """
+        response = self.generate_content(prompt)
+        return response.text
+
+    async def generate_internal_email(self, strengths: str, weaknesses: str):
+        prompt = f"""
+        You are an internal communications expert. Write a professional email to restaurant staff highlighting these strengths: {strengths}.
+        Also address these weaknesses: {weaknesses}. Chinese Traditional.
+        """
+        response = self.generate_content(prompt)
+        return response.text
 
     async def chat(self, user_message: str):
         # In a real app, we would pass history here. 
@@ -74,5 +119,5 @@ class LLMService:
         # We can construct a combined prompt
         combined_prompt = f"{system_prompt}\n\nUser: {user_message}\nAI:"
         
-        response = self.model.generate_content(combined_prompt)
+        response = self.generate_content(combined_prompt)
         return response.text

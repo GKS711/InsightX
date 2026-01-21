@@ -10,7 +10,7 @@ scraper = ScraperService()
 llm = LLMService()
 
 # Use mock responses for demo (since Gemini API quota is exceeded)
-USE_MOCK_RESPONSES = True
+USE_MOCK_RESPONSES = False
 
 class AnalyzeRequest(BaseModel):
     url: str

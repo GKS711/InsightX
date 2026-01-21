@@ -1,0 +1,31 @@
+# Git
+.git
+.gitignore
+
+# Docker
+Dockerfile
+compose.yaml
+.dockerignore
+
+# Python
+.venv
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.python-version
+uv.lock
+
+# Tests
+test_*.py
+
+# Documentation
+README.md
+
+# Local artifacts
+.agent/
+.shared/
+scraper_debug.png
+
+# OS-specific
+.DS_Store

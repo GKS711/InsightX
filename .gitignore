@@ -1,2 +1,24 @@
+# Python virtual environment
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Build artifacts
+build/
+dist/
+*.egg-info
+
+# Local development files / secrets
 .env
-.venv
+*.log
+
+# OS-specific files
+.DS_Store
+*~
+
+# Debugging artifacts
+scraper_debug.png
