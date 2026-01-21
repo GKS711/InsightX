@@ -1,24 +1,9 @@
-# Python virtual environment
-.venv/
-
-# Python cache
 __pycache__/
 *.pyc
-*.pyo
-*.pyd
-
-# Build artifacts
-build/
-dist/
-*.egg-info
-
-# Local development files / secrets
 .env
-*.log
-
-# OS-specific files
+.venv/
+node_modules/
+dist/
+coverage/
 .DS_Store
-*~
-
-# Debugging artifacts
-scraper_debug.png
+*.log
