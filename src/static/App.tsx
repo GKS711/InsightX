@@ -7,7 +7,7 @@ const QUESTIONS = [
         id: 1,
         title: "週末爆量，評論開始出現「等很久」",
         imageText: "週末晚餐客滿",
-        imageSrc: "pictures/G1.png",
+        imageSrc: "/pictures/G1.png",
         scenario: "週六晚餐客滿，現場等候 40–60 分鐘。最近一週 Google 評論出現「出餐慢」字眼變多，但店內也覺得「人手不足才是主因」。",
         options: [
             { id: 'A', text: "出餐流程優化（備料、出菜順序）" },
@@ -34,7 +34,7 @@ const QUESTIONS = [
         id: 2,
         title: "停車抱怨上升，但其實附近有合作停車場",
         imageText: "停車場指引",
-        imageSrc: "pictures/G2.png",
+        imageSrc: "/pictures/G2.png",
         scenario: "近兩週 Facebook 出現「不好停車」負評，店其實有合作停車場，但顧客好像不知道。",
         options: [
             { id: 'A', text: "停車資訊前置（訂位/地圖圖卡）" },
@@ -61,7 +61,7 @@ const QUESTIONS = [
         id: 3,
         title: "價格被說貴，但好評也很多",
         imageText: "餐點價值溝通",
-        imageSrc: "pictures/G3.png",
+        imageSrc: "/pictures/G3.png",
         scenario: "Google 評論出現「好吃但偏貴」，同時也有「份量很足、值得」好評。你要怎麼優先處理？",
         options: [
             { id: 'A', text: "價值溝通（原料/工法可視化）" },
@@ -88,7 +88,7 @@ const QUESTIONS = [
         id: 4,
         title: "服務親切被稱讚，但回覆評論做得很隨便",
         imageText: "評論回覆管理",
-        imageSrc: "pictures/G4.png",
+        imageSrc: "/pictures/G4.png",
         scenario: "你們服務很好，但 Google 評論回覆常是制式「謝謝光臨」。最近有人覺得不被重視。",
         options: [
             { id: 'A', text: "回覆模板升級（分情境）" },
@@ -115,7 +115,7 @@ const QUESTIONS = [
         id: 5,
         title: "環境被稱讚，但「蚊蟲」開始出現",
         imageText: "戶外用餐區",
-        imageSrc: "pictures/G5.png",
+        imageSrc: "/pictures/G5.png",
         scenario: "帳篷區氣氛超好，但最近天氣變化，開始有人提到蚊蟲或悶熱。",
         options: [
             { id: 'A', text: "防蚊措施（防蚊燈/液/紗網）" },
@@ -142,7 +142,7 @@ const QUESTIONS = [
         id: 6,
         title: "外送開始做了，但評論變兩極",
         imageText: "外送包裝",
-        imageSrc: "pictures/G6.png",
+        imageSrc: "/pictures/G6.png",
         scenario: "你們開外送後，評論開始出現「到家不脆」「包裝漏醬」。內用仍很好。",
         options: [
             { id: 'A', text: "包裝升級（分隔、透氣孔）" },
@@ -169,7 +169,7 @@ const QUESTIONS = [
         id: 7,
         title: "新菜上線，評價分歧",
         imageText: "新菜色評價",
-        imageSrc: "pictures/G7.png",
+        imageSrc: "/pictures/G7.png",
         scenario: "新推出「辣味披薩」，有人超愛有人說太辣。你要怎麼處理？",
         options: [
             { id: 'A', text: "辣度分級（小/中/大辣）" },
@@ -196,7 +196,7 @@ const QUESTIONS = [
         id: 8,
         title: "尖峰時段電話一直響，影響前台節奏",
         imageText: "前台忙碌",
-        imageSrc: "pictures/G8.png",
+        imageSrc: "/pictures/G8.png",
         scenario: "晚餐時段訂位電話大量湧入，導致點餐流程被打斷，顧客覺得服務慢。",
         options: [
             { id: 'A', text: "線上訂位/候位（減少電話）" },
@@ -223,7 +223,7 @@ const QUESTIONS = [
         id: 9,
         title: "你們很紅，但「期待太高」導致落差",
         imageText: "網紅名店排隊",
-        imageSrc: "pictures/G9.png",
+        imageSrc: "/pictures/G9.png",
         scenario: "你們在社群很熱門，新客期待很高。近期評論出現「沒有想像中驚艷」。",
         options: [
             { id: 'A', text: "調整行銷訊息（不過度承諾）" },
@@ -250,7 +250,7 @@ const QUESTIONS = [
         id: 10,
         title: "團隊士氣與顧客評價同時要顧",
         imageText: "內場廚房壓力",
-        imageSrc: "pictures/G10.png",
+        imageSrc: "/pictures/G10.png",
         scenario: "你想改善出餐速度，但廚房反應壓力已很大。怎麼做才能又快又不傷士氣？",
         options: [
             { id: 'A', text: "流程微調（切分工序）" },
@@ -658,8 +658,8 @@ const App = () => {
                                 className={`text-left p-4 rounded-2xl border-2 ${borderClass} ${bgClass} ${textClass} ${shadowClass} transition-all duration-200 flex items-center gap-4 relative`}
                             >
                                 <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center flex-shrink-0 font-bold transition-colors ${isSelected || (isAnalyzed && isIdeal)
-                                        ? 'border-current bg-current text-white'
-                                        : 'border-stone-200 text-stone-400 bg-white'
+                                    ? 'border-current bg-current text-white'
+                                    : 'border-stone-200 text-stone-400 bg-white'
                                     }`}>
                                     {isSelected || (isAnalyzed && isIdeal) ? (isAnalyzed && isIdeal ? <CheckCircle className="w-5 h-5" /> : <span className="text-sm">{option.id}</span>) : <span className="text-sm">{option.id}</span>}
                                 </div>
