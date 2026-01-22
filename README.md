@@ -10,6 +10,8 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.2+-3178C6.svg?logo=typescript)](https://www.typescriptlang.org/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
+**Language / 語言:** 🇺🇸 English | [🇹🇼 繁體中文](README_zh-TW.md)
+
 [🌟 Features](#-features) •
 [📸 Screenshots](#-screenshots) •
 [🚀 Quick Start](#-quick-start) •
