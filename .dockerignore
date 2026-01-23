@@ -8,3 +8,4 @@ tests/
 *.md
 coverage/
 output/
+dist/
