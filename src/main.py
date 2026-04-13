@@ -2,7 +2,7 @@ import sys
 import asyncio
 import os
 
-# Windows requires ProactorEventLoop for subprocess support (needed by Playwright)
+# Windows 需要 ProactorEventLoop 以支援 subprocess
 if sys.platform == 'win32':
     asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 

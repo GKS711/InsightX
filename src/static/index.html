@@ -329,7 +329,7 @@
                     </h2>
                     <p
                         class="text-lg md:text-xl text-stone-600 leading-relaxed mb-10 max-w-xl mx-auto md:mx-0 font-medium">
-                        將散落在 Google、Facebook 的評論轉化為具體的營運策略。只需貼上網址，專屬的 AI 營運顧問立即上工。
+                        將 Google Maps 的顧客評論轉化為具體的營運策略。只需貼上網址，專屬的 AI 營運顧問立即上工。
                     </p>
                     <div class="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
                         <button onclick="document.getElementById('demo-block').scrollIntoView({behavior: 'smooth'})"
@@ -402,44 +402,7 @@
                                     value="https://share.google/Exmg5ZTEvmMknwuWF">
                             </div>
                         </div>
-
-                        <!-- Facebook Input -->
-                        <div class="group opacity-70 hover:opacity-100 transition-opacity">
-                            <label class="block text-sm font-bold text-stone-700 mb-2 ml-1">Facebook 粉絲頁</label>
-                            <div class="relative">
-                                <div
-                                    class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-blue-600">
-                                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                                        <path
-                                            d="M12 2.04C6.5 2.04 2 6.53 2 12.06c0 5.06 3.66 9.25 8.44 10v-7.03h-2.53v-2.96h2.53V9.5c0-2.5 1.5-3.88 3.77-3.88 1.07 0 2.15.19 2.15.19v2.52h-1.28c-1.24 0-1.63.77-1.63 1.57v1.88h2.82l-.44 2.96h-2.38V22.06c4.78-.75 8.44-4.94 8.44-10C22 6.53 17.5 2.04 12 2.04z">
-                                        </path>
-                                    </svg>
-                                </div>
-                                <input type="text" id="fb-url"
-                                    class="w-full pl-12 pr-4 py-4 bg-stone-50 border border-stone-200 rounded-xl text-stone-900 placeholder-stone-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-300 shadow-sm font-medium"
-                                    value="https://www.facebook.com/example.restaurant">
-                            </div>
-                        </div>
-
-                        <!-- LINE Input -->
-                        <div class="group opacity-70 hover:opacity-100 transition-opacity">
-                            <label class="block text-sm font-bold text-stone-700 mb-2 ml-1">LINE OA / 其他來源</label>
-                            <div class="relative">
-                                <div
-                                    class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-emerald-500">
-                                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                                        <path
-                                            d="M20.2 3.8A10.4 10.4 0 0 0 12 2a10.4 10.4 0 0 0-8.2 3.8C2.5 5.5 2 7.7 2 10.1v1.8c0 2.4.5 4.6 1.8 6.3A10.4 10.4 0 0 0 12 22a10.4 10.4 0 0 0 8.2-3.8c1.3-1.7 1.8-3.9 1.8-6.3v-1.8c0-2.4-.5-4.6-1.8-6.3zM12 20.5c-4.9 0-8.8-3.9-8.8-8.6S7.1 3.3 12 3.3s8.8 3.9 8.8 8.6-3.9 8.6-8.8 8.6z">
-                                        </path>
-                                    </svg>
-                                </div>
-                                <input type="text" id="line-url"
-                                    class="w-full pl-12 pr-4 py-4 bg-stone-50 border border-stone-200 rounded-xl text-stone-900 placeholder-stone-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all duration-300 shadow-sm font-medium"
-                                    value="https://line.me/R/ti/p/@example_oa">
-                            </div>
-                        </div>
-
-                        <button id="analyzeBtn"
+<button id="analyzeBtn"
                             class="w-full btn-primary py-4 px-8 text-lg flex items-center justify-center gap-3 mt-6">
                             <span>✨ 啟動 AI 智能分析</span>
                         </button>
@@ -585,6 +548,15 @@
     <!-- 載入中骨架 (Placeholder) -->
     <section id="loadingCard" class="hidden px-6 pt-10 pb-10">
         <div class="bg-white p-8 md:p-12 rounded-3xl shadow-xl max-w-5xl mx-auto border border-slate-100">
+            <div class="flex items-center justify-center gap-3 mb-8">
+                <svg class="w-5 h-5 text-orange-500 animate-spin flex-shrink-0" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                </svg>
+                <p id="loading-status-text" class="text-sm font-medium text-stone-500">
+                    正在連線 Google Maps，取得店家資訊...
+                </p>
+            </div>
             <div class="animate-pulse space-y-8">
                 <div class="h-8 bg-slate-200 rounded-lg w-1/3 mx-auto"></div>
                 <div class="h-4 bg-slate-100 rounded w-1/4 mx-auto"></div>
@@ -607,17 +579,18 @@
                     class="text-orange-700 font-semibold mt-3 bg-orange-50 border border-orange-100 inline-block px-4 py-1.5 rounded-full text-sm">
                     共分析 723 則跨平台評論
                 </p>
+                <p id="report-store-name" class="hidden text-stone-600 font-medium mt-2 text-sm">
+                    <span class="inline-flex items-center gap-1.5">
+                        <svg class="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                        <span id="store-name-text">—</span>
+                    </span>
+                </p>
 
                 <div class="mt-8 flex justify-center space-x-2 overflow-x-auto pb-2 sm:pb-0 custom-scrollbar">
                     <button data-platform="overall"
                         class="platform-tab px-6 py-3 rounded-full text-sm font-bold transition-all bg-stone-900 text-white shadow-lg ring-2 ring-stone-200 ring-offset-2">綜合分析</button>
                     <button data-platform="google"
-                        class="platform-tab px-6 py-3 rounded-full text-sm font-bold text-stone-500 hover:bg-stone-100 transition-all">Google</button>
-                    <button data-platform="facebook"
-                        class="platform-tab px-6 py-3 rounded-full text-sm font-bold text-stone-500 hover:bg-stone-100 transition-all">Facebook</button>
-                    <button data-platform="line"
-                        class="platform-tab px-6 py-3 rounded-full text-sm font-bold text-stone-500 hover:bg-stone-100 transition-all">LINE
-                        OA</button>
+                        class="platform-tab px-6 py-3 rounded-full text-sm font-bold text-stone-500 hover:bg-stone-100 transition-all">Google Maps</button>
                 </div>
             </div>
 
@@ -775,7 +748,7 @@
                             class="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600 font-black text-xl">S</span>
                         <h4 class="text-xl font-bold text-stone-900">優勢 Strengths</h4>
                     </div>
-                    <ul class="space-y-4">
+                    <ul id="swot-S-list" class="space-y-4">
                         <li class="flex gap-3 text-stone-700">
                             <span class="text-emerald-500 mt-0.5 font-bold">✔</span>
                             <span><strong>餐點美味 (32%):</strong> 核心產品力強，顧客滿意度高。</span>
@@ -794,7 +767,7 @@
                             class="w-12 h-12 rounded-2xl bg-rose-50 flex items-center justify-center text-rose-600 font-black text-xl">W</span>
                         <h4 class="text-xl font-bold text-stone-900">劣勢 Weaknesses</h4>
                     </div>
-                    <ul class="space-y-4">
+                    <ul id="swot-W-list" class="space-y-4">
                         <li class="flex gap-3 text-stone-700">
                             <span class="text-rose-500 mt-0.5 font-bold">⚠</span>
                             <span><strong>出餐速度慢 (40%):</strong> 營運流程 SOP 存在瓶頸，為最大抱怨點。</span>
@@ -813,7 +786,7 @@
                             class="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600 font-black text-xl">O</span>
                         <h4 class="text-xl font-bold text-stone-900">機會 Opportunities</h4>
                     </div>
-                    <ul class="space-y-4">
+                    <ul id="swot-O-list" class="space-y-4">
                         <li class="flex gap-3 text-stone-700">
                             <span class="text-blue-500 mt-0.5 font-bold">💡</span>
                             <span><strong>優化流程:</strong> 針對「出餐慢」改善廚房動線或增加人手，可立即提升翻桌率。</span>
@@ -832,7 +805,7 @@
                             class="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600 font-black text-xl">T</span>
                         <h4 class="text-xl font-bold text-stone-900">威脅 Threats</h4>
                     </div>
-                    <ul class="space-y-4">
+                    <ul id="swot-T-list" class="space-y-4">
                         <li class="flex gap-3 text-stone-700">
                             <span class="text-amber-500 mt-0.5 font-bold">⚡</span>
                             <span><strong>流失尖峰客群:</strong> 「出餐慢」將導致尖峰時段顧客因不耐久候而離開。</span>
@@ -950,7 +923,7 @@
             <p class="text-xl text-stone-300 mb-12 max-w-2xl mx-auto font-light leading-relaxed">
                 別再讓寶貴的意見石沉大海。讓 AI 成為您全天候的營運顧問。
             </p>
-            <button
+            <button onclick="document.getElementById('demo-block').scrollIntoView({behavior: 'smooth'})"
                 class="bg-gradient-to-r from-orange-400 to-orange-600 hover:from-orange-500 hover:to-orange-700 text-white font-bold py-5 px-12 rounded-full text-xl transition duration-300 shadow-2xl hover:shadow-orange-500/25 transform hover:-translate-y-1 ring-4 ring-orange-500/20">
                 立即免費試用
             </button>
@@ -1099,7 +1072,24 @@
 
             const chatHistory = [];
 
-            const systemPrompt = `您是一位專業的 AI 策略顧問。您正在協助一位餐廳老闆分析一份顧客評論報告。報告總結如下：[優點: 餐點美味(32%), 環境舒適(25%), 服務親切(20%)]。[劣勢: 出餐速度慢(40%), 停車不方便(18%), 價格偏高(12%)]。[SWOT分析: 優勢(S)-產品力強, 劣勢(W)-營運流程瓶頸, 機會(O)-優化流程/異業合作, 威脅(T)-流失尖峰客群]。請根據這份報告，用繁體中文、親切且專業的語氣，回答老闆的提問，並提供具體可行的策略建議。您的回覆必須精簡，並限制在100字以內。`;
+            // 儲存目前分析數據與 SWOT，供 AI 聊天使用
+            let currentAnalysisData = null;
+            let currentSwotData = null;
+
+            function getCurrentContext() {
+                if (!currentAnalysisData) return "";
+                const good = currentAnalysisData.good.map(i => `${i.label}(${i.value}%)`).join('、');
+                const bad = currentAnalysisData.bad.map(i => `${i.label}(${i.value}%)`).join('、');
+                let ctx = `【顧客評論分析報告】\n正面回饋：${good}\n負面回饋：${bad}\n總計：${currentAnalysisData.total}`;
+                if (currentSwotData) {
+                    const s = currentSwotData.strengths?.map(i => i.point).join('、') || '';
+                    const w = currentSwotData.weaknesses?.map(i => i.point).join('、') || '';
+                    const o = currentSwotData.opportunities?.map(i => i.point).join('、') || '';
+                    const t = currentSwotData.threats?.map(i => i.point).join('、') || '';
+                    ctx += `\nSWOT分析：優勢(${s})、劣勢(${w})、機會(${o})、威脅(${t})`;
+                }
+                return ctx;
+            }
 
             analyzeBtn.addEventListener('click', async () => {
                 analyzeBtn.disabled = true;
@@ -1114,11 +1104,27 @@
 
                 loadingCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-                loadingCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                // 狀態提示：依序顯示，對應後端實際 2 步驟流程
+                const statusMessages = [
+                    '解析店家網址中...',
+                    '透過 API 搜尋店家資訊...',
+                    '爬取所有顧客評論（逐頁翻頁中）...',
+                    'Gemini AI 分析評論情緒與主題...',
+                    '生成分析報告中...',
+                ];
+                let statusIdx = 0;
+                const statusEl = document.getElementById('loading-status-text');
+                const statusTimer = setInterval(() => {
+                    if (statusIdx < statusMessages.length - 1) {
+                        statusIdx++;
+                        if (statusEl) statusEl.textContent = statusMessages[statusIdx];
+                    }
+                }, 5000);
 
                 const url = document.getElementById('gmb-url').value;
 
                 try {
+                    // Step 1: 爬取 + Gemini 分析
                     const response = await fetch('/api/analyze', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -1129,26 +1135,75 @@
 
                     const result = await response.json();
 
-                    // Check for error in response
                     if (result.error) {
                         throw new Error(result.error);
                     }
 
-                    // Update reportData with REAL data from backend (not placeholders!)
+                    // 評論資料不足（例如連鎖店只有地址資訊）
+                    if (result.status === 'no_reviews') {
+                        clearInterval(statusTimer);
+                        loadingCard.classList.add('hidden');
+                        analyzeBtn.disabled = false;
+                        analyzeBtn.innerHTML = originalBtnHtml;
+                        // 顯示友善提示訊息
+                        const noReviewsHtml = `
+                            <div class="mt-6 p-6 bg-amber-50 border border-amber-200 rounded-2xl text-center">
+                                <div class="text-3xl mb-3">😔</div>
+                                <h3 class="text-lg font-bold text-amber-800 mb-2">找不到「${result.store_name}」的顧客評論</h3>
+                                <p class="text-amber-700 text-sm">${result.message}</p>
+                                <p class="text-amber-600 text-xs mt-3">建議改試有大量網路評論的餐廳、景點或服務業店家。</p>
+                            </div>`;
+                        document.getElementById('demo-block').insertAdjacentHTML('beforeend', noReviewsHtml);
+                        document.getElementById('demo-block').lastElementChild.scrollIntoView({ behavior: 'smooth' });
+                        return;
+                    }
+
+                    // 更新 reportData 使用真實後端數據
                     reportData.overall = {
-                        total: result.total_reviews || "分析完成",
+                        total: result.total_reviews || '分析完成',
                         good: result.good || [],
                         bad: result.bad || []
                     };
 
-                    // Update the specific platform tab based on detection
                     if (result.platform && reportData[result.platform.toLowerCase()]) {
                         reportData[result.platform.toLowerCase()] = reportData.overall;
+                    }
+
+                    // 儲存分析數據供 context 使用
+                    currentAnalysisData = reportData.overall;
+
+                    // 顯示店家名稱
+                    const storeNameEl = document.getElementById('report-store-name');
+                    const storeNameText = document.getElementById('store-name-text');
+                    if (result.store_name && storeNameEl && storeNameText) {
+                        storeNameText.textContent = result.store_name;
+                        storeNameEl.classList.remove('hidden');
+                    }
+
+                    // Step 2: 呼叫 SWOT API
+                    analyzeBtn.innerHTML = `<div class="loader"></div><span class="ml-2">生成 SWOT 分析中...</span>`;
+                    try {
+                        const swotRes = await fetch('/api/swot', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                good: reportData.overall.good,
+                                bad: reportData.overall.bad
+                            })
+                        });
+                        if (swotRes.ok) {
+                            const swotData = await swotRes.json();
+                            currentSwotData = swotData;
+                            updateSwotSection(swotData);
+                        }
+                    } catch (swotError) {
+                        console.warn('SWOT 生成失敗，使用靜態內容', swotError);
                     }
 
                     analyzeBtn.disabled = false;
                     analyzeBtn.innerHTML = originalBtnHtml;
 
+                    clearInterval(statusTimer);
                     loadingCard.classList.add('hidden');
                     resultsCard.classList.remove('hidden');
                     resultsCard.classList.add('fade-in-up');
@@ -1163,10 +1218,12 @@
                     chatHint.classList.remove('hidden');
 
                     updateReportView('overall');
+                    resultsCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 } catch (error) {
                     console.error(error);
                     analyzeBtn.innerHTML = `分析失敗：${error.message}`;
                     analyzeBtn.disabled = false;
+                    clearInterval(statusTimer);
                     loadingCard.classList.add('hidden');
                 }
             });
@@ -1174,24 +1231,14 @@
             // Report data - moved outside analyzeBtn handler
             const reportData = {
                 overall: {
-                    total: "共分析 723 則跨平台評論",
-                    good: [{ label: "餐點美味", value: 32 }, { label: "環境舒適", value: 25 }, { label: "服務親切", value: 20 }],
-                    bad: [{ label: "出餐速度慢", value: 40 }, { label: "停車不方便", value: 18 }, { label: "價格偏高", value: 12 }]
+                    total: "等待分析...",
+                    good: [],
+                    bad: []
                 },
                 google: {
-                    total: "共分析 410 則 Google 評論",
-                    good: [{ label: "地點方便", value: 35 }, { label: "餐點美味", value: 30 }, { label: "環境舒適", value: 22 }],
-                    bad: [{ label: "停車不方便", value: 25 }, { label: "出餐速度慢", value: 20 }, { label: "價格偏高", value: 15 }]
-                },
-                facebook: {
-                    total: "共分析 205 則 Facebook 評論",
-                    good: [{ label: "服務親切", value: 40 }, { label: "餐點美味", value: 28 }, { label: "活動優惠多", value: 15 }],
-                    bad: [{ label: "出餐速度慢", value: 30 }, { label: "回覆速度慢", value: 22 }, { label: "價格偏高", value: 10 }]
-                },
-                line: {
-                    total: "共分析 108 則 LINE OA 評論",
-                    good: [{ label: "點餐方便", value: 50 }, { label: "服務親切", value: 30 }, { label: "餐點美味", value: 15 }],
-                    bad: [{ label: "系統常當機", value: 35 }, { label: "優惠券問題", value: 25 }, { label: "客服罐頭", value: 18 }]
+                    total: "等待分析...",
+                    good: [],
+                    bad: []
                 }
             };
 
@@ -1385,6 +1432,26 @@
                 });
             }
 
+            // 動態更新 SWOT 四象限內容
+            function updateSwotSection(swotData) {
+                const sections = {
+                    'swot-S-list': swotData.strengths || [],
+                    'swot-W-list': swotData.weaknesses || [],
+                    'swot-O-list': swotData.opportunities || [],
+                    'swot-T-list': swotData.threats || []
+                };
+                for (const [id, items] of Object.entries(sections)) {
+                    const el = document.getElementById(id);
+                    if (!el) continue;
+                    el.innerHTML = '';
+                    items.forEach(item => {
+                        const li = document.createElement('li');
+                        li.innerHTML = `<strong>${item.point}</strong>：${item.detail}`;
+                        el.appendChild(li);
+                    });
+                }
+            }
+
             async function getAiReply(topic) {
                 const response = await fetch('/api/reply', {
                     method: 'POST',
@@ -1549,12 +1616,12 @@
             }
 
             async function getGeminiResponse(userMessage) {
-                // 使用後端 API（支援 Mock 數據）
+                // 使用後端 API，並傳遞當前分析報告作為 context
                 try {
                     const response = await fetch('/api/chat', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ message: userMessage })
+                        body: JSON.stringify({ message: userMessage, context: getCurrentContext() })
                     });
 
                     if (!response.ok) {

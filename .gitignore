@@ -1,9 +1,52 @@
+# Python
 __pycache__/
 *.pyc
-.env
 .venv/
+
+# Environment (contains API keys)
+.env
+
+# Node
 node_modules/
 dist/
 coverage/
+
+# macOS
 .DS_Store
+
+# Logs & runtime output
 *.log
+reviews_latest.md
+
+# Debug artifacts
+debug_screenshot.png
+scraper_debug.png
+test_reviews_result.md
+.fuse_hidden*
+
+# Legacy files (replaced by dev/)
+/tests/
+/test_backend.py
+/test_scraper.py
+/test_reviews_standalone.py
+/test_reviews_raw_response.json
+/main.py
+
+# Tool/IDE config (not part of app)
+.shared/
+.agent/
+.vscode/
+.idea/
+
+# Internal dev notes (kept locally, not on GitHub)
+CLAUDE.md
+自動化規則.md
+ISSUES_RESOLVED.md
+RESEARCH_google_maps_scraping.md
+InsightX_簡報.pptx
+
+# Original game images (replaced by compressed .jpg)
+public/pictures/*.png
+
+# uv lock (reproducible via pyproject.toml)
+uv.lock

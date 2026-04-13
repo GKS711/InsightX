@@ -122,8 +122,3 @@ prompts = {
 提供具體可行的策略建議。
 回覆必須精簡，限制在 100 字以內。"""
 }
-
-def get_prompt(prompt_name, **kwargs):
-    """獲取 system prompt 並填充變數"""
-    template = prompts.get(prompt_name, "")
-    return template.format(**kwargs)
