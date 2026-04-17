@@ -25,12 +25,15 @@ import html as html_module
 from dotenv import load_dotenv
 load_dotenv()
 
+from src.services.youtube_scraper import YouTubeScraper, is_youtube_url
+
 logger = logging.getLogger(__name__)
 
 
 class ScraperService:
     def __init__(self):
         self._serper_key = os.getenv("SERPER_API_KEY", "")
+        self._youtube = YouTubeScraper()
 
     # ══════════════════════════════════════════════════════════════
     #  公開介面
@@ -39,10 +42,15 @@ class ScraperService:
     async def scrape_url(self, url: str) -> dict:
         """
         主入口：根據 URL 自動選擇爬蟲策略。
-        Google Maps → Serper API
+        YouTube → YouTube Data API v3（單支影片留言）
+        Google Maps → Serper API（店家評論）
         其他 URL → 簡易 HTTP 爬取
         """
-        if "google.com/maps" in url or "goo.gl" in url or "maps.app" in url:
+        # v2.0 新增：YouTube 影片留言分析
+        if is_youtube_url(url):
+            return await self._youtube.scrape_video(url)
+
+        if "google.com/maps" in url or "goo.gl" in url or "maps.app" in url or "share.google" in url:
             return await self._scrape_google_maps_reviews(url)
         return await self._scrape_generic_url(url)
 
@@ -491,6 +499,7 @@ class ScraperService:
             "maps_data": maps_data,
             "rating": rating,
             "rating_count": rating_count,
+            "platform": "google",
         }
 
     # ══════════════════════════════════════════════════════════════

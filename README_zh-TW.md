@@ -203,3 +203,4 @@ MIT — 詳見 [LICENSE](LICENSE)。
 [Google Gemini](https://ai.google.dev/) · [Serper API](https://serper.dev/) · [FastAPI](https://fastapi.tiangolo.com/) · [React](https://react.dev/) · [Vite](https://vitejs.dev/) · [Tailwind CSS](https://tailwindcss.com/)
 
 </div>
+

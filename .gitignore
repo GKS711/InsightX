@@ -50,3 +50,21 @@ public/pictures/*.png
 
 # uv lock (reproducible via pyproject.toml)
 uv.lock
+
+# v2.0.0: exclude generated assets & temp files
+*.tmp
+*.~lock*
+unpacked/
+agent-handoff-memory/
+final-*.jpg
+slide-*.jpg
+slide_new-*.jpg
+slide_final-*.jpg
+newslide-*.jpg
+verify-*.jpg
+thumbnails.jpg
+InsightX_簡報_*.pdf
+InsightX_簡報_*.pptx
+agent-handoff-custom.skill
+agent-handoff-memory.skill
+auto-debug.skill

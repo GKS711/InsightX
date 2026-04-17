@@ -377,19 +377,39 @@
                 </div>
 
                 <!-- 標題 -->
-                <div class="text-center mb-12">
+                <div class="text-center mb-8">
                     <h3 class="text-3xl font-bold text-stone-900 mb-3">匯入評論來源</h3>
-                    <p class="text-stone-500 text-lg">AI 將自動整合跨平台數據，生成統一分析報告</p>
+                    <p id="mode-subtitle" class="text-stone-500 text-lg">AI 將自動整合跨平台數據，生成統一分析報告</p>
+                </div>
+
+                <!-- 分析模式切換 Tabs -->
+                <div class="flex justify-center mb-10">
+                    <div class="inline-flex bg-stone-100 rounded-full p-1.5 gap-1 shadow-inner ring-1 ring-stone-200/60">
+                        <button type="button" data-mode="google" id="mode-tab-google"
+                            class="mode-tab px-6 py-2.5 rounded-full text-sm font-bold transition-all bg-white text-orange-600 shadow-md ring-1 ring-orange-100">
+                            <span class="inline-flex items-center gap-2">
+                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z"></path></svg>
+                                店家評論
+                            </span>
+                        </button>
+                        <button type="button" data-mode="youtube" id="mode-tab-youtube"
+                            class="mode-tab px-6 py-2.5 rounded-full text-sm font-bold transition-all text-stone-600 hover:text-stone-900">
+                            <span class="inline-flex items-center gap-2">
+                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                                YouTube 頻道
+                            </span>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="grid lg:grid-cols-5 gap-10">
                     <!-- 左側輸入區 -->
                     <div class="lg:col-span-3 space-y-6">
-                        <!-- Google Input -->
+                        <!-- URL Input -->
                         <div class="group">
-                            <label class="block text-sm font-bold text-stone-700 mb-2 ml-1">Google 地圖網址</label>
+                            <label id="url-input-label" class="block text-sm font-bold text-stone-700 mb-2 ml-1">Google 地圖網址</label>
                             <div class="relative">
-                                <div
+                                <div id="url-input-icon"
                                     class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-orange-500">
                                     <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
                                         <path
@@ -399,12 +419,14 @@
                                 </div>
                                 <input type="text" id="gmb-url"
                                     class="w-full pl-12 pr-4 py-4 bg-white border border-stone-200 rounded-xl text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all duration-300 shadow-sm font-medium"
+                                    placeholder="貼上 Google 地圖店家網址"
                                     value="https://share.google/Exmg5ZTEvmMknwuWF">
                             </div>
+                            <p id="url-input-hint" class="text-xs text-stone-400 mt-2 ml-1">支援 maps.google.com、goo.gl/maps、share.google 短網址</p>
                         </div>
 <button id="analyzeBtn"
                             class="w-full btn-primary py-4 px-8 text-lg flex items-center justify-center gap-3 mt-6">
-                            <span>✨ 啟動 AI 智能分析</span>
+                            <span id="analyzeBtnLabel">✨ 啟動 AI 智能分析</span>
                         </button>
                     </div>
 
@@ -1006,7 +1028,7 @@
             <div class="flex">
                 <div
                     class="bg-white border border-stone-200 text-stone-800 p-4 rounded-2xl rounded-tl-none max-w-xs shadow-sm text-sm leading-relaxed prose prose-stone prose-sm max-w-none">
-                    <p>您好！我是您的 AI 策略顧問。您可以針對這份報告提出任何問題，例如：「如何改善出餐速度？」</p>
+                    <p id="chat-welcome-text">您好！我是您的 AI 策略顧問。您可以針對這份報告提出任何問題，例如：「如何改善出餐速度？」</p>
                 </div>
             </div>
         </div>
@@ -1051,6 +1073,15 @@
             const managerTools = document.getElementById('manager-tools');
             const originalBtnHtml = analyzeBtn.innerHTML;
 
+            // v2: 依目前模式重建 analyzeBtn 內容（避免 innerHTML 被 loader 覆蓋後重置回 google 預設文案）
+            function resetAnalyzeBtn() {
+                const mode = currentPlatform;
+                const label = (typeof MODE_CONFIG !== 'undefined' && MODE_CONFIG[mode])
+                    ? MODE_CONFIG[mode].btnLabel
+                    : '✨ 啟動 AI 智能分析';
+                analyzeBtn.innerHTML = `<span id="analyzeBtnLabel">${label}</span>`;
+            }
+
             const chatToggleBtn = document.getElementById('chat-toggle-btn');
             const chatHint = document.getElementById('chat-hint');
             const chatModal = document.getElementById('chat-modal');
@@ -1076,11 +1107,100 @@
             let currentAnalysisData = null;
             let currentSwotData = null;
 
+            // v2: 分析模式（google = 店家評論 / youtube = YouTube 單支影片留言）
+            let currentPlatform = 'google';
+
+            const MODE_CONFIG = {
+                google: {
+                    subtitle: 'AI 將自動整合跨平台數據，生成統一分析報告',
+                    label: 'Google 地圖網址',
+                    placeholder: '貼上 Google 地圖店家網址',
+                    hint: '支援 maps.google.com、goo.gl/maps、share.google 短網址',
+                    defaultUrl: 'https://share.google/Exmg5ZTEvmMknwuWF',
+                    btnLabel: '✨ 啟動 AI 智能分析',
+                    iconColor: 'text-orange-500',
+                    iconSvg: '<svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z"></path></svg>',
+                    chatWelcome: '您好！我是您的 AI 策略顧問。您可以針對這份報告提出任何問題，例如：「如何改善出餐速度？」',
+                    trainingModalTitle: 'AI 員工培訓劇本',
+                    trainingModalLoading: (topic) => `AI 正在針對「${topic}」撰寫角色扮演劇本...`,
+                    internalEmailModalTitle: 'AI 內部公告信',
+                    internalEmailModalLoading: 'AI 正在草擬給全體員工的內部信件...',
+                },
+                youtube: {
+                    subtitle: 'AI 將分析單支 YouTube 影片的所有留言，生成創作者行動報告',
+                    label: 'YouTube 影片網址',
+                    placeholder: '貼上 YouTube 影片網址（支援 youtu.be / shorts）',
+                    hint: '支援 youtube.com/watch、youtu.be、youtube.com/shorts',
+                    defaultUrl: '',
+                    btnLabel: '✨ 啟動 AI 觀眾留言分析',
+                    iconColor: 'text-red-500',
+                    iconSvg: '<svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>',
+                    chatWelcome: '你好！我是你的 YouTube 頻道成長顧問。你可以針對這份觀眾留言報告提任何問題，例如：「如何提升訂閱轉換率？」',
+                    trainingModalTitle: 'AI 頻道團隊培訓劇本',
+                    trainingModalLoading: (topic) => `AI 正在針對「${topic}」撰寫頻道團隊培訓範本...`,
+                    internalEmailModalTitle: 'AI 頻道團隊週報',
+                    internalEmailModalLoading: 'AI 正在草擬給頻道團隊的週報信件...',
+                }
+            };
+
+            function applyModeUI(mode) {
+                const cfg = MODE_CONFIG[mode] || MODE_CONFIG.google;
+                const subtitleEl = document.getElementById('mode-subtitle');
+                const labelEl = document.getElementById('url-input-label');
+                const iconEl = document.getElementById('url-input-icon');
+                const hintEl = document.getElementById('url-input-hint');
+                const urlEl = document.getElementById('gmb-url');
+                const btnLabelEl = document.getElementById('analyzeBtnLabel');
+
+                if (subtitleEl) subtitleEl.textContent = cfg.subtitle;
+                if (labelEl) labelEl.textContent = cfg.label;
+                if (hintEl) hintEl.textContent = cfg.hint;
+                if (btnLabelEl) btnLabelEl.textContent = cfg.btnLabel;
+                const chatWelcomeEl = document.getElementById('chat-welcome-text');
+                if (chatWelcomeEl && cfg.chatWelcome) chatWelcomeEl.textContent = cfg.chatWelcome;
+                if (iconEl) {
+                    iconEl.className = `absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none ${cfg.iconColor}`;
+                    iconEl.innerHTML = cfg.iconSvg;
+                }
+                if (urlEl) {
+                    urlEl.placeholder = cfg.placeholder;
+                    // 只在 input 為空 或 是另一個模式的預設值時才覆蓋，避免蓋掉使用者手動貼上的網址
+                    const otherDefault = mode === 'google' ? MODE_CONFIG.youtube.defaultUrl : MODE_CONFIG.google.defaultUrl;
+                    if (!urlEl.value || urlEl.value === otherDefault) {
+                        urlEl.value = cfg.defaultUrl;
+                    }
+                }
+
+                // 切換 Tab 視覺狀態
+                document.querySelectorAll('.mode-tab').forEach(btn => {
+                    if (btn.dataset.mode === mode) {
+                        btn.className = 'mode-tab px-6 py-2.5 rounded-full text-sm font-bold transition-all bg-white shadow-md ' +
+                            (mode === 'youtube' ? 'text-red-600 ring-1 ring-red-100' : 'text-orange-600 ring-1 ring-orange-100');
+                    } else {
+                        btn.className = 'mode-tab px-6 py-2.5 rounded-full text-sm font-bold transition-all text-stone-600 hover:text-stone-900';
+                    }
+                });
+            }
+
+            // Tab click handlers
+            document.querySelectorAll('.mode-tab').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    currentPlatform = btn.dataset.mode;
+                    applyModeUI(currentPlatform);
+                });
+            });
+
+            // 初始化 UI（確保 default 狀態正確）
+            applyModeUI(currentPlatform);
+
             function getCurrentContext() {
                 if (!currentAnalysisData) return "";
                 const good = currentAnalysisData.good.map(i => `${i.label}(${i.value}%)`).join('、');
                 const bad = currentAnalysisData.bad.map(i => `${i.label}(${i.value}%)`).join('、');
-                let ctx = `【顧客評論分析報告】\n正面回饋：${good}\n負面回饋：${bad}\n總計：${currentAnalysisData.total}`;
+                const reportTitle = currentPlatform === 'youtube' ? '【YouTube 觀眾留言分析報告】' : '【顧客評論分析報告】';
+                const posLabel = currentPlatform === 'youtube' ? '正面留言主題' : '正面回饋';
+                const negLabel = currentPlatform === 'youtube' ? '負面留言主題' : '負面回饋';
+                let ctx = `${reportTitle}\n${posLabel}：${good}\n${negLabel}：${bad}\n總計：${currentAnalysisData.total}`;
                 if (currentSwotData) {
                     const s = currentSwotData.strengths?.map(i => i.point).join('、') || '';
                     const w = currentSwotData.weaknesses?.map(i => i.point).join('、') || '';
@@ -1093,7 +1213,9 @@
 
             analyzeBtn.addEventListener('click', async () => {
                 analyzeBtn.disabled = true;
-                analyzeBtn.innerHTML = `<div class="loader"></div><span class="ml-2">AI 智能分析中...</span>`;
+                const isYt = currentPlatform === 'youtube';
+                const busyLabel = isYt ? 'AI 留言分析中...' : 'AI 智能分析中...';
+                analyzeBtn.innerHTML = `<div class="loader"></div><span class="ml-2">${busyLabel}</span>`;
 
                 loadingCard.classList.remove('hidden');
                 resultsCard.classList.add('hidden');
@@ -1105,7 +1227,13 @@
                 loadingCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
                 // 狀態提示：依序顯示，對應後端實際 2 步驟流程
-                const statusMessages = [
+                const statusMessages = isYt ? [
+                    '解析 YouTube 影片網址中...',
+                    '透過 YouTube Data API 取得影片資訊...',
+                    '抓取影片所有留言（逐頁翻頁中）...',
+                    'Gemini AI 分析觀眾留言情緒與主題...',
+                    '生成創作者洞察報告中...',
+                ] : [
                     '解析店家網址中...',
                     '透過 API 搜尋店家資訊...',
                     '爬取所有顧客評論（逐頁翻頁中）...',
@@ -1114,6 +1242,7 @@
                 ];
                 let statusIdx = 0;
                 const statusEl = document.getElementById('loading-status-text');
+                if (statusEl) statusEl.textContent = statusMessages[0];
                 const statusTimer = setInterval(() => {
                     if (statusIdx < statusMessages.length - 1) {
                         statusIdx++;
@@ -1122,13 +1251,14 @@
                 }, 5000);
 
                 const url = document.getElementById('gmb-url').value;
+                const submittedPlatform = currentPlatform;
 
                 try {
                     // Step 1: 爬取 + Gemini 分析
                     const response = await fetch('/api/analyze', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ url: url })
+                        body: JSON.stringify({ url: url, platform: submittedPlatform })
                     });
 
                     if (!response.ok) throw new Error('Analysis failed');
@@ -1144,14 +1274,20 @@
                         clearInterval(statusTimer);
                         loadingCard.classList.add('hidden');
                         analyzeBtn.disabled = false;
-                        analyzeBtn.innerHTML = originalBtnHtml;
+                        resetAnalyzeBtn();
+                        const isYtMode = submittedPlatform === 'youtube';
+                        const targetLabel = isYtMode ? '影片' : '店家';
+                        const sourceLabel = isYtMode ? '留言' : '評論';
+                        const suggestion = isYtMode
+                            ? '建議改試擁有較多觀眾留言的 YouTube 影片（一般 100+ 則以上）。'
+                            : '建議改試有大量網路評論的餐廳、景點或服務業店家。';
                         // 顯示友善提示訊息
                         const noReviewsHtml = `
                             <div class="mt-6 p-6 bg-amber-50 border border-amber-200 rounded-2xl text-center">
                                 <div class="text-3xl mb-3">😔</div>
-                                <h3 class="text-lg font-bold text-amber-800 mb-2">找不到「${result.store_name}」的顧客評論</h3>
+                                <h3 class="text-lg font-bold text-amber-800 mb-2">找不到「${result.store_name}」的${targetLabel}${sourceLabel}</h3>
                                 <p class="text-amber-700 text-sm">${result.message}</p>
-                                <p class="text-amber-600 text-xs mt-3">建議改試有大量網路評論的餐廳、景點或服務業店家。</p>
+                                <p class="text-amber-600 text-xs mt-3">${suggestion}</p>
                             </div>`;
                         document.getElementById('demo-block').insertAdjacentHTML('beforeend', noReviewsHtml);
                         document.getElementById('demo-block').lastElementChild.scrollIntoView({ behavior: 'smooth' });
@@ -1188,7 +1324,8 @@
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
                                 good: reportData.overall.good,
-                                bad: reportData.overall.bad
+                                bad: reportData.overall.bad,
+                                platform: submittedPlatform
                             })
                         });
                         if (swotRes.ok) {
@@ -1201,7 +1338,7 @@
                     }
 
                     analyzeBtn.disabled = false;
-                    analyzeBtn.innerHTML = originalBtnHtml;
+                    resetAnalyzeBtn();
 
                     clearInterval(statusTimer);
                     loadingCard.classList.add('hidden');
@@ -1406,7 +1543,8 @@
             if (btnTrainingScript) {
                 btnTrainingScript.addEventListener('click', async () => {
                     const mainIssue = reportData.overall.bad[0].label;
-                    openModal('AI 員工培訓劇本', `AI 正在針對「${mainIssue}」撰寫角色扮演劇本...`);
+                    const trainCfg = MODE_CONFIG[currentPlatform] || MODE_CONFIG.google;
+                    openModal(trainCfg.trainingModalTitle, trainCfg.trainingModalLoading(mainIssue));
                     try {
                         const script = await getTrainingScript(mainIssue);
                         aiContentArea.innerHTML = marked.parse(script);
@@ -1421,7 +1559,8 @@
                 btnInternalEmail.addEventListener('click', async () => {
                     const weaknesses = reportData.overall.bad.map(i => i.label).join('、');
                     const strengths = reportData.overall.good.map(i => i.label).join('、');
-                    openModal('AI 內部公告信', 'AI 正在草擬給全體員工的內部信件...');
+                    const emailCfg = MODE_CONFIG[currentPlatform] || MODE_CONFIG.google;
+                    openModal(emailCfg.internalEmailModalTitle, emailCfg.internalEmailModalLoading);
                     try {
                         const email = await getInternalEmail(strengths, weaknesses);
                         aiContentArea.innerHTML = marked.parse(email);
@@ -1456,7 +1595,7 @@
                 const response = await fetch('/api/reply', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ topic })
+                    body: JSON.stringify({ topic, platform: currentPlatform })
                 });
                 const data = await response.json();
                 return data.reply;
@@ -1466,7 +1605,7 @@
                 const response = await fetch('/api/analyze-issue', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ topic })
+                    body: JSON.stringify({ topic, platform: currentPlatform })
                 });
                 const data = await response.json();
                 return data.analysis;
@@ -1476,7 +1615,7 @@
                 const response = await fetch('/api/marketing', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ strengths })
+                    body: JSON.stringify({ strengths, platform: currentPlatform })
                 });
                 const data = await response.json();
                 return data.copy;
@@ -1486,7 +1625,7 @@
                 const response = await fetch('/api/weekly-plan', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ weaknesses })
+                    body: JSON.stringify({ weaknesses, platform: currentPlatform })
                 });
                 const data = await response.json();
                 return data.plan;
@@ -1496,7 +1635,7 @@
                 const response = await fetch('/api/training-script', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ issue })
+                    body: JSON.stringify({ issue, platform: currentPlatform })
                 });
                 const data = await response.json();
                 return data.script;
@@ -1506,7 +1645,7 @@
                 const response = await fetch('/api/internal-email', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ strengths, weaknesses })
+                    body: JSON.stringify({ strengths, weaknesses, platform: currentPlatform })
                 });
                 const data = await response.json();
                 return data.email;
@@ -1621,7 +1760,7 @@
                     const response = await fetch('/api/chat', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ message: userMessage, context: getCurrentContext() })
+                        body: JSON.stringify({ message: userMessage, context: getCurrentContext(), platform: currentPlatform })
                     });
 
                     if (!response.ok) {
