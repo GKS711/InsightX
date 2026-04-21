@@ -1,7 +1,7 @@
 """
-InsightX LLM 服務 v2.0.0
+InsightX LLM 服務 v3.0.0（Shopee 模組已於 2026-04-21 移除）
 
-v2 變更：所有下游功能支援 platform 參數
+所有下游功能支援 platform 參數：
   - platform="google"  → 店家評論分析（餐飲/零售老闆視角）
   - platform="youtube" → 頻道留言分析（YouTuber 視角）
 

@@ -4,748 +4,775 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 顧客回饋洞察儀 - Demo</title>
+    <title>InsightX — AI 顧客回饋洞察儀</title>
 
     <link rel="icon" sizes="any" type="image/svg+xml" href="/favicon.svg">
     <link rel="apple-touch-icon" sizes="any" type="image/svg+xml" href="/favicon.svg">
 
-    <!-- 載入 Tailwind CSS -->
+    <!-- Tailwind -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- 載入 Marked.js 用於解析 Markdown -->
+    <!-- Marked.js -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     fontFamily: {
-                        sans: ['Inter', 'Noto Sans TC', 'sans-serif'],
+                        sans: ['-apple-system', 'BlinkMacSystemFont', 'SF Pro Display', 'SF Pro Text', 'Inter', 'Noto Sans TC', 'system-ui', 'sans-serif'],
                     },
-                    colors: {
-                        stone: {
-                            50: '#fafaf9',
-                            100: '#f5f5f4',
-                            200: '#e7e5e4',
-                            300: '#d6d3d1',
-                            400: '#a8a29e',
-                            500: '#78716c',
-                            600: '#57534e',
-                            700: '#44403c',
-                            800: '#292524',
-                            900: '#1c1917',
-                        },
-                        brand: {
-                            50: '#fff7ed', // Orange-50
-                            100: '#ffedd5', // Orange-100
-                            200: '#fed7aa', // Orange-200
-                            300: '#fdba74', // Orange-300
-                            400: '#fb923c', // Orange-400
-                            500: '#f97316', // Orange-500
-                            600: '#ea580c', // Orange-600
-                        },
-                        accent: {
-                            50: '#fdf2f8', // Pink-50
-                            100: '#fce7f3', // Pink-100
-                            500: '#ec4899', // Pink-500
-                            600: '#db2777', // Pink-600
-                        }
-                    },
-                    animation: {
-                        'float': 'float 6s ease-in-out infinite',
-                        'blob': 'blob 7s infinite',
-                    },
-                    keyframes: {
-                        float: {
-                            '0%, 100%': { transform: 'translateY(0)' },
-                            '50%': { transform: 'translateY(-10px)' },
-                        },
-                        blob: {
-                            '0%': { transform: 'translate(0px, 0px) scale(1)' },
-                            '33%': { transform: 'translate(30px, -50px) scale(1.1)' },
-                            '66%': { transform: 'translate(-20px, 20px) scale(0.9)' },
-                            '100%': { transform: 'translate(0px, 0px) scale(1)' },
-                        }
+                    letterSpacing: {
+                        tightest: '-0.03em',
                     }
                 }
             }
         }
     </script>
-    <!-- 載入 Inter 字體 -->
+
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=Noto+Sans+TC:wght@400;500;700;900&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+TC:wght@300;400;500;700;900&family=Playfair+Display:ital,wght@0,400;0,500;1,400;1,500&family=Noto+Serif+TC:wght@400;500&display=swap"
         rel="stylesheet">
+
     <style>
-        /* Global Reset & Typography */
+        /* -----------------------------------------------------------
+           InsightX · Apple/Notion 淺色留白風（2026-04-19 redesign）
+           ----------------------------------------------------------- */
+
+        :root {
+            /* --- Warm Precision (Stripe × Claude × Linear hybrid · 2026-04-19) --- */
+            /* Ink = Stripe deep navy stack (warm navy, not cool black) */
+            --ink-900: #061b31;
+            --ink-800: #0f2a44;
+            --ink-700: #1f3a5c;
+            --ink-600: #3d5a7c;
+            --ink-500: #5e7a9a;
+            --ink-400: #8fa3bc;
+            --ink-300: #bcc9d8;
+            --ink-200: #dde4ed;
+            --ink-100: #edf1f6;
+            --ink-50:  #f6f4ee;        /* = paper, for seamless section blend */
+
+            /* Paper = Claude warm parchment (avoids sterile #fff) */
+            --paper:          #f6f4ee;
+            --paper-raised:   #fbf9f3;  /* cards on paper */
+            --paper-elevated: #ffffff;  /* modals / popovers */
+            --hairline:       #e8e3d5;  /* warm border */
+
+            /* Accents — indigo primary + terracotta warm */
+            --accent:      #5e6ad2;     /* Linear indigo */
+            --accent-hover:#7170ff;     /* Linear indigo-hover */
+            --accent-ink:  #4a55b8;
+            --accent-wash: rgba(94,106,210,0.08);
+            --warm:        #c96442;     /* Claude terracotta — rare, intentional */
+            --warm-ink:    #a64f30;
+
+            /* Signature chromatic shadow (Stripe blue-tinted) */
+            --shadow-ring:  0 0 0 1px rgba(6, 27, 49, 0.06);
+            --shadow-soft:  0 1px 2px rgba(50, 50, 93, 0.04), 0 2px 8px rgba(6, 27, 49, 0.04);
+            --shadow-lift:  0 2px 4px rgba(50, 50, 93, 0.08), 0 8px 28px -6px rgba(6, 27, 49, 0.12);
+
+            /* Decorative radius — conservative Stripe-style */
+            --r-sm: 6px;
+            --r-md: 10px;
+            --r-lg: 16px;
+            --r-xl: 22px;
+        }
+
+        html, body {
+            background: var(--paper);
+            color: var(--ink-700);
+        }
+
+        /* Subtle warm noise / parchment grain on body (Claude touch) */
         body {
-            font-family: 'Inter', 'Noto Sans TC', sans-serif;
-            color: #44403c;
-            /* Stone-700 */
-            background-color: #fafaf9;
-            /* Stone-50 */
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Noto Sans TC', system-ui, sans-serif;
+            font-feature-settings: 'cv11', 'ss01', 'ss03';
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
             line-height: 1.6;
+            letter-spacing: -0.005em;
+            font-weight: 400;
+            background-image:
+              radial-gradient(ellipse 800px 600px at 50% -10%, rgba(94,106,210,0.06), transparent 60%),
+              radial-gradient(ellipse 600px 400px at 100% 20%, rgba(201,100,66,0.04), transparent 55%);
+            background-attachment: fixed;
         }
 
-        h1,
-        h2,
-        h3,
-        h4,
-        h5,
-        h6 {
-            color: #1c1917;
-            /* Stone-900 */
-            font-weight: 800;
+        h1, h2, h3, h4, h5, h6 {
+            color: var(--ink-900);
+            font-weight: 600;           /* Stripe: lighter than conventional 700 */
             letter-spacing: -0.025em;
+            line-height: 1.12;
         }
 
-        /* Custom Scrollbar */
-        .custom-scrollbar::-webkit-scrollbar {
-            width: 6px;
+        /* Display — Stripe whisper-weight authority (300) + tight tracking */
+        .display {
+            font-weight: 300;
+            letter-spacing: -0.035em;
+            line-height: 1.02;
+            font-variation-settings: 'wght' 320;
+        }
+        .display em {
+            font-family: 'Playfair Display', 'Noto Serif TC', Georgia, serif;
+            font-weight: 400;
+            font-style: italic;
+            color: var(--warm);
+            letter-spacing: -0.02em;
         }
 
-        .custom-scrollbar::-webkit-scrollbar-track {
-            background: transparent;
+        /* Editorial serif utility (Claude touch) */
+        .editorial {
+            font-family: 'Playfair Display', 'Noto Serif TC', Georgia, serif;
+            font-style: italic;
+            font-weight: 400;
+            letter-spacing: -0.01em;
         }
 
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #d6d3d1;
-            border-radius: 99px;
-        }
+        /* Hairline divider */
+        .hairline { border-color: var(--hairline); }
 
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: #a8a29e;
-        }
-
-        /* Component Classes */
+        /* Card — warm parchment on paper, Stripe blue-tint chromatic shadow */
         .card {
-            background-color: white;
-            border-radius: 24px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.06);
-            border: 1px solid #f5f5f4;
-            /* Stone-100 */
-            transition: all 0.3s ease;
+            background: var(--paper-raised);
+            border: 1px solid var(--hairline);
+            border-radius: var(--r-xl);
+            box-shadow: var(--shadow-ring), var(--shadow-soft);
+            transition: box-shadow .3s cubic-bezier(0.16, 1, 0.3, 1), transform .3s cubic-bezier(0.16, 1, 0.3, 1), border-color .3s ease;
         }
-
         .card:hover {
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
-            border-color: #e7e5e4;
-            /* Stone-200 */
-            transform: translateY(-2px);
-        }
-
-        /* Glass Navigation */
-        .glass-nav {
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border-bottom: 1px solid rgba(231, 229, 228, 0.4);
-            /* Stone-200 alpha */
-        }
-
-        /* Buttons */
-        .btn-primary {
-            background: linear-gradient(135deg, #ea580c 0%, #db2777 100%);
-            color: white;
-            font-weight: 600;
-            border-radius: 16px;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 6px -1px rgba(234, 88, 12, 0.2);
-        }
-
-        .btn-primary:hover {
+            border-color: #d9d2bd;
+            box-shadow: var(--shadow-ring), var(--shadow-lift);
             transform: translateY(-1px);
-            box-shadow: 0 10px 15px -3px rgba(234, 88, 12, 0.3);
         }
 
-        .btn-primary:active {
-            transform: scale(0.98);
+        /* Tinted panel — darker tone-on-tone block */
+        .panel {
+            background: linear-gradient(180deg, #f1ece0 0%, var(--paper) 100%);
+            border: 1px solid var(--hairline);
+            border-radius: var(--r-xl);
         }
 
-        .ai-action-btn {
-            font-size: 13px;
-            font-weight: 600;
+        /* Glass nav — warm-tinted blur instead of cool white */
+        .glass-nav {
+            background: rgba(246, 244, 238, 0.78);
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            border-bottom: 1px solid rgba(232, 227, 213, 0.7);
+        }
+
+        /* Primary button — Linear indigo with subtle gradient + chromatic shadow */
+        .btn-primary {
+            background: linear-gradient(180deg, var(--accent-hover) 0%, var(--accent) 100%);
+            color: #fff;
+            font-weight: 500;
+            letter-spacing: -0.005em;
+            border-radius: var(--r-md);
+            padding: 13px 22px;
+            transition: transform .2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow .2s ease, filter .2s ease;
+            box-shadow: 0 1px 2px rgba(94, 106, 210, 0.35), 0 4px 14px -4px rgba(94, 106, 210, 0.45), inset 0 1px 0 rgba(255,255,255,0.12);
+        }
+        .btn-primary:hover { filter: brightness(1.08); transform: translateY(-1px); box-shadow: 0 2px 4px rgba(94, 106, 210, 0.4), 0 8px 24px -4px rgba(94, 106, 210, 0.55), inset 0 1px 0 rgba(255,255,255,0.18); }
+        .btn-primary:active { transform: scale(0.985); }
+        .btn-primary:disabled { background: var(--ink-300); cursor: not-allowed; transform: none; box-shadow: none; }
+
+        .btn-ghost {
+            background: var(--paper-elevated);
+            color: var(--ink-900);
+            border: 1px solid var(--hairline);
+            font-weight: 500;
+            border-radius: var(--r-md);
+            padding: 13px 22px;
+            transition: background-color .2s ease, border-color .2s ease, box-shadow .2s ease;
+            box-shadow: 0 1px 2px rgba(50, 50, 93, 0.04);
+        }
+        .btn-ghost:hover { background: var(--paper-raised); border-color: #d9d2bd; box-shadow: 0 2px 6px rgba(50, 50, 93, 0.06); }
+
+        /* Segmented control */
+        .segmented {
+            background: rgba(6, 27, 49, 0.05);
+            border-radius: var(--r-md);
+            padding: 3px;
+            display: inline-flex;
+            gap: 2px;
+            border: 1px solid rgba(6, 27, 49, 0.04);
+        }
+        .segmented .seg-btn {
             padding: 8px 16px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--ink-600);
+            border-radius: 8px;
+            transition: all .2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .segmented .seg-btn:hover { color: var(--ink-900); }
+        .segmented .seg-btn:focus-visible {
+            outline: none;
+            box-shadow: 0 0 0 2px var(--paper), 0 0 0 4px var(--accent);
+        }
+        .segmented .seg-btn.is-active,
+        .segmented .seg-btn[aria-selected="true"] {
+            background: var(--paper-elevated);
+            color: var(--ink-900);
+            box-shadow: 0 1px 2px rgba(50,50,93,0.08), 0 1px 1px rgba(0,0,0,0.03);
+            font-weight: 600;
+        }
+
+        /* Input — Stripe restrained + Claude warm bg */
+        .input-field {
+            background: var(--paper-elevated);
+            border: 1px solid var(--hairline);
+            border-radius: var(--r-md);
+            font-size: 15px;
+            font-weight: 400;
+            padding: 14px 16px 14px 46px;
+            color: var(--ink-900);
+            transition: border-color .2s ease, box-shadow .2s ease;
+        }
+        .input-field::placeholder { color: var(--ink-400); font-weight: 400; }
+        .input-field:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 4px var(--accent-wash);
+        }
+
+        /* Chip / tag — indigo wash, not neutral gray */
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px 6px 12px;
             border-radius: 99px;
-            transition: all 0.2s ease;
+            background: var(--accent-wash);
+            color: var(--accent-ink);
+            font-size: 12px;
+            font-weight: 500;
+            letter-spacing: 0;
+            border: 1px solid rgba(94, 106, 210, 0.12);
+        }
+        .chip .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 99px;
+            background: var(--accent);
+            box-shadow: 0 0 0 3px rgba(94, 106, 210, 0.18);
+            animation: pulse-dot 1.8s ease-in-out infinite;
+        }
+        @keyframes pulse-dot {
+            0%, 100% { box-shadow: 0 0 0 3px rgba(94, 106, 210, 0.18); }
+            50%      { box-shadow: 0 0 0 6px rgba(94, 106, 210, 0.06); }
+        }
+
+        /* AI action buttons (inline pills) */
+        .ai-action-btn {
+            font-size: 12px;
+            font-weight: 500;
+            padding: 7px 13px;
+            border-radius: 999px;
+            transition: all .2s ease;
             display: inline-flex;
             align-items: center;
             gap: 6px;
             cursor: pointer;
-            border: 1px solid transparent;
+            border: 1px solid var(--hairline);
+            background: var(--paper-raised);
+            color: var(--ink-700);
+        }
+        .ai-action-btn:hover {
+            background: var(--accent-wash);
+            border-color: rgba(94, 106, 210, 0.25);
+            color: var(--accent-ink);
         }
 
-        .ai-reply-btn {
-            background-color: #fff7ed;
-            /* Orange-50 */
-            color: #c2410c;
-            /* Orange-700 */
-            border-color: #ffedd5;
-        }
-
-        .ai-reply-btn:hover {
-            background-color: #fff1f2;
-            color: #be123c;
-            border-color: #fecdd3;
-        }
-
-        .ai-analyze-btn {
-            background-color: #fdf4ff;
-            /* Fuchsia-50 */
-            color: #a21caf;
-            /* Fuchsia-700 */
-            border-color: #f0abfc;
-        }
-
-        .ai-analyze-btn:hover {
-            background-color: #fae8ff;
-            color: #86198f;
-        }
-
-        /* Loaders and Animations */
+        /* Loader */
         .loader {
-            border: 2px solid rgba(231, 229, 228, 0.5);
-            /* Stone-200 */
-            border-top: 2px solid #ea580c;
-            /* Orange-600 */
+            border: 2px solid var(--ink-200);
+            border-top: 2px solid var(--accent);
             border-radius: 50%;
-            width: 20px;
-            height: 20px;
-            animation: spin 0.8s linear infinite;
+            width: 18px;
+            height: 18px;
+            animation: spin .7s linear infinite;
         }
+        @keyframes spin { 0% { transform: rotate(0); } 100% { transform: rotate(360deg); } }
 
-        @keyframes spin {
-            0% {
-                transform: rotate(0deg);
-            }
-
-            100% {
-                transform: rotate(360deg);
-            }
-        }
-
+        /* Fade in up */
         .fade-in-up {
-            animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            animation: fadeInUp .6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
             opacity: 0;
         }
-
         @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(16px); }
+            to   { opacity: 1; transform: translateY(0); }
         }
 
-        /* Prose Overrides for Markdown */
-        .prose strong {
-            color: #1c1917;
-            font-weight: 700;
+        /* Custom scrollbar (warm) */
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: var(--hairline); border-radius: 99px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: var(--ink-300); }
+
+        /* Bars */
+        .bar-track {
+            background: rgba(6, 27, 49, 0.06);
+            height: 6px;
+            border-radius: 99px;
+            overflow: hidden;
+        }
+        .bar-fill-good {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-hover), var(--accent));
+            border-radius: 99px;
+            transition: width 1s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 0 12px rgba(94, 106, 210, 0.4);
+        }
+        .bar-fill-bad {
+            height: 100%;
+            background: linear-gradient(90deg, #dc8463, var(--warm));
+            border-radius: 99px;
+            transition: width 1s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 0 12px rgba(201, 100, 66, 0.3);
         }
 
-        .prose h3,
-        .prose h4 {
-            color: #292524;
-            font-weight: 700;
-            margin-top: 1.2em;
-        }
-
-        .prose p {
-            margin-bottom: 0.8em;
-            line-height: 1.7;
-            color: #44403c;
-        }
-
-        .prose ul {
-            list-style-type: disc;
-            padding-left: 1.25em;
-            color: #57534e;
-        }
-
+        /* Prose overrides for markdown */
+        .prose { color: var(--ink-700); line-height: 1.7; }
+        .prose strong { color: var(--ink-900); font-weight: 600; }
+        .prose h3, .prose h4 { color: var(--ink-900); font-weight: 600; margin-top: 1.2em; letter-spacing: -0.02em; }
+        .prose p { margin-bottom: 0.9em; }
+        .prose ul { list-style-type: disc; padding-left: 1.25em; color: var(--ink-600); }
         .prose blockquote {
-            border-left-color: #f97316;
-            background: #fff7ed;
-            padding: 0.5em 1em;
-            border-radius: 0 8px 8px 0;
-            color: #78716c;
+            border-left: 3px solid var(--accent);
+            background: var(--accent-wash);
+            padding: 0.8em 1.2em;
+            border-radius: 0 var(--r-sm) var(--r-sm) 0;
+            color: var(--ink-700);
             font-style: normal;
+        }
+        .prose code {
+            background: rgba(94, 106, 210, 0.08);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            color: var(--accent-ink);
+            font-family: 'JetBrains Mono', 'Monaco', monospace;
+        }
+
+        /* Platform accent colors (minimalist — only as small indicators) */
+        .plat-google .accent-ring { box-shadow: 0 0 0 4px rgba(52, 168, 83, 0.1); }
+        .plat-youtube .accent-ring { box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1); }
+
+        /* Subtle grid bg (Notion landing) */
+        .dot-bg {
+            background-image: radial-gradient(var(--ink-200) 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+
+        /* Hero bubble spark (Visual Storyteller signature) */
+        .bubble {
+            aspect-ratio: 1 / 1;
+            border-radius: 999px;
+            background: var(--ink-200);
+            opacity: 0.35;
+            animation: bubble-pulse 3.6s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+        }
+        .bubble.accent { background: var(--accent); }
+        .bubble.warm   { background: var(--warm); }
+        @keyframes bubble-pulse {
+            0%, 100% { opacity: 0.18; transform: scale(0.85); }
+            50%      { opacity: 0.95; transform: scale(1.08); }
+        }
+
+        /* Chromatic Stripe-style gradient text utility */
+        .grad-text {
+            background: linear-gradient(135deg, var(--accent), var(--warm));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            color: transparent;
         }
     </style>
 </head>
 
-<body class="antialiased selection:bg-orange-100 selection:text-orange-600">
+<body class="antialiased selection:bg-stone-900 selection:text-white">
 
-    <!-- 導航列 -->
-    <header class="glass-nav sticky top-0 z-50 transition-all duration-300">
-        <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
+    <!-- ========== NAV ========== -->
+    <header class="glass-nav sticky top-0 z-50">
+        <nav class="container mx-auto px-6 py-3.5 flex justify-between items-center">
             <div class="flex items-center gap-3">
-                <div
-                    class="w-10 h-10 rounded-2xl bg-gradient-to-br from-orange-500 to-pink-600 flex items-center justify-center text-white font-bold shadow-lg shadow-orange-500/20 transform hover:rotate-3 transition-transform">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
-                            d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                <div class="w-8 h-8 rounded-[8px] flex items-center justify-center text-white" style="background: linear-gradient(135deg, var(--accent-hover), var(--accent)); box-shadow: 0 2px 8px rgba(94,106,210,0.35);">
+                    <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
                     </svg>
                 </div>
-                <h1 class="text-xl font-bold text-stone-800 tracking-tight">InsightX <span
-                        class="text-stone-400 font-normal">| 顧客回饋洞察儀</span></h1>
+                <span class="text-[16px] font-semibold tracking-tight" style="color: var(--ink-900); letter-spacing: -0.02em;">InsightX</span>
+                <span class="editorial text-[13px] hidden sm:inline" style="color: var(--ink-500);">Signal from silent reviews.</span>
             </div>
-            <a href="#cta"
-                class="bg-stone-900 hover:bg-stone-800 text-white font-medium px-6 py-2.5 rounded-full transition-all duration-300 shadow-xl shadow-stone-200 hover:-translate-y-0.5">
-                立即試用
-            </a>
+            <div class="flex items-center gap-5">
+                <a href="#demo-block" class="hidden md:inline text-[13px] font-medium transition-colors" style="color: var(--ink-600);" onmouseover="this.style.color='var(--ink-900)'" onmouseout="this.style.color='var(--ink-600)'">如何運作</a>
+                <a href="https://youtu.be/4wE4Axxyiko" target="_blank" class="hidden md:inline text-[13px] font-medium transition-colors" style="color: var(--ink-600);" onmouseover="this.style.color='var(--ink-900)'" onmouseout="this.style.color='var(--ink-600)'">示範影片</a>
+                <a href="#demo-block"
+                    class="text-[13px] font-medium text-white px-4 py-2 rounded-[10px] transition-all"
+                    style="background: linear-gradient(180deg, var(--accent-hover), var(--accent)); box-shadow: 0 1px 2px rgba(94,106,210,0.35), 0 3px 10px -3px rgba(94,106,210,0.5), inset 0 1px 0 rgba(255,255,255,0.14);">
+                    開始試用
+                </a>
+            </div>
         </nav>
     </header>
 
-    <!-- 首屏內容 (Hero Section) -->
+    <!-- ========== HERO ========== -->
     <main class="relative overflow-hidden">
-        <div class="absolute top-0 left-0 w-full h-full overflow-hidden -z-10 bg-[#fafaf9]">
-            <div
-                class="absolute -top-[10%] -left-[10%] w-[50%] h-[50%] bg-orange-100/40 rounded-full mix-blend-multiply filter blur-3xl animate-blob">
-            </div>
-            <div
-                class="absolute top-[20%] -right-[10%] w-[40%] h-[40%] bg-pink-100/40 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000">
-            </div>
-            <div
-                class="absolute -bottom-[20%] left-[20%] w-[40%] h-[60%] bg-stone-200/30 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-4000">
-            </div>
+        <!-- Decorative ambient glow (soft indigo + terracotta) -->
+        <div class="absolute inset-0 pointer-events-none" aria-hidden="true">
+            <div class="absolute top-20 left-1/4 w-[420px] h-[420px] rounded-full" style="background: radial-gradient(circle, rgba(94,106,210,0.12), transparent 65%); filter: blur(20px);"></div>
+            <div class="absolute top-40 right-1/4 w-[380px] h-[380px] rounded-full" style="background: radial-gradient(circle, rgba(201,100,66,0.08), transparent 65%); filter: blur(20px);"></div>
         </div>
 
-        <div class="container mx-auto px-6 py-20 md:py-32">
-            <div class="grid md:grid-cols-2 gap-12 items-center">
-                <div class="text-center md:text-left fade-in-up">
-                    <div
-                        class="inline-flex items-center gap-2 px-4 py-2 mb-8 text-xs font-bold tracking-wider text-orange-700 uppercase bg-orange-50 rounded-full border border-orange-100 shadow-sm">
-                        <span class="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></span>
-                        2026 餐飲 AI 革命
+        <div class="container relative mx-auto px-6 pt-24 md:pt-32 pb-20 md:pb-28 max-w-5xl text-center">
+            <div class="chip mx-auto mb-10 fade-in-up">
+                <span class="dot"></span>
+                <span>AI × 顧客回饋 · 2026 Spring</span>
+            </div>
+
+            <h1 class="display text-[46px] md:text-[68px] lg:text-[84px] leading-[1.02] mb-8 fade-in-up" style="animation-delay:.05s;">
+                把 <em>無聲的評論</em><br class="hidden md:block"/>
+                變成<span style="color: var(--ink-900); font-weight:500;">可執行的策略</span>。
+            </h1>
+
+            <p class="editorial text-[17px] md:text-[19px] max-w-xl mx-auto mb-12 fade-in-up" style="color: var(--ink-500); animation-delay:.1s; line-height: 1.55;">
+                「貼上一個網址——商家、影片、或商品。
+                幾秒後，AI 端上情緒分析、SWOT、回覆草案與週行動計畫。」
+            </p>
+
+            <div class="flex flex-col sm:flex-row gap-3 justify-center fade-in-up" style="animation-delay:.15s;">
+                <button onclick="document.getElementById('demo-block').scrollIntoView({behavior:'smooth'})"
+                    class="btn-primary text-[15px] inline-flex items-center gap-2">
+                    開始免費分析
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                </button>
+                <a href="https://youtu.be/4wE4Axxyiko" target="_blank" class="btn-ghost text-[15px] inline-flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    觀看示範
+                </a>
+            </div>
+
+            <!-- Signature: animated review-bubble spark visualization -->
+            <div class="mt-20 mx-auto max-w-3xl fade-in-up" style="animation-delay:.22s;">
+                <div class="flex items-center justify-between px-1 mb-4">
+                    <span class="text-[11px] uppercase tracking-[0.2em]" style="color: var(--ink-400);">Live · 正在被聆聽的評論</span>
+                    <span class="flex items-center gap-1.5 text-[11px]" style="color: var(--ink-500);">
+                        <span class="relative flex h-2 w-2">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style="background: var(--accent);"></span>
+                            <span class="relative inline-flex rounded-full h-2 w-2" style="background: var(--accent);"></span>
+                        </span>
+                        即時
+                    </span>
+                </div>
+                <div class="relative rounded-[18px] p-6 md:p-7" style="background: var(--paper-elevated); border: 1px solid var(--hairline); box-shadow: var(--shadow-ring), var(--shadow-soft);">
+                    <div class="grid grid-cols-8 gap-2 md:gap-3">
+                        <!-- 24 bubbles, staggered pulse -->
+                        <div class="bubble" style="animation-delay:0s"></div>
+                        <div class="bubble warm" style="animation-delay:.12s"></div>
+                        <div class="bubble" style="animation-delay:.24s"></div>
+                        <div class="bubble" style="animation-delay:.36s"></div>
+                        <div class="bubble accent" style="animation-delay:.48s"></div>
+                        <div class="bubble" style="animation-delay:.6s"></div>
+                        <div class="bubble" style="animation-delay:.72s"></div>
+                        <div class="bubble warm" style="animation-delay:.84s"></div>
+                        <div class="bubble accent" style="animation-delay:.96s"></div>
+                        <div class="bubble" style="animation-delay:1.08s"></div>
+                        <div class="bubble" style="animation-delay:1.2s"></div>
+                        <div class="bubble" style="animation-delay:1.32s"></div>
+                        <div class="bubble accent" style="animation-delay:1.44s"></div>
+                        <div class="bubble" style="animation-delay:1.56s"></div>
+                        <div class="bubble warm" style="animation-delay:1.68s"></div>
+                        <div class="bubble" style="animation-delay:1.8s"></div>
+                        <div class="bubble" style="animation-delay:1.92s"></div>
+                        <div class="bubble accent" style="animation-delay:2.04s"></div>
+                        <div class="bubble" style="animation-delay:2.16s"></div>
+                        <div class="bubble" style="animation-delay:2.28s"></div>
+                        <div class="bubble warm" style="animation-delay:2.4s"></div>
+                        <div class="bubble" style="animation-delay:2.52s"></div>
+                        <div class="bubble" style="animation-delay:2.64s"></div>
+                        <div class="bubble accent" style="animation-delay:2.76s"></div>
                     </div>
-                    <h2 class="text-5xl md:text-6xl font-black tracking-tight leading-[1.1] text-stone-900 mb-8">
-                        別讓數據冷掉。<br>
-                        <span class="bg-clip-text text-transparent bg-gradient-to-r from-orange-600 to-pink-600">AI
-                            趁熱為您端上</span><br>
-                        營運洞察。
-                    </h2>
-                    <p
-                        class="text-lg md:text-xl text-stone-600 leading-relaxed mb-10 max-w-xl mx-auto md:mx-0 font-medium">
-                        將 Google Maps 的顧客評論轉化為具體的營運策略。只需貼上網址，專屬的 AI 營運顧問立即上工。
-                    </p>
-                    <div class="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
-                        <button onclick="document.getElementById('demo-block').scrollIntoView({behavior: 'smooth'})"
-                            class="btn-primary px-8 py-4 text-base shadow-lg shadow-orange-500/20">
-                            開始免費分析
-                        </button>
-                        <a href="https://youtu.be/4wE4Axxyiko" target="_blank"><button
-                                class="px-8 py-4 text-base font-bold text-stone-600 bg-white border border-stone-200 rounded-2xl hover:bg-stone-50 hover:border-stone-300 transition-all shadow-sm">
-                                觀看示範影片
-                            </button></a>
+                    <div class="mt-5 flex flex-wrap items-center justify-between gap-3">
+                        <div class="flex items-center gap-4 text-[12px]" style="color: var(--ink-500);">
+                            <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background: var(--accent);"></span>正面訊號</span>
+                            <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background: var(--warm);"></span>待關注</span>
+                            <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background: var(--ink-300);"></span>中性</span>
+                        </div>
+                        <div class="editorial text-[13px]" style="color: var(--ink-600);">每則發光的，都是值得被回應的。</div>
                     </div>
                 </div>
+            </div>
 
-                <!-- 右側影片容器 -->
-                <div class="hidden md:block relative fade-in-up" style="animation-delay: 0.2s;">
-                    <div
-                        class="relative rounded-[2rem] overflow-hidden shadow-2xl shadow-stone-200 border-4 border-white transform rotate-1 hover:rotate-0 transition-all duration-500">
-                        <div class="aspect-video bg-stone-900 relative">
-                            <video controls autoplay muted loop
-                                class="w-full h-full object-cover opacity-90 hover:opacity-100 transition duration-500">
-                                <source
-                                    src="https://imagine-public.x.ai/imagine-public/share-videos/b8ba4c20-a8f6-4449-8b74-66b0e4f987c3.mp4"
-                                    type="video/mp4">
-                            </video>
-                        </div>
-                    </div>
-                    <!-- 裝飾元素 -->
-                    <div
-                        class="absolute -z-10 -bottom-10 -right-10 w-full h-full border-2 border-stone-200 rounded-[2.5rem]">
-                    </div>
+            <!-- Trust row -->
+            <div class="mt-14 flex flex-wrap justify-center items-center gap-x-8 gap-y-3 fade-in-up" style="animation-delay:.28s;">
+                <span class="text-[11px] uppercase tracking-[0.2em]" style="color: var(--ink-400);">支援平台</span>
+                <div class="flex items-center gap-2 text-[13px]" style="color: var(--ink-600);">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z"></path></svg>
+                    Google 商家
+                </div>
+                <div class="flex items-center gap-2 text-[13px]" style="color: var(--ink-600);">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                    YouTube
                 </div>
             </div>
         </div>
     </main>
 
-    <!-- 互動式模擬區塊 (Core Functionality Block) -->
-    <section id="demo-block" class="px-6 pb-24 relative z-10 -mt-10">
-        <div class="container mx-auto max-w-6xl">
-            <!-- 玻璃擬態卡片 -->
-            <div
-                class="card p-8 md:p-12 border-0 bg-white/60 backdrop-blur-xl shadow-2xl shadow-stone-200/50 overflow-hidden relative">
-                <!-- 裝飾背景 -->
-                <div
-                    class="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-orange-100/50 to-transparent rounded-full blur-3xl -z-10">
+    <!-- ========== DEMO / INPUT BLOCK ========== -->
+    <section id="demo-block" class="px-6 pb-32">
+        <div class="container mx-auto max-w-4xl">
+            <div class="card p-8 md:p-12">
+                <!-- Header -->
+                <div class="text-center mb-10">
+                    <h2 class="text-[28px] md:text-[36px] font-bold mb-3 tracking-tight" style="color: var(--ink-900);">開始一次分析</h2>
+                    <p id="mode-subtitle" class="text-[15px]" style="color: var(--ink-500);">AI 將自動整合跨平台數據，生成統一分析報告</p>
                 </div>
 
-                <!-- 標題 -->
-                <div class="text-center mb-8">
-                    <h3 class="text-3xl font-bold text-stone-900 mb-3">匯入評論來源</h3>
-                    <p id="mode-subtitle" class="text-stone-500 text-lg">AI 將自動整合跨平台數據，生成統一分析報告</p>
-                </div>
-
-                <!-- 分析模式切換 Tabs -->
+                <!-- Segmented tabs -->
                 <div class="flex justify-center mb-10">
-                    <div class="inline-flex bg-stone-100 rounded-full p-1.5 gap-1 shadow-inner ring-1 ring-stone-200/60">
-                        <button type="button" data-mode="google" id="mode-tab-google"
-                            class="mode-tab px-6 py-2.5 rounded-full text-sm font-bold transition-all bg-white text-orange-600 shadow-md ring-1 ring-orange-100">
-                            <span class="inline-flex items-center gap-2">
-                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z"></path></svg>
-                                店家評論
-                            </span>
+                    <div class="segmented" role="tablist" aria-label="分析平台">
+                        <button type="button" data-mode="google" id="mode-tab-google" role="tab" aria-selected="true" class="mode-tab seg-btn is-active">
+                            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z"></path></svg>
+                            店家評論
                         </button>
-                        <button type="button" data-mode="youtube" id="mode-tab-youtube"
-                            class="mode-tab px-6 py-2.5 rounded-full text-sm font-bold transition-all text-stone-600 hover:text-stone-900">
-                            <span class="inline-flex items-center gap-2">
-                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
-                                YouTube 頻道
-                            </span>
+                        <button type="button" data-mode="youtube" id="mode-tab-youtube" role="tab" aria-selected="false" class="mode-tab seg-btn">
+                            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                            YouTube
                         </button>
                     </div>
                 </div>
 
-                <div class="grid lg:grid-cols-5 gap-10">
-                    <!-- 左側輸入區 -->
-                    <div class="lg:col-span-3 space-y-6">
-                        <!-- URL Input -->
-                        <div class="group">
-                            <label id="url-input-label" class="block text-sm font-bold text-stone-700 mb-2 ml-1">Google 地圖網址</label>
-                            <div class="relative">
-                                <div id="url-input-icon"
-                                    class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-orange-500">
-                                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                                        <path
-                                            d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z">
-                                        </path>
-                                    </svg>
-                                </div>
-                                <input type="text" id="gmb-url"
-                                    class="w-full pl-12 pr-4 py-4 bg-white border border-stone-200 rounded-xl text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all duration-300 shadow-sm font-medium"
-                                    placeholder="貼上 Google 地圖店家網址"
-                                    value="https://share.google/Exmg5ZTEvmMknwuWF">
-                            </div>
-                            <p id="url-input-hint" class="text-xs text-stone-400 mt-2 ml-1">支援 maps.google.com、goo.gl/maps、share.google 短網址</p>
+                <!-- Input area -->
+                <div>
+                    <label id="url-input-label" class="block text-[13px] font-semibold mb-2" style="color: var(--ink-700);">Google 地圖網址</label>
+                    <div class="relative">
+                        <div id="url-input-icon" class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none" style="color: var(--ink-400);">
+                            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z"></path></svg>
                         </div>
-<button id="analyzeBtn"
-                            class="w-full btn-primary py-4 px-8 text-lg flex items-center justify-center gap-3 mt-6">
-                            <span id="analyzeBtnLabel">✨ 啟動 AI 智能分析</span>
-                        </button>
+                        <input type="text" id="gmb-url"
+                            class="input-field w-full"
+                            placeholder="貼上 Google 地圖店家網址"
+                            value="https://share.google/Exmg5ZTEvmMknwuWF">
                     </div>
+                    <p id="url-input-hint" class="text-xs mt-2" style="color: var(--ink-400);">支援 maps.google.com、goo.gl/maps、share.google 短網址</p>
 
-                    <!-- 右側說明 -->
-                    <div
-                        class="lg:col-span-2 bg-[#fff7ed] rounded-2xl p-8 border border-orange-100 flex flex-col justify-center relative overflow-hidden">
-                        <div class="relative z-10">
-                            <h4 class="font-bold text-lg text-stone-800 mb-6 flex items-center gap-2">
-                                <span class="bg-orange-500 w-1 h-6 rounded-full"></span>
-                                分析報告包含：
-                            </h4>
-                            <ul class="space-y-5">
-                                <li class="flex items-start">
-                                    <div
-                                        class="w-8 h-8 rounded-full bg-white flex items-center justify-center text-orange-500 shadow-sm mr-4 shrink-0 mt-0.5 border border-orange-50">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z">
-                                            </path>
-                                        </svg>
-                                    </div>
-                                    <div>
-                                        <strong class="block text-stone-900 text-base">綜合情緒分析</strong>
-                                        <span class="text-xs text-stone-500">一次看懂所有平台的優缺點</span>
-                                    </div>
-                                </li>
-                                <li class="flex items-start">
-                                    <div
-                                        class="w-8 h-8 rounded-full bg-white flex items-center justify-center text-blue-500 shadow-sm mr-4 shrink-0 mt-0.5 border border-blue-50">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01">
-                                            </path>
-                                        </svg>
-                                    </div>
-                                    <div>
-                                        <strong class="block text-stone-900 text-base">SWOT 策略建議</strong>
-                                        <span class="text-xs text-stone-500">AI 擔任您的虛擬營運長</span>
-                                    </div>
-                                </li>
-                                <li class="flex items-start">
-                                    <div
-                                        class="w-8 h-8 rounded-full bg-white flex items-center justify-center text-accent-500 shadow-sm mr-4 shrink-0 mt-0.5 border border-accent-50">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z">
-                                            </path>
-                                        </svg>
-                                    </div>
-                                    <div>
-                                        <strong class="block text-stone-900 text-base">公關 & 行銷助手</strong>
-                                        <span class="text-xs text-stone-500">生成回覆與吸睛行銷貼文</span>
-                                    </div>
-                                </li>
-                            </ul>
-                        </div>
+                    <button id="analyzeBtn" class="btn-primary w-full text-[15px] mt-6 flex items-center justify-center gap-2">
+                        <span id="analyzeBtnLabel">啟動 AI 智能分析</span>
+                    </button>
+                </div>
+
+                <!-- Feature list (compact) -->
+                <div class="mt-10 pt-8 border-t hairline grid grid-cols-1 sm:grid-cols-3 gap-6 text-center">
+                    <div>
+                        <div class="text-[13px] font-semibold" style="color: var(--ink-900);">情緒分析</div>
+                        <div class="text-[12px] mt-1" style="color: var(--ink-500);">一眼看懂好壞評</div>
+                    </div>
+                    <div>
+                        <div class="text-[13px] font-semibold" style="color: var(--ink-900);">SWOT 策略</div>
+                        <div class="text-[12px] mt-1" style="color: var(--ink-500);">虛擬營運長建議</div>
+                    </div>
+                    <div>
+                        <div class="text-[13px] font-semibold" style="color: var(--ink-900);">9 個 AI 工具</div>
+                        <div class="text-[12px] mt-1" style="color: var(--ink-500);">回覆、行銷、週計畫</div>
                     </div>
                 </div>
             </div>
 
-            <p class="text-center text-xs text-stone-400 mt-8 font-medium tracking-wide">
-                Powered by Google Gemini 2.0 Flash
+            <p class="text-center text-xs mt-6" style="color: var(--ink-400);">
+                Powered by Google Gemini
             </p>
         </div>
     </section>
 
-    <!-- NEW: Game Section (Standalone Large Block) -->
-    <section id="game-section" class="py-24 bg-stone-900 text-white relative overflow-hidden">
-        <!-- Background Decor -->
-        <div
-            class="absolute top-0 right-0 w-[500px] h-[500px] bg-orange-500/20 rounded-full blur-[100px] -mr-20 -mt-20 pointer-events-none">
-        </div>
-        <div
-            class="absolute bottom-0 left-0 w-[500px] h-[500px] bg-pink-600/20 rounded-full blur-[100px] -ml-20 -mb-20 pointer-events-none">
-        </div>
-
-        <div class="container mx-auto px-6 relative z-10">
-            <div class="max-w-6xl mx-auto grid md:grid-cols-2 gap-16 items-center">
-                <div class="order-2 md:order-1 relative group">
-                    <!-- Rotated Card Effect -->
-                    <div
-                        class="absolute inset-0 bg-gradient-to-r from-orange-400 to-pink-500 rounded-3xl transform rotate-3 scale-105 opacity-50 blur-lg group-hover:rotate-6 transition-transform duration-500">
+    <!-- ========== GAME SECTION ========== -->
+    <section id="game-section" class="py-24 md:py-32 border-t hairline" style="background: var(--ink-50);">
+        <div class="container mx-auto px-6 max-w-5xl">
+            <div class="grid md:grid-cols-2 gap-12 md:gap-16 items-center">
+                <div>
+                    <div class="chip mb-6" style="background: var(--paper); border: 1px solid var(--ink-200);">
+                        <span class="dot"></span>
+                        <span>情境模擬</span>
                     </div>
-                    <div
-                        class="relative bg-stone-800 border border-stone-700 rounded-3xl p-8 overflow-hidden shadow-2xl">
-                        <!-- Visual representation of the game -->
-                        <div
-                            class="space-y-4 opacity-50 pointer-events-none select-none grayscale group-hover:grayscale-0 transition-all duration-500">
-                            <div class="h-4 bg-stone-700 rounded w-3/4"></div>
-                            <div class="h-32 bg-stone-700 rounded-xl w-full"></div>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div class="h-12 bg-stone-700 rounded-lg"></div>
-                                <div class="h-12 bg-stone-700 rounded-lg"></div>
-                            </div>
-                        </div>
-                        <div class="absolute inset-0 flex items-center justify-center">
-                            <div
-                                class="w-20 h-20 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center border border-white/20 group-hover:scale-110 transition-transform duration-300">
-                                <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z">
-                                    </path>
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                </svg>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="order-1 md:order-2">
-                    <div
-                        class="inline-flex items-center gap-2 px-3 py-1 text-xs font-bold tracking-wider text-orange-300 uppercase bg-orange-500/20 rounded-full border border-orange-500/30 mb-6">
-                        <span class="w-2 h-2 rounded-full bg-orange-400 animate-pulse"></span>
-                        情境模擬挑戰
-                    </div>
-                    <h2 class="text-4xl md:text-5xl font-black mb-6 tracking-tight leading-tight">
-                        店長決策模擬室<br>
-                        <span class="text-stone-400">你的直覺 vs 顧客數據</span>
+                    <h2 class="display text-[36px] md:text-[48px] mb-5" style="color: var(--ink-900);">
+                        店長決策模擬室。
                     </h2>
-                    <p class="text-stone-300 text-lg mb-8 leading-relaxed">
-                        面對 10 個真實餐廳經營難題：負評爆量、員工士氣低落、漲價還是降價？<br>
-                        進入虛擬決策室，測試你的管理智商，看看你能否成為「洞察大師」。
+                    <p class="text-[17px] mb-8 leading-relaxed" style="color: var(--ink-600);">
+                        10 個真實經營難題——負評爆量、員工士氣、漲價還是降價。<br>
+                        進入虛擬決策室，測試你的管理直覺是否和顧客數據對得上。
                     </p>
-                    <div class="flex flex-col sm:flex-row gap-4">
-                        <a href="insightx_game.html" target="_blank"
-                            class="px-8 py-4 bg-gradient-to-r from-orange-500 to-pink-600 hover:from-orange-400 hover:to-pink-500 text-white font-bold rounded-2xl transition-all shadow-lg shadow-orange-500/20 flex items-center justify-center gap-2 text-lg group">
-                            立即進入挑戰
-                            <svg class="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none"
-                                stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
-                            </svg>
-                        </a>
+                    <a href="insightx_game.html" target="_blank" class="btn-primary text-[15px] inline-flex items-center gap-2">
+                        立即開始挑戰
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+                        </svg>
+                    </a>
+                </div>
+                <div class="card p-8 dot-bg">
+                    <div class="space-y-4">
+                        <div class="h-3 w-2/3 rounded-full" style="background: var(--ink-200);"></div>
+                        <div class="h-24 w-full rounded-xl" style="background: var(--ink-100);"></div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="h-10 rounded-lg" style="background: var(--ink-100);"></div>
+                            <div class="h-10 rounded-lg" style="background: var(--ink-100);"></div>
+                        </div>
+                        <div class="flex justify-center pt-2">
+                            <div class="w-14 h-14 rounded-full flex items-center justify-center text-white" style="background: linear-gradient(135deg, var(--accent-hover), var(--accent)); box-shadow: 0 4px 16px -4px rgba(94, 106, 210, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.2);">
+                                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- 載入中骨架 (Placeholder) -->
-    <section id="loadingCard" class="hidden px-6 pt-10 pb-10">
-        <div class="bg-white p-8 md:p-12 rounded-3xl shadow-xl max-w-5xl mx-auto border border-slate-100">
-            <div class="flex items-center justify-center gap-3 mb-8">
-                <svg class="w-5 h-5 text-orange-500 animate-spin flex-shrink-0" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
-                </svg>
-                <p id="loading-status-text" class="text-sm font-medium text-stone-500">
-                    正在連線 Google Maps，取得店家資訊...
-                </p>
-            </div>
-            <div class="animate-pulse space-y-8">
-                <div class="h-8 bg-slate-200 rounded-lg w-1/3 mx-auto"></div>
-                <div class="h-4 bg-slate-100 rounded w-1/4 mx-auto"></div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
-                    <div class="bg-slate-50 h-64 rounded-2xl"></div>
-                    <div class="bg-slate-50 h-64 rounded-2xl"></div>
+    <!-- ========== LOADING ========== -->
+    <section id="loadingCard" class="hidden px-6 py-20">
+        <div class="container mx-auto max-w-4xl">
+            <div class="card p-12">
+                <div class="flex items-center justify-center gap-3 mb-10">
+                    <div class="loader"></div>
+                    <p id="loading-status-text" class="text-sm font-medium" style="color: var(--ink-500);">
+                        正在連線 Google Maps，取得店家資訊...
+                    </p>
+                </div>
+                <div class="animate-pulse space-y-6">
+                    <div class="h-6 rounded-lg w-1/3 mx-auto" style="background: var(--ink-100);"></div>
+                    <div class="h-4 rounded w-1/4 mx-auto" style="background: var(--ink-100);"></div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                        <div class="h-48 rounded-2xl" style="background: var(--ink-50);"></div>
+                        <div class="h-48 rounded-2xl" style="background: var(--ink-50);"></div>
+                    </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- 結果區塊 (Results Section) -->
+    <!-- ========== RESULTS ========== -->
     <section id="resultsCard" class="hidden px-6 pb-20 fade-in-up">
-        <div class="container mx-auto max-w-6xl">
+        <div class="container mx-auto max-w-5xl">
 
-            <!-- 標題與分頁 -->
-            <div class="card rounded-b-none border-b-0 p-8 md:p-10 text-center relative z-10 shadow-sm">
-                <h3 class="text-3xl font-bold text-stone-900 tracking-tight">分析完成報告</h3>
-                <p id="report-total"
-                    class="text-orange-700 font-semibold mt-3 bg-orange-50 border border-orange-100 inline-block px-4 py-1.5 rounded-full text-sm">
-                    共分析 723 則跨平台評論
-                </p>
-                <p id="report-store-name" class="hidden text-stone-600 font-medium mt-2 text-sm">
-                    <span class="inline-flex items-center gap-1.5">
-                        <svg class="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+            <!-- Header -->
+            <div class="text-center mb-10">
+                <h2 class="display text-[32px] md:text-[44px] mb-4">分析完成</h2>
+                <p id="report-total" class="chip">共分析 723 則評論</p>
+                <p id="report-store-name" class="hidden mt-4 text-sm" style="color: var(--ink-500);">
+                    <span class="inline-flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                         <span id="store-name-text">—</span>
                     </span>
                 </p>
 
-                <div class="mt-8 flex justify-center space-x-2 overflow-x-auto pb-2 sm:pb-0 custom-scrollbar">
-                    <button data-platform="overall"
-                        class="platform-tab px-6 py-3 rounded-full text-sm font-bold transition-all bg-stone-900 text-white shadow-lg ring-2 ring-stone-200 ring-offset-2">綜合分析</button>
-                    <button data-platform="google"
-                        class="platform-tab px-6 py-3 rounded-full text-sm font-bold text-stone-500 hover:bg-stone-100 transition-all">Google Maps</button>
+                <!-- Platform sub-tabs -->
+                <div class="mt-8 flex justify-center">
+                    <div class="segmented" role="tablist" aria-label="分析視角">
+                        <button data-platform="overall" role="tab" aria-selected="true" class="platform-tab seg-btn is-active">綜合分析</button>
+                        <button data-platform="google" role="tab" aria-selected="false" class="platform-tab seg-btn">Google Maps</button>
+                    </div>
                 </div>
             </div>
 
-            <!-- 分析卡片內容 -->
-            <div class="card rounded-t-none shadow-xl border-t-0 p-8 md:p-12 relative z-0">
+            <!-- Good / Bad split -->
+            <div class="card p-8 md:p-12">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-16">
-
-                    <!-- 左欄：優點 -->
-                    <div class="flex flex-col h-full">
-                        <div class="flex items-center gap-4 mb-8">
-                            <div
-                                class="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600 shadow-sm border border-emerald-100">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5">
-                                    </path>
-                                </svg>
-                            </div>
-                            <div>
-                                <h4 class="text-2xl font-bold text-stone-900">顧客最愛</h4>
-                                <span class="text-sm text-stone-500">Highlights</span>
-                            </div>
-                        </div>
-
-                        <div class="space-y-8 flex-grow">
-                            <!-- 數據條 -->
-                            <div class="group">
-                                <div class="flex justify-between mb-2 text-sm font-bold text-stone-700">
-                                    <span id="good-1-label">餐點美味</span>
-                                    <span id="good-1-value" class="text-emerald-600">32%</span>
-                                </div>
-                                <div class="w-full bg-stone-100 rounded-full h-3 overflow-hidden">
-                                    <div id="good-1-bar"
-                                        class="bg-gradient-to-r from-emerald-400 to-teal-400 h-3 rounded-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(52,211,153,0.3)]"
-                                        style="width: 32%"></div>
-                                </div>
-                            </div>
-                            <div class="group">
-                                <div class="flex justify-between mb-2 text-sm font-bold text-stone-700">
-                                    <span id="good-2-label">環境舒適</span>
-                                    <span id="good-2-value" class="text-emerald-600">25%</span>
-                                </div>
-                                <div class="w-full bg-stone-100 rounded-full h-3 overflow-hidden">
-                                    <div id="good-2-bar"
-                                        class="bg-gradient-to-r from-emerald-400 to-teal-400 h-3 rounded-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(52,211,153,0.3)]"
-                                        style="width: 25%"></div>
-                                </div>
-                            </div>
-                            <div class="group">
-                                <div class="flex justify-between mb-2 text-sm font-bold text-stone-700">
-                                    <span id="good-3-label">服務親切</span>
-                                    <span id="good-3-value" class="text-emerald-600">20%</span>
-                                </div>
-                                <div class="w-full bg-stone-100 rounded-full h-3 overflow-hidden">
-                                    <div id="good-3-bar"
-                                        class="bg-gradient-to-r from-emerald-400 to-teal-400 h-3 rounded-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(52,211,153,0.3)]"
-                                        style="width: 20%"></div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- 生成行銷文案按鈕 -->
-                        <div class="mt-10 pt-8 border-t border-stone-100">
-                            <button id="generate-marketing-btn"
-                                class="w-full group bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-bold py-4 px-4 rounded-2xl transition duration-300 flex items-center justify-center space-x-2">
-                                <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor"
-                                    viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z">
-                                    </path>
-                                </svg>
-                                <span>利用優點生成 FB/IG 行銷貼文</span>
-                            </button>
-                            <p class="text-xs text-center text-stone-400 mt-3 font-medium">AI 將自動整合上述優點撰寫吸睛文案</p>
-                        </div>
-                    </div>
-
-                    <!-- 右欄：待改進 -->
+                    <!-- Good -->
                     <div>
-                        <div class="flex items-center gap-4 mb-8">
-                            <div
-                                class="w-12 h-12 bg-orange-50 rounded-2xl flex items-center justify-center text-orange-600 shadow-sm border border-orange-100">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018a2 2 0 01.485.06l3.76.94m-7 10v5a2 2 0 002 2h.096c.5 0 .905-.405.905-.904 0-.715.211-1.413.608-2.008L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5">
-                                    </path>
+                        <div class="flex items-center justify-between mb-8">
+                            <div>
+                                <div class="text-[11px] uppercase tracking-wider font-semibold" style="color: var(--ink-400);">Strengths</div>
+                                <h3 class="text-[22px] font-bold mt-1">顧客最愛</h3>
+                            </div>
+                            <div class="w-8 h-8 rounded-full flex items-center justify-center text-white" style="background: linear-gradient(135deg, var(--accent-hover), var(--accent)); box-shadow: 0 2px 8px rgba(94, 106, 210, 0.35);">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"></path>
                                 </svg>
                             </div>
+                        </div>
+
+                        <div class="space-y-7">
                             <div>
-                                <h4 class="text-2xl font-bold text-stone-900">待改進</h4>
-                                <span class="text-sm text-stone-500">Pain Points</span>
+                                <div class="flex justify-between mb-2.5 text-[13px] font-semibold">
+                                    <span id="good-1-label" style="color: var(--ink-800);">餐點美味</span>
+                                    <span id="good-1-value" style="color: var(--ink-900);">32%</span>
+                                </div>
+                                <div class="bar-track"><div id="good-1-bar" class="bar-fill-good" style="width: 32%"></div></div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between mb-2.5 text-[13px] font-semibold">
+                                    <span id="good-2-label" style="color: var(--ink-800);">環境舒適</span>
+                                    <span id="good-2-value" style="color: var(--ink-900);">25%</span>
+                                </div>
+                                <div class="bar-track"><div id="good-2-bar" class="bar-fill-good" style="width: 25%"></div></div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between mb-2.5 text-[13px] font-semibold">
+                                    <span id="good-3-label" style="color: var(--ink-800);">服務親切</span>
+                                    <span id="good-3-value" style="color: var(--ink-900);">20%</span>
+                                </div>
+                                <div class="bar-track"><div id="good-3-bar" class="bar-fill-good" style="width: 20%"></div></div>
                             </div>
                         </div>
 
-                        <div class="space-y-8">
-                            <div class="group">
-                                <div class="flex justify-between items-center mb-2">
-                                    <div class="flex items-center gap-3" id="bad-1-container">
-                                        <span class="text-sm font-bold text-stone-700" id="bad-1-label">出餐速度慢</span>
-                                    </div>
-                                    <span id="bad-1-value" class="text-orange-600 text-sm font-bold">40%</span>
-                                </div>
-                                <div class="w-full bg-stone-100 rounded-full h-3 overflow-hidden">
-                                    <div id="bad-1-bar"
-                                        class="bg-gradient-to-r from-orange-400 to-red-400 h-3 rounded-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(251,146,60,0.3)]"
-                                        style="width: 40%"></div>
-                                </div>
+                        <div class="mt-10 pt-8 border-t hairline">
+                            <button id="generate-marketing-btn" class="btn-ghost w-full text-[14px] flex items-center justify-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                </svg>
+                                用這些優點產生社群行銷貼文
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Bad -->
+                    <div>
+                        <div class="flex items-center justify-between mb-8">
+                            <div>
+                                <div class="text-[11px] uppercase tracking-wider font-semibold" style="color: var(--ink-400);">Pain points</div>
+                                <h3 class="text-[22px] font-bold mt-1">待改進</h3>
                             </div>
-                            <div class="group">
-                                <div class="flex justify-between items-center mb-2">
-                                    <div class="flex items-center gap-3" id="bad-2-container">
-                                        <span class="text-sm font-bold text-stone-700" id="bad-2-label">停車不方便</span>
-                                    </div>
-                                    <span id="bad-2-value" class="text-orange-600 text-sm font-bold">18%</span>
-                                </div>
-                                <div class="w-full bg-stone-100 rounded-full h-3 overflow-hidden">
-                                    <div id="bad-2-bar"
-                                        class="bg-gradient-to-r from-orange-400 to-red-400 h-3 rounded-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(251,146,60,0.3)]"
-                                        style="width: 18%"></div>
-                                </div>
+                            <div class="w-8 h-8 rounded-full flex items-center justify-center text-white" style="background: linear-gradient(135deg, #dc8463, var(--warm)); box-shadow: 0 2px 8px rgba(201, 100, 66, 0.3);">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018a2 2 0 01.485.06l3.76.94m-7 10v5a2 2 0 002 2h.096c.5 0 .905-.405.905-.904 0-.715.211-1.413.608-2.008L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5"></path>
+                                </svg>
                             </div>
-                            <div class="group">
-                                <div class="flex justify-between items-center mb-2">
-                                    <div class="flex items-center gap-3" id="bad-3-container">
-                                        <span class="text-sm font-bold text-stone-700" id="bad-3-label">價格偏高</span>
+                        </div>
+
+                        <div class="space-y-7">
+                            <div>
+                                <div class="flex justify-between items-center mb-2.5">
+                                    <div class="flex items-center gap-2 flex-1 min-w-0" id="bad-1-container">
+                                        <span class="text-[13px] font-semibold" id="bad-1-label" style="color: var(--ink-800);">出餐速度慢</span>
                                     </div>
-                                    <span id="bad-3-value" class="text-orange-600 text-sm font-bold">12%</span>
+                                    <span id="bad-1-value" class="text-[13px] font-semibold" style="color: var(--warm-ink);">40%</span>
                                 </div>
-                                <div class="w-full bg-stone-100 rounded-full h-3 overflow-hidden">
-                                    <div id="bad-3-bar"
-                                        class="bg-gradient-to-r from-orange-400 to-red-400 h-3 rounded-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(251,146,60,0.3)]"
-                                        style="width: 12%"></div>
+                                <div class="bar-track"><div id="bad-1-bar" class="bar-fill-bad" style="width: 40%"></div></div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between items-center mb-2.5">
+                                    <div class="flex items-center gap-2 flex-1 min-w-0" id="bad-2-container">
+                                        <span class="text-[13px] font-semibold" id="bad-2-label" style="color: var(--ink-800);">停車不方便</span>
+                                    </div>
+                                    <span id="bad-2-value" class="text-[13px] font-semibold" style="color: var(--warm-ink);">18%</span>
                                 </div>
+                                <div class="bar-track"><div id="bad-2-bar" class="bar-fill-bad" style="width: 18%"></div></div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between items-center mb-2.5">
+                                    <div class="flex items-center gap-2 flex-1 min-w-0" id="bad-3-container">
+                                        <span class="text-[13px] font-semibold" id="bad-3-label" style="color: var(--ink-800);">價格偏高</span>
+                                    </div>
+                                    <span id="bad-3-value" class="text-[13px] font-semibold" style="color: var(--warm-ink);">12%</span>
+                                </div>
+                                <div class="bar-track"><div id="bad-3-bar" class="bar-fill-bad" style="width: 12%"></div></div>
                             </div>
                         </div>
                     </div>
@@ -754,313 +781,233 @@
         </div>
     </section>
 
-    <!-- SWOT 分析區塊 -->
+    <!-- ========== SWOT ========== -->
     <section id="professionalAnalysis" class="hidden px-6 pb-20 fade-in-up">
-        <div class="container mx-auto max-w-6xl">
+        <div class="container mx-auto max-w-5xl">
             <div class="text-center mb-12">
-                <h3 class="text-3xl font-bold text-stone-900">AI 策略洞察</h3>
-                <p class="text-stone-500 mt-3 font-medium">基於數據生成的專業 SWOT 營運建議</p>
+                <div class="text-[11px] uppercase tracking-wider font-semibold mb-2" style="color: var(--ink-400);">Strategic framework</div>
+                <h2 class="display text-[32px] md:text-[40px]">SWOT 策略洞察</h2>
+                <p class="mt-3 text-[15px]" style="color: var(--ink-500);">基於數據自動生成的四象限營運建議</p>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <!-- S: 優勢 -->
-                <div class="card p-8 border-l-4 border-l-emerald-400 hover:shadow-lg transition-all">
-                    <div class="flex items-center gap-4 mb-6">
-                        <span
-                            class="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600 font-black text-xl">S</span>
-                        <h4 class="text-xl font-bold text-stone-900">優勢 Strengths</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div class="card p-8">
+                    <div class="flex items-center gap-3 mb-5">
+                        <span class="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-[15px] text-white" style="background: linear-gradient(135deg, var(--accent-hover), var(--accent)); box-shadow: 0 2px 8px rgba(94, 106, 210, 0.3);">S</span>
+                        <h3 class="text-[18px] font-bold">優勢 Strengths</h3>
                     </div>
-                    <ul id="swot-S-list" class="space-y-4">
-                        <li class="flex gap-3 text-stone-700">
-                            <span class="text-emerald-500 mt-0.5 font-bold">✔</span>
-                            <span><strong>餐點美味 (32%):</strong> 核心產品力強，顧客滿意度高。</span>
-                        </li>
-                        <li class="flex gap-3 text-stone-700">
-                            <span class="text-emerald-500 mt-0.5 font-bold">✔</span>
-                            <span><strong>環境舒適 (25%):</strong> 提供良好的用餐體驗，有助於提高客單價。</span>
-                        </li>
+                    <ul id="swot-S-list" class="space-y-3 text-[14px]" style="color: var(--ink-700);">
+                        <li><strong>餐點美味 (32%)：</strong>核心產品力強，顧客滿意度高。</li>
+                        <li><strong>環境舒適 (25%)：</strong>提供良好的用餐體驗，有助於提高客單價。</li>
                     </ul>
                 </div>
 
-                <!-- W: 劣勢 -->
-                <div class="card p-8 border-l-4 border-l-rose-400 hover:shadow-lg transition-all">
-                    <div class="flex items-center gap-4 mb-6">
-                        <span
-                            class="w-12 h-12 rounded-2xl bg-rose-50 flex items-center justify-center text-rose-600 font-black text-xl">W</span>
-                        <h4 class="text-xl font-bold text-stone-900">劣勢 Weaknesses</h4>
+                <div class="card p-8">
+                    <div class="flex items-center gap-3 mb-5">
+                        <span class="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-[15px] text-white" style="background: linear-gradient(135deg, #dc8463, var(--warm)); box-shadow: 0 2px 8px rgba(201, 100, 66, 0.3);">W</span>
+                        <h3 class="text-[18px] font-bold">劣勢 Weaknesses</h3>
                     </div>
-                    <ul id="swot-W-list" class="space-y-4">
-                        <li class="flex gap-3 text-stone-700">
-                            <span class="text-rose-500 mt-0.5 font-bold">⚠</span>
-                            <span><strong>出餐速度慢 (40%):</strong> 營運流程 SOP 存在瓶頸，為最大抱怨點。</span>
-                        </li>
-                        <li class="flex gap-3 text-stone-700">
-                            <span class="text-rose-500 mt-0.5 font-bold">⚠</span>
-                            <span><strong>停車不方便 (18%):</strong> 地理位置限制，可能流失開車客群。</span>
-                        </li>
+                    <ul id="swot-W-list" class="space-y-3 text-[14px]" style="color: var(--ink-700);">
+                        <li><strong>出餐速度慢 (40%)：</strong>營運流程 SOP 存在瓶頸，為最大抱怨點。</li>
+                        <li><strong>停車不方便 (18%)：</strong>地理位置限制，可能流失開車客群。</li>
                     </ul>
                 </div>
 
-                <!-- O: 機會 -->
-                <div class="card p-8 border-l-4 border-l-blue-400 hover:shadow-lg transition-all">
-                    <div class="flex items-center gap-4 mb-6">
-                        <span
-                            class="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600 font-black text-xl">O</span>
-                        <h4 class="text-xl font-bold text-stone-900">機會 Opportunities</h4>
+                <div class="card p-8">
+                    <div class="flex items-center gap-3 mb-5">
+                        <span class="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-[15px]" style="background: var(--accent-wash); color: var(--accent-ink); border: 1px solid rgba(94, 106, 210, 0.15);">O</span>
+                        <h3 class="text-[18px] font-bold">機會 Opportunities</h3>
                     </div>
-                    <ul id="swot-O-list" class="space-y-4">
-                        <li class="flex gap-3 text-stone-700">
-                            <span class="text-blue-500 mt-0.5 font-bold">💡</span>
-                            <span><strong>優化流程:</strong> 針對「出餐慢」改善廚房動線或增加人手，可立即提升翻桌率。</span>
-                        </li>
-                        <li class="flex gap-3 text-stone-700">
-                            <span class="text-blue-500 mt-0.5 font-bold">💡</span>
-                            <span><strong>異業合作:</strong> 與鄰近停車場洽談「用餐折抵停車費」，化解「停車難」的劣勢。</span>
-                        </li>
+                    <ul id="swot-O-list" class="space-y-3 text-[14px]" style="color: var(--ink-700);">
+                        <li><strong>優化流程：</strong>針對「出餐慢」改善廚房動線或增加人手，可立即提升翻桌率。</li>
+                        <li><strong>異業合作：</strong>與鄰近停車場洽談「用餐折抵停車費」，化解「停車難」的劣勢。</li>
                     </ul>
                 </div>
 
-                <!-- T: 威脅 -->
-                <div class="card p-8 border-l-4 border-l-amber-400 hover:shadow-lg transition-all">
-                    <div class="flex items-center gap-4 mb-6">
-                        <span
-                            class="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600 font-black text-xl">T</span>
-                        <h4 class="text-xl font-bold text-stone-900">威脅 Threats</h4>
+                <div class="card p-8">
+                    <div class="flex items-center gap-3 mb-5">
+                        <span class="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-[15px]" style="background: rgba(15, 42, 68, 0.08); color: var(--ink-800); border: 1px solid rgba(15, 42, 68, 0.12);">T</span>
+                        <h3 class="text-[18px] font-bold">威脅 Threats</h3>
                     </div>
-                    <ul id="swot-T-list" class="space-y-4">
-                        <li class="flex gap-3 text-stone-700">
-                            <span class="text-amber-500 mt-0.5 font-bold">⚡</span>
-                            <span><strong>流失尖峰客群:</strong> 「出餐慢」將導致尖峰時段顧客因不耐久候而離開。</span>
-                        </li>
-                        <li class="flex gap-3 text-stone-700">
-                            <span class="text-amber-500 mt-0.5 font-bold">⚡</span>
-                            <span><strong>新客卻步:</strong> 「停車難」與「價格高」的評論，可能使新客在搜尋階段就放棄嘗試。</span>
-                        </li>
+                    <ul id="swot-T-list" class="space-y-3 text-[14px]" style="color: var(--ink-700);">
+                        <li><strong>流失尖峰客群：</strong>「出餐慢」將導致尖峰時段顧客因不耐久候而離開。</li>
+                        <li><strong>新客卻步：</strong>「停車難」與「價格高」的評論，可能使新客在搜尋階段就放棄嘗試。</li>
                     </ul>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- (NEW) 主管 AI 工具箱 -->
+    <!-- ========== MANAGER TOOLS ========== -->
     <section id="manager-tools" class="hidden px-6 pb-24 fade-in-up">
-        <div class="container mx-auto max-w-6xl">
+        <div class="container mx-auto max-w-5xl">
             <div class="text-center mb-12">
-                <div
-                    class="inline-flex items-center justify-center p-3 mb-4 bg-accent-50 rounded-2xl text-accent-600 shadow-sm border border-accent-100">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z">
-                        </path>
-                    </svg>
-                </div>
-                <h3 class="text-3xl font-bold text-stone-900">主管 AI 工具箱</h3>
-                <p class="text-stone-500 mt-3 font-medium">從數據分析到實際行動，AI 幫您完成</p>
+                <div class="text-[11px] uppercase tracking-wider font-semibold mb-2" style="color: var(--ink-400);">AI Toolbox</div>
+                <h2 class="display text-[32px] md:text-[40px]">主管 AI 工具箱</h2>
+                <p class="mt-3 text-[15px]" style="color: var(--ink-500);">從分析到實際行動，AI 幫你完成</p>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <!-- Tool 1: Weekly Plan -->
-                <div
-                    class="card p-8 flex flex-col items-center text-center group hover:-translate-y-2 transition-transform">
-                    <div
-                        class="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mb-6 text-blue-500 group-hover:bg-blue-100 transition-colors">
-                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
-                            </path>
-                        </svg>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <div class="card p-8 flex flex-col">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-5" style="background: var(--accent-wash); color: var(--accent-ink); border: 1px solid rgba(94, 106, 210, 0.15);">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                     </div>
-                    <h4 class="text-xl font-bold text-stone-900 mb-2">生成週行動計畫</h4>
-                    <p class="text-stone-500 text-sm mb-8 flex-grow leading-relaxed">
-                        根據本週的 SWOT 分析，自動規劃下週一到週日的具體改善排程與負責人。
+                    <h3 class="text-[17px] font-bold mb-2">週行動計畫</h3>
+                    <p class="text-[13px] leading-relaxed mb-6 flex-grow" style="color: var(--ink-500);">
+                        根據本週 SWOT 分析，自動規劃下週一到週日的具體改善排程與負責人。
                     </p>
-                    <button id="btn-weekly-plan"
-                        class="w-full bg-white text-blue-600 border border-blue-200 hover:bg-blue-50 font-bold py-3 px-6 rounded-xl transition duration-300 shadow-sm">
-                        📋 立即生成
-                    </button>
+                    <button id="btn-weekly-plan" class="btn-ghost text-[13px] w-full">立即生成</button>
                 </div>
 
-                <!-- Tool 2: Training Script -->
-                <div
-                    class="card p-8 flex flex-col items-center text-center group hover:-translate-y-2 transition-transform">
-                    <div
-                        class="w-16 h-16 bg-violet-50 rounded-2xl flex items-center justify-center mb-6 text-violet-500 group-hover:bg-violet-100 transition-colors">
-                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z">
-                            </path>
-                        </svg>
+                <div class="card p-8 flex flex-col">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-5" style="background: var(--accent-wash); color: var(--accent-ink); border: 1px solid rgba(94, 106, 210, 0.15);">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z"></path></svg>
                     </div>
-                    <h4 class="text-xl font-bold text-stone-900 mb-2">產生員工培訓劇本</h4>
-                    <p class="text-stone-500 text-sm mb-8 flex-grow leading-relaxed">
-                        針對「出餐慢」等痛點，生成「正確 vs 錯誤」的應對話術，強化員工教育訓練。
+                    <h3 class="text-[17px] font-bold mb-2">員工培訓劇本</h3>
+                    <p class="text-[13px] leading-relaxed mb-6 flex-grow" style="color: var(--ink-500);">
+                        針對主要痛點，生成「正確 vs 錯誤」的應對話術，強化員工教育訓練。
                     </p>
-                    <button id="btn-training-script"
-                        class="w-full bg-white text-violet-600 border border-violet-200 hover:bg-violet-50 font-bold py-3 px-6 rounded-xl transition duration-300 shadow-sm">
-                        🗣️ 產生劇本
-                    </button>
+                    <button id="btn-training-script" class="btn-ghost text-[13px] w-full">產生劇本</button>
                 </div>
 
-                <!-- Tool 3: Internal Email -->
-                <div
-                    class="card p-8 flex flex-col items-center text-center group hover:-translate-y-2 transition-transform">
-                    <div
-                        class="w-16 h-16 bg-orange-50 rounded-2xl flex items-center justify-center mb-6 text-orange-500 group-hover:bg-orange-100 transition-colors">
-                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z">
-                            </path>
-                        </svg>
+                <div class="card p-8 flex flex-col">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-5" style="background: var(--accent-wash); color: var(--accent-ink); border: 1px solid rgba(94, 106, 210, 0.15);">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
                     </div>
-                    <h4 class="text-xl font-bold text-stone-900 mb-2">撰寫內部公告信</h4>
-                    <p class="text-stone-500 text-sm mb-8 flex-grow leading-relaxed">
+                    <h3 class="text-[17px] font-bold mb-2">內部公告信</h3>
+                    <p class="text-[13px] leading-relaxed mb-6 flex-grow" style="color: var(--ink-500);">
                         自動草擬一封給全體員工的內部信，傳達本週重點、改善目標並激勵士氣。
                     </p>
-                    <button id="btn-internal-email"
-                        class="w-full bg-white text-orange-600 border border-orange-200 hover:bg-orange-50 font-bold py-3 px-6 rounded-xl transition duration-300 shadow-sm">
-                        📧 草擬信件
-                    </button>
+                    <button id="btn-internal-email" class="btn-ghost text-[13px] w-full">草擬信件</button>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- 結尾行動呼籲 (CTA) -->
-    <section id="cta" class="relative py-32 overflow-hidden">
-        <!-- 背景 -->
-        <div class="absolute inset-0 bg-stone-900 z-0"></div>
-        <div class="absolute inset-0 bg-gradient-to-br from-stone-900 via-stone-800 to-stone-900 opacity-90 z-0"></div>
-        <!-- 裝飾光點 -->
-        <div
-            class="absolute top-0 right-0 w-96 h-96 bg-orange-500/10 rounded-full mix-blend-screen filter blur-[100px]">
-        </div>
-        <div
-            class="absolute bottom-0 left-0 w-96 h-96 bg-emerald-500/10 rounded-full mix-blend-screen filter blur-[100px]">
-        </div>
-
-        <div class="container mx-auto px-6 text-center relative z-10">
-            <h3 class="text-4xl md:text-5xl font-black mb-6 text-white tracking-tight leading-tight">
-                聆聽顧客心聲，<br class="md:hidden">從現在開始。
-            </h3>
-            <p class="text-xl text-stone-300 mb-12 max-w-2xl mx-auto font-light leading-relaxed">
-                別再讓寶貴的意見石沉大海。讓 AI 成為您全天候的營運顧問。
+    <!-- ========== BOTTOM CTA ========== -->
+    <section id="cta" class="py-32 border-t hairline" style="background: var(--ink-50);">
+        <div class="container mx-auto px-6 text-center max-w-3xl">
+            <h2 class="display text-[40px] md:text-[64px] mb-6" style="color: var(--ink-900);">
+                聆聽顧客心聲，<br/>從現在開始。
+            </h2>
+            <p class="text-lg md:text-xl mb-10" style="color: var(--ink-500);">
+                別再讓寶貴的意見石沉大海。讓 AI 成為你全天候的營運顧問。
             </p>
-            <button onclick="document.getElementById('demo-block').scrollIntoView({behavior: 'smooth'})"
-                class="bg-gradient-to-r from-orange-400 to-orange-600 hover:from-orange-500 hover:to-orange-700 text-white font-bold py-5 px-12 rounded-full text-xl transition duration-300 shadow-2xl hover:shadow-orange-500/25 transform hover:-translate-y-1 ring-4 ring-orange-500/20">
+            <button onclick="document.getElementById('demo-block').scrollIntoView({behavior:'smooth'})" class="btn-primary text-[15px]">
                 立即免費試用
             </button>
-            <p class="mt-8 text-stone-400 text-sm">無需信用卡 · 14 天免費體驗</p>
+            <p class="mt-6 text-xs" style="color: var(--ink-400);">無需信用卡 · 隨開隨用</p>
         </div>
     </section>
 
-    <!-- 頁尾 -->
-    <footer class="bg-white border-t border-stone-100 pt-16 pb-8">
-        <div class="container mx-auto px-6 flex flex-col items-center">
-            <div class="flex items-center gap-2 mb-4 opacity-80 grayscale hover:grayscale-0 transition duration-300">
-                <div
-                    class="w-6 h-6 rounded bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white text-xs font-bold">
-                    AI</div>
-                <span class="font-bold text-stone-900">顧客回饋洞察儀</span>
+    <!-- ========== FOOTER ========== -->
+    <footer class="py-12 border-t hairline">
+        <div class="container mx-auto px-6 flex flex-col items-center gap-3">
+            <div class="flex items-center gap-2">
+                <div class="w-6 h-6 rounded-md flex items-center justify-center text-white" style="background: linear-gradient(135deg, var(--accent-hover), var(--accent)); box-shadow: 0 2px 6px rgba(94, 106, 210, 0.3);">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                </div>
+                <span class="text-[13px] font-semibold" style="color: var(--ink-900);">InsightX</span>
             </div>
-            <p class="text-stone-400 text-sm">&copy; 2025 AI 顧客回饋洞察儀. All rights reserved.</p>
+            <p class="text-[12px]" style="color: var(--ink-400);">&copy; 2026 AI 顧客回饋洞察儀 · All rights reserved.</p>
         </div>
     </footer>
 
-    <!-- (Generic) AI Content Modal -->
+    <!-- ========== AI MODAL (Generic) ========== -->
     <div id="ai-modal"
-        class="hidden fixed inset-0 bg-stone-900/60 backdrop-blur-md z-[110] flex items-center justify-center p-6 transition-opacity duration-300">
-        <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-8 relative transform transition-all duration-300 scale-95 opacity-0 flex flex-col max-h-[85vh] border border-stone-100"
-            id="ai-modal-content">
-            <!-- 關閉按鈕 -->
+        class="hidden fixed inset-0 z-[110] flex items-center justify-center p-6 transition-opacity duration-300"
+        style="background: rgba(6, 27, 49, 0.42); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);">
+        <div class="rounded-[20px] max-w-lg w-full p-8 relative flex flex-col max-h-[85vh] transform transition-all duration-300 scale-95 opacity-0"
+            id="ai-modal-content"
+            style="background: var(--paper-elevated); border: 1px solid var(--hairline); box-shadow: 0 1px 2px rgba(50, 50, 93, 0.1), 0 24px 64px -12px rgba(6, 27, 49, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.6);">
+            <!-- Close -->
             <button id="ai-modal-close-btn"
-                class="absolute top-6 right-6 text-stone-400 hover:text-stone-600 transition-colors bg-stone-50 rounded-full p-2 z-10 hover:bg-stone-100">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
-                    </path>
+                class="absolute top-5 right-5 w-8 h-8 rounded-full flex items-center justify-center transition-colors"
+                style="background: var(--paper); color: var(--ink-500); border: 1px solid var(--hairline);"
+                onmouseover="this.style.background='var(--accent-wash)';this.style.color='var(--accent-ink)';"
+                onmouseout="this.style.background='var(--paper)';this.style.color='var(--ink-500)';">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path>
                 </svg>
             </button>
 
-            <!-- 標題區 -->
-            <div class="flex items-center gap-3 mb-6 shrink-0">
-                <span
-                    class="bg-gradient-to-br from-violet-500 to-purple-600 text-white p-2.5 rounded-xl shadow-lg shadow-violet-500/20">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+            <!-- Title -->
+            <div class="flex items-center gap-3 mb-5 shrink-0">
+                <span class="w-8 h-8 rounded-lg flex items-center justify-center text-white" style="background: linear-gradient(135deg, var(--accent-hover), var(--accent)); box-shadow: 0 2px 8px rgba(94, 106, 210, 0.35);">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
                     </svg>
                 </span>
-                <h4 id="ai-modal-title" class="text-xl font-bold text-stone-800">AI 智能生成</h4>
+                <h4 id="ai-modal-title" class="text-[17px] font-bold" style="color: var(--ink-900); letter-spacing: -0.015em;">AI 智能生成</h4>
             </div>
 
-            <!-- 內容區 -->
+            <!-- Content -->
             <div id="ai-content-area"
-                class="prose prose-stone prose-sm bg-stone-50 border border-stone-100 p-6 rounded-2xl min-h-[150px] text-stone-700 whitespace-normal overflow-y-auto custom-scrollbar shadow-inner max-w-none">
+                class="prose prose-sm max-w-none p-5 rounded-2xl min-h-[150px] overflow-y-auto custom-scrollbar text-[14px]"
+                style="background: var(--paper); border: 1px solid var(--hairline); box-shadow: inset 0 1px 2px rgba(6, 27, 49, 0.03);">
                 AI 正在思考中...
             </div>
 
-            <!-- 底部按鈕 -->
-            <button
-                class="mt-6 w-full bg-stone-900 hover:bg-black text-white font-bold py-3.5 px-4 rounded-xl transition shadow-lg shadow-stone-200 shrink-0 transform active:scale-[0.98]"
-                onclick="copyAiContent()">
+            <!-- Copy button -->
+            <button class="btn-primary mt-5 w-full text-[14px] shrink-0" onclick="copyAiContent()">
                 複製內容
             </button>
         </div>
     </div>
 
-    <!-- AI 對話框 -->
+    <!-- ========== CHAT MODAL ========== -->
     <div id="chat-modal"
-        class="hidden fixed bottom-28 right-5 md:right-10 w-80 md:w-96 h-[60vh] bg-white rounded-2xl shadow-2xl border border-stone-200 flex flex-col z-[100] overflow-hidden ring-1 ring-stone-900/5">
-        <div class="flex justify-between items-center p-4 border-b border-stone-100 bg-white">
+        class="hidden fixed bottom-24 right-5 md:right-8 w-80 md:w-96 h-[60vh] rounded-[20px] flex flex-col z-[100] overflow-hidden"
+        style="background: var(--paper-elevated); border: 1px solid var(--hairline); box-shadow: 0 1px 2px rgba(50, 50, 93, 0.1), 0 24px 64px -12px rgba(6, 27, 49, 0.28);">
+        <div class="flex justify-between items-center p-4 border-b hairline">
             <div class="flex items-center gap-2">
-                <div
-                    class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]">
-                </div>
-                <h4 class="font-bold text-stone-800">AI 策略顧問</h4>
+                <div class="w-2 h-2 rounded-full" style="background: var(--accent); box-shadow: 0 0 0 3px rgba(94, 106, 210, 0.18); animation: pulse-dot 1.8s ease-in-out infinite;"></div>
+                <h4 class="text-[14px] font-bold" style="color: var(--ink-900); letter-spacing: -0.015em;">AI 策略顧問</h4>
             </div>
-            <button id="chat-close-btn" class="text-stone-400 hover:text-stone-600 transition-colors">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
-                    </path>
+            <button id="chat-close-btn" class="w-7 h-7 rounded-full flex items-center justify-center transition-colors"
+                style="background: var(--paper); color: var(--ink-500); border: 1px solid var(--hairline);"
+                onmouseover="this.style.background='var(--accent-wash)';this.style.color='var(--accent-ink)';"
+                onmouseout="this.style.background='var(--paper)';this.style.color='var(--ink-500)';">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path>
                 </svg>
             </button>
         </div>
-        <div id="chat-log" class="flex-1 p-4 overflow-y-auto space-y-4 bg-stone-50/50 custom-scrollbar">
+        <div id="chat-log" class="flex-1 p-4 overflow-y-auto space-y-3 custom-scrollbar" style="background: var(--paper);">
             <div class="flex">
-                <div
-                    class="bg-white border border-stone-200 text-stone-800 p-4 rounded-2xl rounded-tl-none max-w-xs shadow-sm text-sm leading-relaxed prose prose-stone prose-sm max-w-none">
+                <div class="p-3 rounded-2xl rounded-tl-md max-w-xs text-[13px] leading-relaxed prose prose-sm max-w-none"
+                    style="background: var(--paper-elevated); border: 1px solid var(--hairline); box-shadow: var(--shadow-ring);">
                     <p id="chat-welcome-text">您好！我是您的 AI 策略顧問。您可以針對這份報告提出任何問題，例如：「如何改善出餐速度？」</p>
                 </div>
             </div>
         </div>
-        <form id="chat-form" class="p-3 border-t border-stone-100 bg-white">
+        <form id="chat-form" class="p-3 border-t hairline">
             <div class="flex gap-2">
                 <input type="text" id="chat-input" placeholder="詢問 AI 建議..."
-                    class="flex-1 w-full px-4 py-3 bg-stone-50 border-0 rounded-xl text-stone-900 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:bg-white transition-all text-sm placeholder-stone-400">
-                <button type="submit"
-                    class="bg-violet-600 hover:bg-violet-700 text-white p-3 rounded-xl transition duration-300 shadow-md shadow-violet-200 flex items-center justify-center">
-                    <svg class="w-5 h-5 transform rotate-45 -ml-1" fill="none" stroke="currentColor"
-                        viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                    class="flex-1 w-full px-4 py-2.5 rounded-xl text-[13px] transition-all"
+                    style="background: var(--paper); border: 1px solid var(--hairline); color: var(--ink-900);">
+                <button type="submit" class="w-10 h-10 rounded-xl flex items-center justify-center transition-all text-white"
+                    style="background: linear-gradient(180deg, var(--accent-hover) 0%, var(--accent) 100%); box-shadow: 0 1px 2px rgba(94, 106, 210, 0.35), 0 4px 10px -2px rgba(94, 106, 210, 0.4), inset 0 1px 0 rgba(255,255,255,0.12);">
+                    <svg class="w-4 h-4 transform rotate-45 -ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
                     </svg>
                 </button>
             </div>
         </form>
     </div>
 
-    <!-- AI 對話框觸發按鈕 & 提示 -->
-    <div id="chat-hint" class="hidden fixed bottom-28 right-5 md:right-10 w-auto z-[98] fade-in-up">
-        <div
-            class="bg-stone-800 text-white text-sm font-medium px-4 py-2 rounded-xl rounded-br-none shadow-xl mb-2 flex items-center gap-2">
-            <span>👋</span> 點我詢問 AI 策略！
+    <!-- Chat hint + toggle -->
+    <div id="chat-hint" class="hidden fixed bottom-24 right-5 md:right-8 z-[98] fade-in-up">
+        <div class="text-[12px] font-medium px-3 py-2 rounded-xl rounded-br-none mb-2 flex items-center gap-2 text-white"
+            style="background: linear-gradient(135deg, var(--accent-hover), var(--accent)); box-shadow: 0 8px 24px -6px rgba(94, 106, 210, 0.5);">
+            <span>👋</span> 點我詢問 AI 策略
         </div>
     </div>
     <button id="chat-toggle-btn"
-        class="hidden fixed bottom-8 right-5 md:right-10 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white w-14 h-14 rounded-full shadow-xl shadow-violet-500/30 flex items-center justify-center z-[99] transition-all duration-300 hover:scale-110 hover:-translate-y-1 ring-4 ring-white/30 backdrop-blur-md">
-        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z">
-            </path>
+        class="hidden fixed bottom-6 right-5 md:right-8 w-12 h-12 rounded-full flex items-center justify-center z-[99] transition-all duration-200 hover:scale-105 text-white"
+        style="background: linear-gradient(135deg, var(--accent-hover), var(--accent)); box-shadow: 0 1px 2px rgba(94, 106, 210, 0.35), 0 12px 32px -6px rgba(94, 106, 210, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.18);">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
         </svg>
     </button>
 
@@ -1078,7 +1025,7 @@
                 const mode = currentPlatform;
                 const label = (typeof MODE_CONFIG !== 'undefined' && MODE_CONFIG[mode])
                     ? MODE_CONFIG[mode].btnLabel
-                    : '✨ 啟動 AI 智能分析';
+                    : '啟動 AI 智能分析';
                 analyzeBtn.innerHTML = `<span id="analyzeBtnLabel">${label}</span>`;
             }
 
@@ -1117,8 +1064,7 @@
                     placeholder: '貼上 Google 地圖店家網址',
                     hint: '支援 maps.google.com、goo.gl/maps、share.google 短網址',
                     defaultUrl: 'https://share.google/Exmg5ZTEvmMknwuWF',
-                    btnLabel: '✨ 啟動 AI 智能分析',
-                    iconColor: 'text-orange-500',
+                    btnLabel: '啟動 AI 智能分析',
                     iconSvg: '<svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z"></path></svg>',
                     chatWelcome: '您好！我是您的 AI 策略顧問。您可以針對這份報告提出任何問題，例如：「如何改善出餐速度？」',
                     trainingModalTitle: 'AI 員工培訓劇本',
@@ -1132,8 +1078,7 @@
                     placeholder: '貼上 YouTube 影片網址（支援 youtu.be / shorts）',
                     hint: '支援 youtube.com/watch、youtu.be、youtube.com/shorts',
                     defaultUrl: '',
-                    btnLabel: '✨ 啟動 AI 觀眾留言分析',
-                    iconColor: 'text-red-500',
+                    btnLabel: '啟動 AI 觀眾留言分析',
                     iconSvg: '<svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>',
                     chatWelcome: '你好！我是你的 YouTube 頻道成長顧問。你可以針對這份觀眾留言報告提任何問題，例如：「如何提升訂閱轉換率？」',
                     trainingModalTitle: 'AI 頻道團隊培訓劇本',
@@ -1159,26 +1104,25 @@
                 const chatWelcomeEl = document.getElementById('chat-welcome-text');
                 if (chatWelcomeEl && cfg.chatWelcome) chatWelcomeEl.textContent = cfg.chatWelcome;
                 if (iconEl) {
-                    iconEl.className = `absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none ${cfg.iconColor}`;
                     iconEl.innerHTML = cfg.iconSvg;
                 }
                 if (urlEl) {
                     urlEl.placeholder = cfg.placeholder;
-                    // 只在 input 為空 或 是另一個模式的預設值時才覆蓋，避免蓋掉使用者手動貼上的網址
-                    const otherDefault = mode === 'google' ? MODE_CONFIG.youtube.defaultUrl : MODE_CONFIG.google.defaultUrl;
-                    if (!urlEl.value || urlEl.value === otherDefault) {
+                    // 只在 input 為空 或 是其他模式的預設值時才覆蓋，避免蓋掉使用者手動貼上的網址
+                    const otherDefaults = Object.keys(MODE_CONFIG)
+                        .filter(k => k !== mode)
+                        .map(k => MODE_CONFIG[k].defaultUrl)
+                        .filter(v => v);
+                    if (!urlEl.value || otherDefaults.includes(urlEl.value)) {
                         urlEl.value = cfg.defaultUrl;
                     }
                 }
 
-                // 切換 Tab 視覺狀態
+                // 切換 Tab 視覺狀態（segmented control）+ 同步 aria-selected
                 document.querySelectorAll('.mode-tab').forEach(btn => {
-                    if (btn.dataset.mode === mode) {
-                        btn.className = 'mode-tab px-6 py-2.5 rounded-full text-sm font-bold transition-all bg-white shadow-md ' +
-                            (mode === 'youtube' ? 'text-red-600 ring-1 ring-red-100' : 'text-orange-600 ring-1 ring-orange-100');
-                    } else {
-                        btn.className = 'mode-tab px-6 py-2.5 rounded-full text-sm font-bold transition-all text-stone-600 hover:text-stone-900';
-                    }
+                    const isOn = btn.dataset.mode === mode;
+                    btn.classList.toggle('is-active', isOn);
+                    btn.setAttribute('aria-selected', isOn ? 'true' : 'false');
                 });
             }
 
@@ -1197,9 +1141,21 @@
                 if (!currentAnalysisData) return "";
                 const good = currentAnalysisData.good.map(i => `${i.label}(${i.value}%)`).join('、');
                 const bad = currentAnalysisData.bad.map(i => `${i.label}(${i.value}%)`).join('、');
-                const reportTitle = currentPlatform === 'youtube' ? '【YouTube 觀眾留言分析報告】' : '【顧客評論分析報告】';
-                const posLabel = currentPlatform === 'youtube' ? '正面留言主題' : '正面回饋';
-                const negLabel = currentPlatform === 'youtube' ? '負面留言主題' : '負面回饋';
+                const reportTitleMap = {
+                    youtube: '【YouTube 觀眾留言分析報告】',
+                    google: '【顧客評論分析報告】',
+                };
+                const posLabelMap = {
+                    youtube: '正面留言主題',
+                    google: '正面回饋',
+                };
+                const negLabelMap = {
+                    youtube: '負面留言主題',
+                    google: '負面回饋',
+                };
+                const reportTitle = reportTitleMap[currentPlatform] || reportTitleMap.google;
+                const posLabel = posLabelMap[currentPlatform] || posLabelMap.google;
+                const negLabel = negLabelMap[currentPlatform] || negLabelMap.google;
                 let ctx = `${reportTitle}\n${posLabel}：${good}\n${negLabel}：${bad}\n總計：${currentAnalysisData.total}`;
                 if (currentSwotData) {
                     const s = currentSwotData.strengths?.map(i => i.point).join('、') || '';
@@ -1213,8 +1169,11 @@
 
             analyzeBtn.addEventListener('click', async () => {
                 analyzeBtn.disabled = true;
-                const isYt = currentPlatform === 'youtube';
-                const busyLabel = isYt ? 'AI 留言分析中...' : 'AI 智能分析中...';
+                const busyLabelMap = {
+                    youtube: 'AI 留言分析中...',
+                    google: 'AI 智能分析中...',
+                };
+                const busyLabel = busyLabelMap[currentPlatform] || busyLabelMap.google;
                 analyzeBtn.innerHTML = `<div class="loader"></div><span class="ml-2">${busyLabel}</span>`;
 
                 loadingCard.classList.remove('hidden');
@@ -1227,19 +1186,23 @@
                 loadingCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
                 // 狀態提示：依序顯示，對應後端實際 2 步驟流程
-                const statusMessages = isYt ? [
-                    '解析 YouTube 影片網址中...',
-                    '透過 YouTube Data API 取得影片資訊...',
-                    '抓取影片所有留言（逐頁翻頁中）...',
-                    'Gemini AI 分析觀眾留言情緒與主題...',
-                    '生成創作者洞察報告中...',
-                ] : [
-                    '解析店家網址中...',
-                    '透過 API 搜尋店家資訊...',
-                    '爬取所有顧客評論（逐頁翻頁中）...',
-                    'Gemini AI 分析評論情緒與主題...',
-                    '生成分析報告中...',
-                ];
+                const statusMessagesMap = {
+                    youtube: [
+                        '解析 YouTube 影片網址中...',
+                        '透過 YouTube Data API 取得影片資訊...',
+                        '抓取影片所有留言（逐頁翻頁中）...',
+                        'Gemini AI 分析觀眾留言情緒與主題...',
+                        '生成創作者洞察報告中...',
+                    ],
+                    google: [
+                        '解析店家網址中...',
+                        '透過 API 搜尋店家資訊...',
+                        '爬取所有顧客評論（逐頁翻頁中）...',
+                        'Gemini AI 分析評論情緒與主題...',
+                        '生成分析報告中...',
+                    ],
+                };
+                const statusMessages = statusMessagesMap[currentPlatform] || statusMessagesMap.google;
                 let statusIdx = 0;
                 const statusEl = document.getElementById('loading-status-text');
                 if (statusEl) statusEl.textContent = statusMessages[0];
@@ -1275,19 +1238,22 @@
                         loadingCard.classList.add('hidden');
                         analyzeBtn.disabled = false;
                         resetAnalyzeBtn();
-                        const isYtMode = submittedPlatform === 'youtube';
-                        const targetLabel = isYtMode ? '影片' : '店家';
-                        const sourceLabel = isYtMode ? '留言' : '評論';
-                        const suggestion = isYtMode
-                            ? '建議改試擁有較多觀眾留言的 YouTube 影片（一般 100+ 則以上）。'
-                            : '建議改試有大量網路評論的餐廳、景點或服務業店家。';
+                        const targetLabelMap = { youtube: '影片', google: '店家' };
+                        const sourceLabelMap = { youtube: '留言', google: '評論' };
+                        const suggestionMap = {
+                            youtube: '建議改試擁有較多觀眾留言的 YouTube 影片（一般 100+ 則以上）。',
+                            google: '建議改試有大量網路評論的餐廳、景點或服務業店家。',
+                        };
+                        const targetLabel = targetLabelMap[submittedPlatform] || targetLabelMap.google;
+                        const sourceLabel = sourceLabelMap[submittedPlatform] || sourceLabelMap.google;
+                        const suggestion = suggestionMap[submittedPlatform] || suggestionMap.google;
                         // 顯示友善提示訊息
                         const noReviewsHtml = `
-                            <div class="mt-6 p-6 bg-amber-50 border border-amber-200 rounded-2xl text-center">
-                                <div class="text-3xl mb-3">😔</div>
-                                <h3 class="text-lg font-bold text-amber-800 mb-2">找不到「${result.store_name}」的${targetLabel}${sourceLabel}</h3>
-                                <p class="text-amber-700 text-sm">${result.message}</p>
-                                <p class="text-amber-600 text-xs mt-3">${suggestion}</p>
+                            <div class="mt-6 p-6 rounded-2xl text-center" style="background: var(--paper-raised); border: 1px solid var(--hairline); box-shadow: var(--shadow-ring);">
+                                <div class="text-2xl mb-3">🫥</div>
+                                <h3 class="text-[15px] font-bold mb-2" style="color: var(--ink-900);">找不到「${result.store_name}」的${targetLabel}${sourceLabel}</h3>
+                                <p class="text-[13px]" style="color: var(--ink-600);">${result.message}</p>
+                                <p class="text-[12px] mt-3" style="color: var(--ink-400);">${suggestion}</p>
                             </div>`;
                         document.getElementById('demo-block').insertAdjacentHTML('beforeend', noReviewsHtml);
                         document.getElementById('demo-block').lastElementChild.scrollIntoView({ behavior: 'smooth' });
@@ -1367,16 +1333,8 @@
 
             // Report data - moved outside analyzeBtn handler
             const reportData = {
-                overall: {
-                    total: "等待分析...",
-                    good: [],
-                    bad: []
-                },
-                google: {
-                    total: "等待分析...",
-                    good: [],
-                    bad: []
-                }
+                overall: { total: "等待分析...", good: [], bad: [] },
+                google:  { total: "等待分析...", good: [], bad: [] }
             };
 
             const platformTabs = document.querySelectorAll('.platform-tab');
@@ -1387,7 +1345,7 @@
 
                 document.getElementById('report-total').textContent = data.total;
 
-                // Handle DYNAMIC good feedback (up to 3 items)
+                // Good (up to 3 items)
                 for (let i = 0; i < 3; i++) {
                     const labelEl = document.getElementById(`good-${i + 1}-label`);
                     const valueEl = document.getElementById(`good-${i + 1}-value`);
@@ -1398,14 +1356,13 @@
                         valueEl.textContent = `${data.good[i].value}%`;
                         barEl.style.width = `${data.good[i].value}%`;
                     } else {
-                        // Hide if no data
                         labelEl.textContent = '無資料';
                         valueEl.textContent = '0%';
                         barEl.style.width = '0%';
                     }
                 }
 
-                // Handle DYNAMIC bad feedback (up to 3 items)
+                // Bad (up to 3 items)
                 for (let i = 0; i < 3; i++) {
                     const container = document.getElementById(`bad-${i + 1}-container`);
                     const valueSpan = document.getElementById(`bad-${i + 1}-value`);
@@ -1416,34 +1373,31 @@
                         const value = data.bad[i].value;
 
                         container.innerHTML = `
-                        <span class="text-sm font-bold text-slate-700">${topic}</span>
-                        <div class="flex">
-                            <button class="ai-action-btn ai-reply-btn" data-topic="${topic}" title="撰寫回覆">
-                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path></svg>
-                                <span>回覆</span>
-                            </button>
-                            <button class="ai-action-btn ai-analyze-btn" data-topic="${topic}" title="根源問題分析">
-                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                                <span>分析</span>
-                            </button>
-                        </div>
-                    `;
+                            <span class="text-[13px] font-semibold" id="bad-${i + 1}-label" style="color: var(--ink-800);">${topic}</span>
+                            <div class="flex gap-1.5 ml-auto">
+                                <button class="ai-action-btn ai-reply-btn" data-topic="${topic}" title="撰寫回覆">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path></svg>
+                                    回覆
+                                </button>
+                                <button class="ai-action-btn ai-analyze-btn" data-topic="${topic}" title="根源問題分析">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                                    分析
+                                </button>
+                            </div>
+                        `;
                         valueSpan.textContent = `${value}%`;
                         barDiv.style.width = `${value}%`;
                     } else {
-                        // Hide if no data
-                        container.innerHTML = '<span class="text-sm font-bold text-slate-700">無資料</span>';
+                        container.innerHTML = `<span class="text-[13px] font-semibold" id="bad-${i + 1}-label" style="color: var(--ink-800);">無資料</span>`;
                         valueSpan.textContent = '0%';
                         barDiv.style.width = '0%';
                     }
                 }
 
                 platformTabs.forEach(tab => {
-                    if (tab.dataset.platform === platform) {
-                        tab.className = 'platform-tab px-6 py-3 rounded-full text-sm font-bold transition-all bg-gradient-to-r from-orange-500 to-pink-500 text-white shadow-lg shadow-orange-500/30 ring-2 ring-orange-200 ring-offset-2';
-                    } else {
-                        tab.className = 'platform-tab px-6 py-3 rounded-full text-sm font-bold text-slate-600 hover:bg-slate-100 transition-all';
-                    }
+                    const isOn = tab.dataset.platform === platform;
+                    tab.classList.toggle('is-active', isOn);
+                    tab.setAttribute('aria-selected', isOn ? 'true' : 'false');
                 });
             }
 
@@ -1456,7 +1410,6 @@
             // --- Generic Modal Logic with Markdown ---
             function openModal(title, initialContent) {
                 aiModalTitle.textContent = title;
-                // 若內容包含 "AI 正在..." 開頭，表示是載入中訊息，不需解析 Markdown
                 if (initialContent.startsWith("AI 正在")) {
                     aiContentArea.textContent = initialContent;
                 } else {
@@ -1466,11 +1419,13 @@
                 setTimeout(() => {
                     aiModal.classList.add('opacity-100');
                     aiModalContent.classList.add('scale-100', 'opacity-100');
+                    aiModalContent.classList.remove('scale-95', 'opacity-0');
                 }, 10);
             }
 
             function closeModal() {
                 aiModalContent.classList.remove('scale-100', 'opacity-100');
+                aiModalContent.classList.add('scale-95', 'opacity-0');
                 aiModal.classList.remove('opacity-100');
                 setTimeout(() => {
                     aiModal.classList.add('hidden');
@@ -1490,7 +1445,6 @@
                     openModal('AI 建議回覆', 'AI 正在分析語意並草擬回覆...');
                     try {
                         const reply = await getAiReply(topic);
-                        // 更新內容時解析 Markdown
                         aiContentArea.innerHTML = marked.parse(reply);
                     } catch (error) {
                         console.error("AI Reply error:", error);
@@ -1498,9 +1452,9 @@
                     }
                 }
 
-                const analyzeBtn = e.target.closest('.ai-analyze-btn');
-                if (analyzeBtn) {
-                    const topic = analyzeBtn.dataset.topic;
+                const analyzeBtnInner = e.target.closest('.ai-analyze-btn');
+                if (analyzeBtnInner) {
+                    const topic = analyzeBtnInner.dataset.topic;
                     openModal('AI 根源問題分析', 'AI 正在深入分析數據與潛在成因...');
                     try {
                         const analysis = await getRootCauseAnalysis(topic);
@@ -1542,7 +1496,7 @@
 
             if (btnTrainingScript) {
                 btnTrainingScript.addEventListener('click', async () => {
-                    const mainIssue = reportData.overall.bad[0].label;
+                    const mainIssue = reportData.overall.bad[0]?.label || '主要痛點';
                     const trainCfg = MODE_CONFIG[currentPlatform] || MODE_CONFIG.google;
                     openModal(trainCfg.trainingModalTitle, trainCfg.trainingModalLoading(mainIssue));
                     try {
@@ -1651,26 +1605,8 @@
                 return data.email;
             }
 
-            async function callGemini(promptText) {
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
-                const payload = { contents: [{ parts: [{ text: promptText }] }] };
-
-                const response = await fetchWithBackoff(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                const result = await response.json();
-                if (result.candidates && result.candidates[0]) {
-                    return result.candidates[0].content.parts[0].text;
-                } else {
-                    throw new Error("No content generated.");
-                }
-            }
-
             window.copyAiContent = function () {
-                const textToCopy = aiContentArea.innerText; // 改為 innerText 以保留排版
+                const textToCopy = aiContentArea.innerText;
                 const textArea = document.createElement('textarea');
                 textArea.value = textToCopy;
                 textArea.style.position = 'fixed';
@@ -1679,14 +1615,12 @@
                 textArea.select();
                 try {
                     document.execCommand('copy');
-                    const btn = document.querySelector('#ai-modal-content button:last-child');
-                    const originalText = btn.innerText;
-                    btn.innerText = "已複製！";
-                    btn.classList.add('bg-emerald-600');
-                    setTimeout(() => {
-                        btn.innerText = originalText;
-                        btn.classList.remove('bg-emerald-600');
-                    }, 2000);
+                    const btn = document.querySelector('#ai-modal-content button.btn-primary');
+                    if (btn) {
+                        const originalText = btn.innerText;
+                        btn.innerText = "已複製！";
+                        setTimeout(() => { btn.innerText = originalText; }, 2000);
+                    }
                 } catch (err) {
                     console.error('無法複製', err);
                 }
@@ -1730,16 +1664,15 @@
                 const bubble = document.createElement('div');
                 if (id) wrapper.id = id;
 
-                // 加入 prose class 以支援 markdown 樣式
-                bubble.classList.add('p-3', 'rounded-2xl', 'max-w-[85%]', 'text-sm', 'leading-relaxed', 'shadow-sm', 'prose', 'prose-sm', 'max-w-none');
+                bubble.classList.add('p-3', 'rounded-2xl', 'max-w-[85%]', 'text-[13px]', 'leading-relaxed', 'prose', 'prose-sm', 'max-w-none');
 
-                // 若是使用者訊息，維持原樣；若是 AI 回覆，使用 marked 解析
                 if (sender === 'user') {
                     bubble.innerHTML = message.replace(/\n/g, '<br>');
                     wrapper.classList.add('flex', 'justify-end');
-                    bubble.classList.add('bg-gradient-to-br', 'from-orange-500', 'to-pink-500', 'text-white', 'rounded-tr-none');
-                    // 使用者訊息通常不需要 prose 的黑色文字顏色覆蓋，需重置部分樣式
-                    bubble.style.color = 'white';
+                    bubble.style.background = 'linear-gradient(135deg, var(--accent-hover), var(--accent))';
+                    bubble.style.color = '#fff';
+                    bubble.style.boxShadow = '0 1px 2px rgba(94, 106, 210, 0.3), 0 4px 12px -4px rgba(94, 106, 210, 0.35)';
+                    bubble.classList.add('rounded-tr-md');
                 } else {
                     if (id === 'typing-indicator') {
                         bubble.innerHTML = message;
@@ -1747,7 +1680,11 @@
                         bubble.innerHTML = marked.parse(message);
                     }
                     wrapper.classList.add('flex', 'justify-start');
-                    bubble.classList.add('bg-white', 'border', 'border-slate-200', 'text-slate-800', 'rounded-tl-none');
+                    bubble.style.background = 'var(--paper-elevated)';
+                    bubble.style.border = '1px solid var(--hairline)';
+                    bubble.style.color = 'var(--ink-800)';
+                    bubble.style.boxShadow = 'var(--shadow-ring)';
+                    bubble.classList.add('rounded-tl-md');
                 }
                 wrapper.appendChild(bubble);
                 chatLog.appendChild(wrapper);
@@ -1755,7 +1692,6 @@
             }
 
             async function getGeminiResponse(userMessage) {
-                // 使用後端 API，並傳遞當前分析報告作為 context
                 try {
                     const response = await fetch('/api/chat', {
                         method: 'POST',
@@ -1763,13 +1699,10 @@
                         body: JSON.stringify({ message: userMessage, context: getCurrentContext(), platform: currentPlatform })
                     });
 
-                    if (!response.ok) {
-                        throw new Error('API 請求失敗');
-                    }
+                    if (!response.ok) throw new Error('API 請求失敗');
 
                     const result = await response.json();
                     return result.reply || '抱歉，無法生成回應。';
-
                 } catch (error) {
                     console.error('Chat API 錯誤:', error);
                     throw error;

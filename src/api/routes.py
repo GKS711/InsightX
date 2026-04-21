@@ -1,6 +1,6 @@
 import asyncio
 import json
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from src.services.scraper_service import ScraperService
@@ -98,9 +98,16 @@ async def analyze(request: AnalyzeRequest):
 
         # 先偵測平台，為 fallback mock 挑對版本
         from src.services.youtube_scraper import is_youtube_url
-        platform = "youtube" if is_youtube_url(request.url) else "google"
-        mock_fallback = MOCK_ANALYSIS_YOUTUBE if platform == "youtube" else MOCK_ANALYSIS
-        source_label = "留言" if platform == "youtube" else "評論"
+        if is_youtube_url(request.url):
+            platform = "youtube"
+        else:
+            platform = "google"
+        if platform == "youtube":
+            mock_fallback = MOCK_ANALYSIS_YOUTUBE
+            source_label = "留言"
+        else:
+            mock_fallback = MOCK_ANALYSIS
+            source_label = "評論"
 
         # Step 1: 爬取內容（ScraperService 內部自動 dispatch）
         print(f"[INFO] Step 1/2 · 爬取{source_label}中...（platform={platform}）")
@@ -119,12 +126,12 @@ async def analyze(request: AnalyzeRequest):
             scraped_platform = scrape_result.get("platform", platform)
             print(f"[INFO] 爬蟲完成 · 標的={scraper_store_name!r} · {review_count} 則{source_label} · {len(raw_text)} 字元")
 
-            # YouTube API key 缺失或影片抓不到時，提早回報（不退 mock，避免誤導）
+            # YouTube 爬不到時，提早回報（不退 mock，避免誤導）
             if scraped_platform == "youtube" and scrape_result.get("status") == "error":
                 return {
                     "store_name": "",
                     "status": "error",
-                    "platform": "youtube",
+                    "platform": scraped_platform,
                     "total_reviews": "0",
                     "good": [],
                     "bad": [],
@@ -149,8 +156,11 @@ async def analyze(request: AnalyzeRequest):
                 has_reviews = result.get("good") or result.get("bad")
                 if not has_reviews:
                     print("[WARN] Gemini 未分析到內容，返回 no_reviews 狀態")
+                    unknown_label = {
+                        "youtube": "未知影片",
+                    }.get(scraped_platform, "未知店家")
                     return {
-                        "store_name": scraper_store_name or ("未知影片" if scraped_platform == "youtube" else "未知店家"),
+                        "store_name": scraper_store_name or unknown_label,
                         "status": "no_reviews",
                         "platform": scraped_platform,
                         "total_reviews": "0",
@@ -312,11 +322,18 @@ async def analyze_stream(url: str):
         try:
             yield log("🔍 收到分析請求")
             is_yt = is_youtube_url(url)
-            platform = "youtube" if is_yt else "google"
-            source_label = "留言" if is_yt else "評論"
-            target_label = "影片" if is_yt else "店家"
-            api_label = "YouTube Data API" if is_yt else "Serper API"
-            mock_fallback = MOCK_ANALYSIS_YOUTUBE if is_yt else MOCK_ANALYSIS
+            if is_yt:
+                platform = "youtube"
+                source_label = "留言"
+                target_label = "影片"
+                api_label = "YouTube Data API"
+                mock_fallback = MOCK_ANALYSIS_YOUTUBE
+            else:
+                platform = "google"
+                source_label = "評論"
+                target_label = "店家"
+                api_label = "Serper API"
+                mock_fallback = MOCK_ANALYSIS
             yield log(f"🎯 平台偵測：{platform}")
 
             # Step 1: 爬取（ScraperService 內部 dispatch）
@@ -382,13 +399,13 @@ async def analyze_stream(url: str):
                     yield log("📦 回傳 Demo 數據")
                     yield f"event: result\ndata: {json.dumps(mock_fallback, ensure_ascii=False)}\n\n"
             else:
-                # 爬蟲出錯且 YouTube 場景要提早回報清楚的錯誤
+                # 爬蟲出錯且是 YouTube 場景要提早回報清楚的錯誤
                 if is_yt and scrape_error:
                     yield log(f"❌ {scrape_error[:120]}")
                     err_result = {
                         "store_name": "",
                         "status": "error",
-                        "platform": "youtube",
+                        "platform": platform,
                         "total_reviews": "0",
                         "good": [],
                         "bad": [],

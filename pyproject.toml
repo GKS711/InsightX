@@ -1,7 +1,7 @@
 [project]
 name = "insightx"
-version = "2.0.0"
-description = "AI-powered customer feedback & YouTube comment insight tool"
+version = "3.0.0"
+description = "AI-powered customer feedback and YouTube comment insight tool"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [

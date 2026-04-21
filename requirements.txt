@@ -1,5 +1,6 @@
-# InsightX Python Dependencies
+# InsightX Python Dependencies (v3.0.0)
 # Install: pip install -r requirements.txt
+# 對齊 pyproject.toml；此檔供 Dockerfile 使用
 
 fastapi>=0.109.0
 uvicorn>=0.27.0
@@ -8,3 +9,4 @@ beautifulsoup4>=4.12.3
 jinja2>=3.1.3
 google-genai>=1.59.0
 requests>=2.31.0
+youtube-comment-downloader>=0.1.76
