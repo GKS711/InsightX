@@ -2964,6 +2964,12 @@ const GuideNote = ({ title, items, neg }) => (
   </div>
 );
 
+// P3.17 fix：4 個 tool（marketing/weeklyPlan/training/internalEmail）原本用 useRef 存
+// lastCtxKey 防重複 fetch，但 useRef 在 component unmount 時 ref 會丟（切 tab → unmount）。
+// 結果：使用者切 tab 來回時即使 reducer 內 slice 還是 ready，重 mount 後 ref 變 null
+// → ctxKey 比對失敗 → 重打 LLM。改成 module-level cache 跨 mount 保留。
+const _toolCtxCache = { marketing: null, weeklyPlan: null, training: null, internalEmail: null };
+
 // ---- MarketingTool ----
 // 真分析模式下不顯示 MARKETING 餐廳靜態 demo (V1/V2/V3 「招牌主菜」「家庭來店日」等罐頭文案)。
 // 規則：facts 沒就緒 → 空態；facts 就緒但 strengths 為空 → 「等 SWOT」；其餘狀態都靠 AI 卡。
@@ -2979,14 +2985,14 @@ const MarketingTool = () => {
     : null;
 
   // P3.9-5R fix #3：context key 含 platform/ytRole，避免切平台後仍套舊 ready 資料。
+  // P3.17 fix：改用 module-level _toolCtxCache 跨 mount 保留（useRef 在 unmount 時丟）。
   const ctxKey = `${facts.analyzeRequestId || "none"}|${platform}|${ytRole || ""}|${strengthsStr}`;
-  const lastCtxRef = React.useRef(null);
   React.useEffect(() => {
     if (!Adapters || !dispatch) return;
     if (!facts.isReady) return;
     if (!strengthsStr) return;
-    if (lastCtxRef.current === ctxKey && (slice?.status === "loading" || slice?.status === "ready")) return;
-    lastCtxRef.current = ctxKey;
+    if (_toolCtxCache.marketing === ctxKey && (slice?.status === "loading" || slice?.status === "ready")) return;
+    _toolCtxCache.marketing = ctxKey;
     Adapters.fetchMarketing({ strengths: strengthsStr, platform, ytRole, dispatch }).catch(() => {});
   }, [ctxKey]);
 
@@ -3097,14 +3103,14 @@ const WeekPlanTool = () => {
 
   // P3.9-5R fix #3 + R3 #7：context key 含 platform/ytRole/analyzeRequestId/weaknesses；
   // 並補 facts.isReady guard 避免 useSwotSummary 在分析未就緒時回 themesNeg fallback 的舊值。
+  // P3.17 fix：改 module-level _toolCtxCache.weeklyPlan，跨 mount 保留。
   const ctxKey = `${facts.analyzeRequestId || "none"}|${platform}|${ytRole || ""}|${weaknessesStr}`;
-  const lastCtxRef = React.useRef(null);
   React.useEffect(() => {
     if (!Adapters || !dispatch) return;
     if (!facts.isReady) return;
     if (!weaknessesStr) return;
-    if (lastCtxRef.current === ctxKey && (slice?.status === "loading" || slice?.status === "ready")) return;
-    lastCtxRef.current = ctxKey;
+    if (_toolCtxCache.weeklyPlan === ctxKey && (slice?.status === "loading" || slice?.status === "ready")) return;
+    _toolCtxCache.weeklyPlan = ctxKey;
     Adapters.fetchWeeklyPlan({ weaknesses: weaknessesStr, platform, ytRole, dispatch }).catch(() => {});
   }, [ctxKey, facts.isReady]);
 
@@ -3167,14 +3173,14 @@ const TrainingTool = () => {
     : null;
 
   // P3.9-5R fix #3 + R3 #7：context key 含 platform/ytRole/analyzeRequestId/issue + facts.isReady guard。
+  // P3.17 fix：改 module-level _toolCtxCache.training，跨 mount 保留。
   const ctxKey = `${facts.analyzeRequestId || "none"}|${platform}|${ytRole || ""}|${issue}`;
-  const lastCtxRef = React.useRef(null);
   React.useEffect(() => {
     if (!Adapters || !dispatch) return;
     if (!facts.isReady) return;
     if (!issue) return;
-    if (lastCtxRef.current === ctxKey && (slice?.status === "loading" || slice?.status === "ready")) return;
-    lastCtxRef.current = ctxKey;
+    if (_toolCtxCache.training === ctxKey && (slice?.status === "loading" || slice?.status === "ready")) return;
+    _toolCtxCache.training = ctxKey;
     Adapters.fetchTrainingScript({ issue, platform, ytRole, dispatch }).catch(() => {});
   }, [ctxKey, facts.isReady]);
 
@@ -3280,14 +3286,14 @@ const EmailTool = () => {
     : null;
 
   // P3.9-5R fix #3：context key 含 platform/ytRole/analyzeRequestId/strengths/weaknesses。
+  // P3.17 fix：改 module-level _toolCtxCache.internalEmail，跨 mount 保留。
   const ctxKey = `${facts.analyzeRequestId || "none"}|${platform}|${ytRole || ""}|${strengthsStr}|${weaknessesStr}`;
-  const lastCtxRef = React.useRef(null);
   React.useEffect(() => {
     if (!Adapters || !dispatch) return;
     if (!facts.isReady) return;
     if (!strengthsStr || !weaknessesStr) return;
-    if (lastCtxRef.current === ctxKey && (slice?.status === "loading" || slice?.status === "ready")) return;
-    lastCtxRef.current = ctxKey;
+    if (_toolCtxCache.internalEmail === ctxKey && (slice?.status === "loading" || slice?.status === "ready")) return;
+    _toolCtxCache.internalEmail = ctxKey;
     Adapters.fetchInternalEmail({ strengths: strengthsStr, weaknesses: weaknessesStr, platform, ytRole, dispatch }).catch(() => {});
   }, [ctxKey]);
 
