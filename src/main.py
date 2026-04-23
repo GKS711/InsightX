@@ -16,14 +16,21 @@ app = FastAPI(title="InsightX API")
 # API first (important)
 app.include_router(router, prefix="/api")
 
-# Prefer dist if built artifacts exist
+# v4.0.0 UI routing:
+#   /         → src/static/v2/ (v2-design Babel-standalone React 單檔 + core/ + hooks/)
+#   /legacy/  → src/static/ (v3.x Tailwind HTML，向下相容)
+# dist/（v3 Vite 打包後的快照）在 v4.0.0 不再當主入口。如果還在磁碟上，只掛到 /dist-legacy 保底預覽。
+V2_DIR = "src/static/v2"
+LEGACY_DIR = "src/static"
 DIST_DIR = "dist"
+
+# /legacy/ 先 mount（比 / 特殊）；StaticFiles.html=True 會自動對 .html 做目錄 index
+app.mount("/legacy", StaticFiles(directory=LEGACY_DIR, html=True), name="legacy")
 if os.path.isfile(os.path.join(DIST_DIR, "index.html")):
-    app.mount("/", StaticFiles(directory=DIST_DIR, html=True), name="static")
-else:
-    # Dev fallback: serve plain static (only works if your src/static is usable as static HTML)
-    # If you rely on React/TSX, you should use Vite dev server instead.
-    app.mount("/", StaticFiles(directory="src/static", html=True), name="static")
+    app.mount("/dist-legacy", StaticFiles(directory=DIST_DIR, html=True), name="dist_legacy")
+
+# / 最後掛，指到 v2-design
+app.mount("/", StaticFiles(directory=V2_DIR, html=True), name="static")
 
 if __name__ == "__main__":
     uvicorn.run("src.main:app", host="0.0.0.0", port=8000, reload=True)

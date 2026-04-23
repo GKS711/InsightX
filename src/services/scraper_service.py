@@ -29,6 +29,11 @@ from src.services.youtube_scraper import YouTubeScraper, is_youtube_url
 
 logger = logging.getLogger(__name__)
 
+# P3.12-R2 reverted（2026-04-23 使用者澄清）：原本想在後端 cap 50，但使用者澄清
+# 「照樣抓所有 google 評論，只是 §04 UI 那邊有問題」。後端要餵給 LLM 的是「全部
+# 含文字評論」（max_pages=20 仍是安全上限，實際被 Serper 自然 EOF 決定），
+# 顯示限制改在前端 ReviewsSection 用 MAX_REVIEWS_DISPLAY = 50 控制。
+
 
 class ScraperService:
     def __init__(self):
@@ -369,11 +374,18 @@ class ScraperService:
                 for rev in place_info.get("reviews", []):
                     text = rev.get("snippet") or rev.get("text", "")
                     if text and len(text.strip()) > 3:
+                        _user = rev.get("user") if isinstance(rev.get("user"), dict) else {}
                         maps_reviews.append({
                             "text": text.strip(),
                             "rating": rev.get("rating", 0),
-                            "author": rev.get("author", rev.get("name", "")),
-                            "time": rev.get("date", ""),
+                            "author": (
+                                _user.get("name")
+                                or rev.get("author")
+                                or rev.get("name")
+                                or rev.get("user_name")
+                                or ""
+                            ),
+                            "time": rev.get("date", "") or rev.get("time", ""),
                         })
                 print(f"[Serper] /maps 評論：{len(maps_reviews)} 則")
             else:
@@ -399,6 +411,7 @@ class ScraperService:
             # 分頁迴圈：嘗試用 page 參數取得所有評論
             page = 1
             max_pages = 20  # 安全上限
+            seen_serper_texts = set()
             while page <= max_pages:
                 current_payload = {**reviews_payload}
                 if page > 1:
@@ -421,12 +434,32 @@ class ScraperService:
                 for rev in raw_reviews:
                     text = rev.get("snippet") or rev.get("text", "")
                     if text and len(text.strip()) > 3:
+                        text = text.strip()
+                        key = text[:60]
+                        if key in seen_serper_texts:
+                            continue
+                        seen_serper_texts.add(key)
+                        _user = rev.get("user") if isinstance(rev.get("user"), dict) else {}
                         serper_reviews.append({
-                            "text": text.strip(),
+                            "text": text,
                             "rating": rev.get("rating", 0),
-                            "author": rev.get("author", rev.get("name", "")),
-                            "time": rev.get("date", ""),
+                            "author": (
+                                _user.get("name")
+                                or rev.get("author")
+                                or rev.get("name")
+                                or rev.get("user_name")
+                                or ""
+                            ),
+                            "time": rev.get("date", "") or rev.get("time", ""),
                         })
+
+                # DEBUG：第一頁第一則印出原始 shape，確認 author 路徑
+                if page == 1 and raw_reviews:
+                    _first = raw_reviews[0]
+                    _author_resolved = serper_reviews[-1]["author"] if serper_reviews else ""
+                    print(f"[Serper] DEBUG first review keys: {list(_first.keys())}, "
+                          f"author.resolved='{_author_resolved}', "
+                          f"user={_first.get('user')!r}")
 
                 # 檢查是否有下一頁 token
                 next_token = (reviews_data.get("nextPageToken")
@@ -482,10 +515,16 @@ class ScraperService:
             txt = r["text"]
             rat = r.get("rating", 0)
             author = r.get("author", "")
+            when = r.get("time", "") or r.get("date", "")
             if txt:
                 star = f"（{rat}星）" if rat else ""
                 lines.append(f"顧客評論{star}：{txt}")
-            structured.append({"text": txt, "rating": rat, "author": author})
+            structured.append({
+                "text": txt,
+                "rating": rat,
+                "author": author,
+                "time": when,
+            })
 
         with_text = sum(1 for r in all_reviews if r.get("text"))
         print(f"[Serper] 有文字評論：{with_text} 則 / 總共 {len(all_reviews)} 則")
@@ -495,10 +534,13 @@ class ScraperService:
             "raw_text": "\n\n".join(lines),
             "store_name": final_store_name,
             "review_count": len(all_reviews),
+            "total_reviews": rating_count,
             "reviews_structured": structured,
             "maps_data": maps_data,
             "rating": rating,
             "rating_count": rating_count,
+            "address": address,
+            "category": category,
             "platform": "google",
         }
 
@@ -561,16 +603,20 @@ class ScraperService:
             ]
 
             if reviews:
-                lines.append(f"| # | 評論內容 | 評分 |")
-                lines.append(f"|---|---------|------|")
+                lines.append(f"| # | 作者 | 時間 | 評論內容 | 評分 |")
+                lines.append(f"|---|------|------|---------|------|")
                 for i, r in enumerate(reviews, 1):
                     if isinstance(r, dict):
                         text = str(r.get("text", "")).replace("|", "｜").replace("\n", " ")
                         rating_val = r.get("rating", "-")
+                        author = str(r.get("author", "")).replace("|", "｜")[:30] or "—"
+                        when = str(r.get("time", "") or r.get("date", "")).replace("|", "｜")[:20] or "—"
                     else:
                         text = str(r).replace("|", "｜").replace("\n", " ")
                         rating_val = "-"
-                    lines.append(f"| {i} | {text[:200]} | {rating_val} |")
+                        author = "—"
+                        when = "—"
+                    lines.append(f"| {i} | {author} | {when} | {text[:200]} | {rating_val} |")
             else:
                 lines.append("（無評論）")
 
