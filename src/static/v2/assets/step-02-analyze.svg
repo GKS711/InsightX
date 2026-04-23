@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" role="img" aria-label="Analyze in 30 seconds illustration">
+  <defs>
+    <radialGradient id="analyzeGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#635BFF" stop-opacity="0.18"/>
+      <stop offset="62%" stop-color="#635BFF" stop-opacity="0.07"/>
+      <stop offset="100%" stop-color="#635BFF" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="analyzeShadow" x="-35%" y="-45%" width="170%" height="200%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="18" result="blur"/>
+      <feOffset in="blur" dx="0" dy="18" result="offset"/>
+      <feFlood flood-color="#635BFF" flood-opacity="0.25" result="color"/>
+      <feComposite in="color" in2="offset" operator="in" result="shadow"/>
+      <feMerge>
+        <feMergeNode in="shadow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <ellipse cx="408" cy="226" rx="270" ry="155" fill="url(#analyzeGlow)"/>
+
+  <g fill="none" stroke="#635BFF" stroke-width="1.8" stroke-linecap="round" stroke-dasharray="2 4" opacity="0.8">
+    <path d="M92 170 C190 170 238 190 302 214"/>
+    <path d="M78 225 C174 225 232 225 300 225"/>
+    <path d="M96 280 C188 280 238 258 302 236"/>
+  </g>
+
+  <g fill="none" stroke="#A5A0FF" stroke-width="1.8" stroke-linecap="round" stroke-dasharray="2 4" opacity="0.78">
+    <path d="M498 214 C560 188 602 166 706 166"/>
+    <path d="M500 225 C562 225 604 225 690 225"/>
+    <path d="M498 238 C560 262 598 286 700 292"/>
+  </g>
+
+  <g filter="url(#analyzeShadow)">
+    <circle cx="400" cy="225" r="88" fill="#FFFFFF" fill-opacity="0.04" stroke="#FFFFFF" stroke-opacity="0.14" stroke-width="1.8"/>
+    <circle cx="400" cy="225" r="88" fill="none" stroke="#FFFFFF" stroke-opacity="0.14" stroke-width="10"/>
+    <path d="M400 137 A88 88 0 1 1 312 225" fill="none" stroke="#635BFF" stroke-width="10" stroke-linecap="round"/>
+    <text x="400" y="234" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="600" fill="#FFFFFF">30s</text>
+    <circle cx="400" cy="225" r="52" fill="none" stroke="#FFFFFF" stroke-opacity="0.22" stroke-width="1.4"/>
+    <circle cx="400" cy="225" r="6" fill="#A5A0FF" fill-opacity="0.8"/>
+  </g>
+
+  <g filter="url(#analyzeShadow)">
+    <rect x="588" y="120" width="128" height="76" rx="18" fill="#FFFFFF" fill-opacity="0.04" stroke="#FFFFFF" stroke-opacity="0.14" stroke-width="1.4"/>
+    <rect x="612" y="140" width="56" height="8" rx="4" fill="#635BFF" fill-opacity="0.85"/>
+    <rect x="612" y="160" width="78" height="8" rx="4" fill="#FFFFFF" fill-opacity="0.45"/>
+    <rect x="612" y="176" width="54" height="8" rx="4" fill="#FFFFFF" fill-opacity="0.22"/>
+
+    <rect x="566" y="206" width="148" height="82" rx="18" fill="#FFFFFF" fill-opacity="0.04" stroke="#FFFFFF" stroke-opacity="0.14" stroke-width="1.4"/>
+    <rect x="592" y="228" width="70" height="8" rx="4" fill="#635BFF" fill-opacity="0.85"/>
+    <rect x="592" y="250" width="86" height="8" rx="4" fill="#FFFFFF" fill-opacity="0.45"/>
+    <rect x="592" y="266" width="64" height="8" rx="4" fill="#FFFFFF" fill-opacity="0.22"/>
+
+    <rect x="598" y="298" width="132" height="76" rx="18" fill="#FFFFFF" fill-opacity="0.04" stroke="#FFFFFF" stroke-opacity="0.14" stroke-width="1.4"/>
+    <rect x="622" y="318" width="62" height="8" rx="4" fill="#635BFF" fill-opacity="0.85"/>
+    <rect x="622" y="340" width="80" height="8" rx="4" fill="#FFFFFF" fill-opacity="0.45"/>
+    <rect x="622" y="356" width="56" height="8" rx="4" fill="#FFFFFF" fill-opacity="0.22"/>
+  </g>
+
+  <g fill="#FFFFFF">
+    <circle cx="146" cy="170" r="3" fill-opacity="0.45"/>
+    <circle cx="205" cy="225" r="3" fill-opacity="0.65"/>
+    <circle cx="154" cy="280" r="3" fill-opacity="0.45"/>
+    <circle cx="548" cy="186" r="3" fill-opacity="0.45"/>
+    <circle cx="548" cy="264" r="3" fill-opacity="0.45"/>
+  </g>
+
+  <g fill="none" stroke="#A5A0FF" stroke-width="1.4" stroke-linecap="round" opacity="0.7">
+    <path d="M246 108v18"/>
+    <path d="M237 117h18"/>
+    <path d="M510 96v14"/>
+    <path d="M503 103h14"/>
+    <path d="M258 340v16"/>
+    <path d="M250 348h16"/>
+    <circle cx="528" cy="336" r="3" fill="#635BFF" stroke="none"/>
+    <circle cx="305" cy="92" r="4" fill="#A5A0FF" stroke="none"/>
+  </g>
+</svg>

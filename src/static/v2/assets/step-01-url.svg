@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" role="img" aria-label="Paste URL step illustration">
+  <defs>
+    <radialGradient id="urlGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#635BFF" stop-opacity="0.18"/>
+      <stop offset="58%" stop-color="#635BFF" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#635BFF" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="urlShadow" x="-30%" y="-50%" width="160%" height="220%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="18" result="blur"/>
+      <feOffset in="blur" dx="0" dy="18" result="offset"/>
+      <feFlood flood-color="#635BFF" flood-opacity="0.25" result="color"/>
+      <feComposite in="color" in2="offset" operator="in" result="shadow"/>
+      <feMerge>
+        <feMergeNode in="shadow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <ellipse cx="470" cy="230" rx="260" ry="145" fill="url(#urlGlow)"/>
+
+  <g filter="url(#urlShadow)">
+    <rect x="120" y="176" width="560" height="72" rx="36" fill="#FFFFFF" fill-opacity="0.04" stroke="#FFFFFF" stroke-opacity="0.14" stroke-width="1.8"/>
+    <circle cx="162" cy="212" r="6" fill="#A5A0FF" fill-opacity="0.65"/>
+    <circle cx="184" cy="212" r="6" fill="#A5A0FF" fill-opacity="0.45"/>
+    <circle cx="206" cy="212" r="6" fill="#A5A0FF" fill-opacity="0.22"/>
+    <rect x="242" y="207" width="360" height="10" rx="5" fill="#FFFFFF" fill-opacity="0.55"/>
+    <rect x="616" y="198" width="2" height="28" rx="1" fill="#635BFF">
+      <animate attributeName="opacity" values="1;0.2;1" dur="1.2s" repeatCount="indefinite"/>
+    </rect>
+  </g>
+
+  <g filter="url(#urlShadow)">
+    <rect x="74" y="112" width="168" height="72" rx="18" fill="#FFFFFF" fill-opacity="0.04" stroke="#FFFFFF" stroke-opacity="0.14" stroke-width="1.4"/>
+    <circle cx="105" cy="148" r="12" fill="#635BFF" fill-opacity="0.65"/>
+    <rect x="130" y="132" width="76" height="10" rx="5" fill="#FFFFFF" fill-opacity="0.65"/>
+    <rect x="130" y="154" width="92" height="8" rx="4" fill="#FFFFFF" fill-opacity="0.22"/>
+    <rect x="96" y="205" width="132" height="44" rx="12" fill="#FFFFFF" fill-opacity="0.04" stroke="#FFFFFF" stroke-opacity="0.14" stroke-width="1.4"/>
+    <rect x="118" y="219" width="62" height="8" rx="4" fill="#FFFFFF" fill-opacity="0.45"/>
+    <rect x="118" y="234" width="84" height="8" rx="4" fill="#FFFFFF" fill-opacity="0.22"/>
+  </g>
+
+  <g filter="url(#urlShadow)">
+    <rect x="576" y="270" width="166" height="72" rx="18" fill="#FFFFFF" fill-opacity="0.04" stroke="#FFFFFF" stroke-opacity="0.14" stroke-width="1.4"/>
+    <circle cx="608" cy="306" r="12" fill="#A5A0FF" fill-opacity="0.55"/>
+    <rect x="634" y="290" width="72" height="10" rx="5" fill="#FFFFFF" fill-opacity="0.65"/>
+    <rect x="634" y="312" width="88" height="8" rx="4" fill="#FFFFFF" fill-opacity="0.22"/>
+    <rect x="596" y="220" width="126" height="42" rx="12" fill="#FFFFFF" fill-opacity="0.04" stroke="#FFFFFF" stroke-opacity="0.14" stroke-width="1.4"/>
+    <rect x="618" y="234" width="58" height="8" rx="4" fill="#FFFFFF" fill-opacity="0.45"/>
+    <rect x="618" y="249" width="76" height="8" rx="4" fill="#FFFFFF" fill-opacity="0.22"/>
+  </g>
+
+  <g fill="none" stroke="#635BFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" filter="url(#urlShadow)">
+    <rect x="375" y="286" width="54" height="64" rx="12"/>
+    <path d="M391 286v-9h22v9"/>
+    <path d="M390 314h24"/>
+    <path d="M390 333h18"/>
+    <path d="M438 308l23 23"/>
+    <path d="M461 331h-16"/>
+    <path d="M461 331v-16"/>
+  </g>
+
+  <g fill="none" stroke="#A5A0FF" stroke-width="1.4" stroke-linecap="round" opacity="0.7">
+    <path d="M302 130v18"/>
+    <path d="M293 139h18"/>
+    <path d="M690 150v14"/>
+    <path d="M683 157h14"/>
+    <circle cx="318" cy="312" r="3" fill="#A5A0FF" stroke="none"/>
+    <circle cx="517" cy="128" r="4" fill="#635BFF" stroke="none" opacity="0.75"/>
+  </g>
+</svg>

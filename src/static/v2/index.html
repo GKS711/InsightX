@@ -1,0 +1,3704 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>InsightX — AI 商業洞察</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<script>
+  const TWEAKS = /*EDITMODE-BEGIN*/{
+    "accent": "coral",
+    "density": "comfortable",
+    "showAdvisorBadge": true
+  }/*EDITMODE-END*/;
+</script>
+
+<style>
+  :root {
+    /* Editorial palette — magazine-grade */
+    --ink: oklch(0.22 0.015 160);
+    --ink-2: oklch(0.35 0.02 160);
+    --ink-3: oklch(0.52 0.015 160);
+    --ink-4: oklch(0.72 0.01 160);
+    --rule: oklch(0.88 0.01 160);
+    --rule-2: oklch(0.93 0.008 160);
+    --paper: oklch(0.975 0.006 85);
+    --paper-2: oklch(0.955 0.01 85);
+    --paper-3: oklch(0.92 0.012 85);
+    --card: oklch(0.99 0.003 85);
+
+    --forest: oklch(0.28 0.045 170);
+    --forest-2: oklch(0.38 0.05 170);
+    --forest-ink: oklch(0.18 0.035 170);
+
+    --coral: oklch(0.68 0.16 45);
+    --coral-2: oklch(0.58 0.18 40);
+    --coral-soft: oklch(0.92 0.04 45);
+
+    --slate: oklch(0.55 0.06 240);
+    --slate-soft: oklch(0.93 0.02 240);
+
+    --ochre: oklch(0.72 0.12 85);
+    --ochre-soft: oklch(0.94 0.04 85);
+
+    --pos: oklch(0.55 0.09 155);
+    --pos-soft: oklch(0.93 0.03 155);
+    --neg: oklch(0.58 0.15 30);
+    --neg-soft: oklch(0.93 0.04 30);
+
+    --serif: "Noto Serif TC", "Songti TC", Georgia, serif;
+    --sans: "IBM Plex Sans", "Noto Sans TC", -apple-system, BlinkMacSystemFont, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: var(--sans);
+    background: var(--paper);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    font-feature-settings: "ss01", "ss02", "cv11";
+    line-height: 1.5;
+  }
+  button { font-family: inherit; cursor: pointer; }
+  input, textarea { font-family: inherit; }
+  ::selection { background: var(--forest); color: var(--paper); }
+
+  .serif { font-family: var(--serif); letter-spacing: -0.01em; }
+  .mono { font-family: var(--mono); }
+  .tracking-wide { letter-spacing: 0.14em; }
+
+  .rule { background: var(--rule); height: 1px; width: 100%; }
+  .rule-ink { background: var(--ink); height: 1px; width: 100%; }
+
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: oklch(0.85 0.01 160); border-radius: 10px; }
+  ::-webkit-scrollbar-thumb:hover { background: oklch(0.75 0.015 160); }
+
+  :focus-visible { outline: 2px solid var(--forest); outline-offset: 2px; border-radius: 2px; }
+
+  #root:empty::before {
+    content: "";
+    position: fixed; inset: 0;
+    background: var(--paper);
+    z-index: 9999;
+  }
+
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes tickerSlide { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+  @keyframes growBar { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+  @keyframes pulseBorder { 0%,100% { border-color: var(--forest); } 50% { border-color: var(--coral); } }
+  @keyframes dot { 0%,100% { opacity: 0.3; } 50% { opacity: 1; } }
+  @keyframes floatCard { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+  @keyframes scanBeam { from { left: -2px; } to { left: 100%; } }
+  @keyframes pulseDot { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(1.4); } }
+  @keyframes barScan { 0%,100% { background: var(--card); } 50% { background: oklch(0.93 0.06 85 / 0.4); } }
+  @keyframes grow { from { transform: scaleX(0.6); transform-origin: left; } to { transform: scaleX(1); transform-origin: left; } }
+  @keyframes sweepRotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+  .fade-up { animation: fadeUp 0.5s cubic-bezier(.2,.7,.2,1) both; }
+  .fade-in { animation: fadeIn 0.3s ease both; }
+
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { scrollbar-width: none; }
+
+  .show-sm { display: none !important; }
+  @media (max-width: 900px) {
+    .hero-grid, .mode-grid, .flow-grid, .benefits-grid, .report-grid, .faq-grid, .testimonials-grid {
+      grid-template-columns: 1fr !important;
+      gap: 32px !important;
+    }
+    .benefits-grid > div { border-right: none !important; border-bottom: 1px solid var(--ink); }
+    .benefits-grid > div:last-child { border-bottom: none; }
+    .testimonials-grid > div { border-right: none !important; border-left: 1px solid oklch(0.4 0.02 160) !important; border-top: 1px solid oklch(0.4 0.02 160) !important; }
+    .hero-stat-grid { grid-template-columns: 1fr !important; }
+    .hero-stat-grid > * { border-right: none !important; border-bottom: 1px solid var(--rule) !important; grid-column: span 1 !important; }
+    .themes-grid { grid-template-columns: 1fr !important; }
+    .themes-grid > :first-child { border-right: none !important; border-bottom: 1px solid var(--rule) !important; }
+    .swot-grid { grid-template-columns: 1fr !important; }
+    .swot-grid > * { border-right: none !important; border-bottom: 1px solid var(--ink) !important; }
+    .swot-grid > :last-child { border-bottom: none !important; }
+    .tool-split { grid-template-columns: 1fr !important; }
+    .tool-split > * { border-right: none !important; border-bottom: 1px solid var(--rule); border-left: none !important; }
+    .train-split { grid-template-columns: 1fr !important; }
+    .train-split > :last-child { border-left: none !important; border-top: 1px solid var(--ink); }
+    .advisor-grid { grid-template-columns: 1fr !important; }
+    .week-row { grid-template-columns: 60px 1fr !important; }
+    .week-row > :nth-child(2) { grid-column: span 2; border-top: 1px solid var(--rule); border-right: none !important; }
+    .week-row > :nth-child(3) { grid-column: span 2; }
+    .hide-cols-sm { grid-template-columns: 1fr !important; }
+    .hide-sm { display: none !important; }
+    .show-sm { display: flex !important; }
+    .mobile-nav { display: block !important; }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<!-- v4 bridge：把 ES module 的 core/ + hooks/ 掛到 window.IX，供下方 Babel 區塊消費 -->
+<script type="module" src="/bootstrap.js"></script>
+
+<script type="text/babel" data-presets="react">
+
+// ========================================================
+// IX bridge — 從 window.IX 取出 reducer + adapters + helpers
+// ========================================================
+const IX_LIB = window.IX;
+if (!IX_LIB) {
+  console.error("[InsightX] window.IX not ready — bootstrap.js must load before this Babel block");
+}
+const { useAppReducer, useAnalyzeStream, Adapters, Async, formatErrorMessage } = IX_LIB || {};
+// P3.9-7：fallback 給單獨開檔測試 / IX 還沒 ready 時用，行為跟 core/async.js 同。
+const _fmtErr = formatErrorMessage || ((e, fb = "未知錯誤") =>
+  e == null ? fb : (typeof e === "string" ? e : (typeof e === "object" && typeof e.message === "string" && e.message ? e.message : fb))
+);
+
+// Context for slice-aware components
+const IXContext = React.createContext(null);
+const useIX = () => React.useContext(IXContext);
+
+// ========================================================
+// Helpers — 把後端 SSE / POST 結構轉成元件需要的 view-model
+// ========================================================
+
+// SSE result 包裝為 {platform, effective_yt_role, durationMs, data}；POST 直接是 data
+const unwrapAnalyze = (raw) => {
+  if (!raw) return null;
+  if (raw.data && typeof raw.data === "object" && (raw.data.store_name || raw.data.good || raw.data.summary)) {
+    return raw.data;
+  }
+  return raw;
+};
+
+// P3.12-R3：DISPLAY_REVIEWS_LIMIT 撤掉（原本 50）。理由：buildReviews 在這層 slice 會
+// 讓 ReviewsSection 永遠看到 reviews.length <= 50 → truncated 永遠 false → 「精選 N」字樣
+// 跟「下方顯示其中 50 則樣本」caption 永遠出不來，使用者就看不到 honest 的「我分析了 N 則」。
+// 顯示限制統一交給 ReviewsSection 的 MAX_REVIEWS_DISPLAY 處理。
+// 其他用到 buildReviews 的地方（如 buildSentiment）本來就是用 raw.reviews_structured 直接算，
+// 不受影響。React render 也只 render 前 50 則（slice 在 ReviewsSection），性能無慮。
+
+const parseCountNumber = (value) => {
+  if (typeof value === "number" && Number.isFinite(value)) return Math.max(0, Math.round(value));
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!/^\d[\d,]*$/.test(trimmed)) return null;
+  return Number(trimmed.replace(/,/g, ""));
+};
+
+// 把後端 analyze 結果映射到 dashboard 用的 view-model（保留 mock fallback shape）
+const buildShopViewModel = (rawIn) => {
+  const raw = unwrapAnalyze(rawIn) || {};
+  const totalReviews = parseCountNumber(raw.total_reviews) ?? parseCountNumber(raw.rating_count);
+  const analyzedCount = (typeof raw.review_count === "number" && raw.review_count > 0)
+    ? raw.review_count
+    : (Array.isArray(raw.reviews_structured) ? raw.reviews_structured.length : null);
+  return {
+    name: raw.store_name || RESTAURANT.name,
+    nameZh: raw.store_name || RESTAURANT.nameZh,
+    address: raw.address || RESTAURANT.address,
+    city: RESTAURANT.city,
+    category: raw.category || RESTAURANT.category,
+    platform: raw.platform || "google",
+    googleUrl: RESTAURANT.googleUrl,
+    rating: raw.rating != null ? raw.rating : RESTAURANT.rating,
+    ratingPrev: RESTAURANT.ratingPrev,
+    reviewCount: totalReviews ?? RESTAURANT.reviewCount,
+    totalReviews,
+    reviewCountNew: raw.reviews_analyzed || RESTAURANT.reviewCountNew,
+    // 純數字，前端 Hero 顯示用（後端帶 review_count；fallback 用 reviews_structured.length）
+    analyzedCount,
+    hours: RESTAURANT.hours,
+    phone: RESTAURANT.phone,
+    analyzedAt: raw.analyzed_at || "",
+    reportId: raw.report_id || RESTAURANT.reportId,
+    _raw: raw,
+  };
+};
+
+// 從 raw analyze 推 sentiment %
+//   1) 後端有給 raw.sentiment 物件 → 直接用
+//   2) 否則從 reviews_structured 的 rating 分布推：>=4 正向、==3 中性、<=2 負面
+//   3) 都沒有才 fallback 到 SENTIMENT mock
+const buildSentiment = (rawIn) => {
+  const raw = unwrapAnalyze(rawIn) || {};
+  if (raw.sentiment && typeof raw.sentiment === "object") {
+    const s = raw.sentiment;
+    if (s.positive != null && s.negative != null) {
+      return {
+        positive: Math.round(s.positive),
+        neutral: Math.round(s.neutral != null ? s.neutral : Math.max(0, 100 - s.positive - s.negative)),
+        negative: Math.round(s.negative),
+      };
+    }
+  }
+  // 從真實評論 rating 算
+  const reviews = Array.isArray(raw.reviews_structured) ? raw.reviews_structured : [];
+  if (reviews.length > 0) {
+    let pos = 0, neu = 0, neg = 0;
+    for (const r of reviews) {
+      const rating = typeof r.rating === "number" ? r.rating : Number(r.rating);
+      if (!Number.isFinite(rating)) continue;
+      if (rating >= 4) pos++;
+      else if (rating === 3) neu++;
+      else if (rating <= 2 && rating > 0) neg++;
+    }
+    const total = pos + neu + neg;
+    if (total > 0) {
+      const pPct = Math.round((pos * 100) / total);
+      const nPct = Math.round((neg * 100) / total);
+      const uPct = Math.max(0, 100 - pPct - nPct); // 用減法避免三項加總 ≠ 100
+      return { positive: pPct, neutral: uPct, negative: nPct };
+    }
+  }
+  return SENTIMENT;
+};
+
+// 從 raw analyze 推 themes（good/bad list）成 THEMES_POS / THEMES_NEG shape
+// 只用 LLM 真實回的 label + value（提及比例%），不再偽造 count / pct / sample。
+// 後端 LLM prompt（src/services/llm_service.py 第 87-96 / 114-123 行）僅保證回 {label, value}，
+// 因此 sample/count 一律給 null，由 ThemesSection 自行決定顯不顯示。
+const buildThemes = (rawIn) => {
+  const raw = unwrapAnalyze(rawIn) || {};
+  // P3.9-5R fix #4：label 缺值不再灌「主題 N」placeholder。
+  // 沒 label 的條目直接過濾，避免 strict facts 被偽造主題汙染。
+  const pickLabel = (x) => {
+    const lab = x.theme || x.title || x.label || "";
+    return typeof lab === "string" && lab.trim() ? lab.trim() : null;
+  };
+  // P3.9-5R-R3 fix #4：Array.isArray 防禦，避免 LLM schema 變動時 .slice 炸掉。
+  const goodArr = Array.isArray(raw.good) ? raw.good : [];
+  const badArr = Array.isArray(raw.bad) ? raw.bad : [];
+  const pos = goodArr.slice(0, 5).map((g) => {
+    const label = pickLabel(g);
+    if (!label) return null;
+    const v = typeof g.value === "number" ? g.value : null;
+    return {
+      label,
+      pct: v != null ? Math.max(0, Math.min(100, Math.round(v))) : null,
+      sample: g.quote || g.sample || g.example || g.evidence || "",
+    };
+  }).filter(Boolean);
+  const neg = badArr.slice(0, 5).map((b) => {
+    const label = pickLabel(b);
+    if (!label) return null;
+    const v = typeof b.value === "number" ? b.value : null;
+    return {
+      label,
+      pct: v != null ? Math.max(0, Math.min(100, Math.round(v))) : null,
+      // 不再用排名假裝 severity；後端 LLM 沒給 severity 欄位 (P3.9 移除)
+      sample: b.quote || b.sample || b.example || b.evidence || "",
+    };
+  }).filter(Boolean);
+  return {
+    pos: pos.length ? pos : THEMES_POS,
+    neg: neg.length ? neg : THEMES_NEG,
+  };
+};
+
+// 從 raw analyze 推 reviews（real reviews_structured）
+// P3.15：分平台處理
+//   - Google：r.rating 是 1-5 星，cap 到 [1,5]，從 rating 推 sentiment
+//   - YouTube：r.rating 是 comment.like_count（譬如 12 個讚），**完全不是星等**。
+//     ReviewCard 不能畫 StarRow（之前把 12 cap 成 5 顆星完全是胡謅）；sentiment 也不能
+//     從 like_count 推（讚多不代表情感正向，可能是「炎上」討論串）→ 標 "unknown"
+//     等 LLM 後續給標籤；同時把 likes 帶出來給 ReviewCard 顯示「♥ 12」。
+const buildReviews = (rawIn) => {
+  const raw = unwrapAnalyze(rawIn) || {};
+  const list = raw.reviews_structured || raw.reviews || [];
+  if (!list.length) return REVIEWS;
+  const platform = raw.platform || "google";
+  const isYT = platform === "youtube";
+  return list.map((r) => {
+    const name = r.author || r.name || "匿名";
+    const ratingRaw = r.rating;
+    const ratingNum = ratingRaw == null ? NaN : Number(ratingRaw);
+    let rating = null;
+    let likes = null;
+    let sentiment = "unknown";
+    if (isYT) {
+      // YouTube：rating 欄位是 like_count（整數，可能 0~數萬）
+      likes = Number.isFinite(ratingNum) && ratingNum > 0 ? ratingNum : null;
+      // rating 留 null → ReviewCard 走 comment 模式不畫星
+      // sentiment 留 unknown（暫不用 like_count 推；炎上影片高 like 的負評會被誤標 pos）
+    } else {
+      // Google：rating 是 1-5 星
+      // P3.9-5R fix #5：後端可能用字串 "5" 回；用 Number() 強制轉。
+      // P3.9-5R-R3 fix #5：cap 到 [1,5]，避免後端回 6/7 或負值汙染 sentiment 推斷。
+      rating = (Number.isFinite(ratingNum) && ratingNum > 0) ? Math.min(5, ratingNum) : null;
+      sentiment = rating == null
+        ? "unknown"
+        : rating >= 4 ? "pos" : rating <= 2 ? "neg" : "mixed";
+    }
+    return {
+      name,
+      init: name.slice(0, 1),
+      rating,
+      likes,
+      kind: isYT ? "comment" : "review",
+      when: r.when || r.relative_date || r.date || "",
+      text: r.text || r.snippet || r.content || "",
+      themes: r.themes || r.tags || [],
+      sentiment,
+    };
+  });
+};
+
+// ========================================================
+// components/icons.jsx — Editorial line icons
+// ========================================================
+const Ic = ({ children, size = 16, sw = 1.5, ...p }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+       strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" {...p}>
+    {children}
+  </svg>
+);
+
+const ArrowRight = (p) => <Ic {...p}><path d="M5 12h14M13 6l6 6-6 6"/></Ic>;
+const ArrowUp = (p) => <Ic {...p}><path d="M12 19V5M5 12l7-7 7 7"/></Ic>;
+const ArrowDown = (p) => <Ic {...p}><path d="M12 5v14M19 12l-7 7-7-7"/></Ic>;
+const Check = (p) => <Ic {...p}><path d="M20 6 9 17l-5-5"/></Ic>;
+const X = (p) => <Ic {...p}><path d="M18 6 6 18M6 6l12 12"/></Ic>;
+const Plus = (p) => <Ic {...p}><path d="M12 5v14M5 12h14"/></Ic>;
+const Search = (p) => <Ic {...p}><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></Ic>;
+const Link = (p) => <Ic {...p}><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></Ic>;
+const MapPin = (p) => <Ic {...p}><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></Ic>;
+const Star = (p) => <Ic {...p}><path d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></Ic>;
+const StarFill = (p) => <Ic {...p} fill="currentColor"><path d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></Ic>;
+const MessageCircle = (p) => <Ic {...p}><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z"/></Ic>;
+const ChartBar = (p) => <Ic {...p}><path d="M3 3v18h18M7 15v4M12 11v8M17 7v12"/></Ic>;
+const Grid = (p) => <Ic {...p}><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></Ic>;
+const Sparkle = (p) => <Ic {...p}><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8"/></Ic>;
+const Alert = (p) => <Ic {...p}><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01"/></Ic>;
+const Info = (p) => <Ic {...p}><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></Ic>;
+const Download = (p) => <Ic {...p}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></Ic>;
+const Copy = (p) => <Ic {...p}><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></Ic>;
+const Refresh = (p) => <Ic {...p}><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5"/></Ic>;
+const Send = (p) => <Ic {...p}><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z"/></Ic>;
+const Tools = (p) => <Ic {...p}><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></Ic>;
+const Mail = (p) => <Ic {...p}><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></Ic>;
+const BookOpen = (p) => <Ic {...p}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2zM22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></Ic>;
+const Target = (p) => <Ic {...p}><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></Ic>;
+const Users = (p) => <Ic {...p}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></Ic>;
+const TrendingUp = (p) => <Ic {...p}><path d="m22 7-8.5 8.5-5-5L2 17M16 7h6v6"/></Ic>;
+const Calendar = (p) => <Ic {...p}><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></Ic>;
+const Zap = (p) => <Ic {...p}><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></Ic>;
+const ChevronRight = (p) => <Ic {...p}><path d="m9 6 6 6-6 6"/></Ic>;
+const ChevronDown = (p) => <Ic {...p}><path d="m6 9 6 6 6-6"/></Ic>;
+const ChevronLeft = (p) => <Ic {...p}><path d="m15 6-6 6 6 6"/></Ic>;
+const Menu = (p) => <Ic {...p}><path d="M3 6h18M3 12h18M3 18h18"/></Ic>;
+const Settings = (p) => <Ic {...p}><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></Ic>;
+const Quote = (p) => <Ic {...p}><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h4c0 4-1 6-4 6v2zM14 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h4c0 4-1 6-4 6v2z"/></Ic>;
+const Circle = (p) => <Ic {...p}><circle cx="12" cy="12" r="10"/></Ic>;
+const ExternalLink = (p) => <Ic {...p}><path d="M15 3h6v6M10 14 21 3M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"/></Ic>;
+const Loader = (p) => <Ic {...p}><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></Ic>;
+
+// ========================================================
+// components/data.jsx — Demo / fallback data
+// ========================================================
+const RESTAURANT = {
+  name: "示範小館",
+  nameZh: "示範小館（DEMO）",
+  address: "範例市・示範區・樣板路 100 號",
+  city: "示範城市",
+  category: "餐酒・家常料理・戶外用餐",
+  googleUrl: "https://maps.app.goo.gl/example-demo",
+  rating: 4.3,
+  ratingPrev: 4.2,
+  reviewCount: 847,
+  reviewCountNew: 62,
+  hours: "週一至週日 15:30–21:00",
+  phone: "0000-000-000",
+  analyzedAt: "",
+  reportId: "DEMO-0001"
+};
+
+const YOUTUBE = {
+  totalViews: 184230,
+  clipCount: 7,
+  avgSentiment: 78,
+  topClip: {
+    title: "在地美食 Vlog｜巷弄小館的招牌菜值得排隊嗎？",
+    channel: "吃貨日記 TW",
+    views: 62400,
+    duration: "8:42",
+    sentiment: "pos",
+    highlight: "3:12 「這個招牌菜真的做得很細，醬汁是有靈魂的」",
+    published: "近 90 天內"
+  },
+  clips: [
+    { title: "巷弄美食開箱｜招牌菜值得排隊嗎？", channel: "吃貨日記 TW", views: 62400, sentiment: "pos", len: "8:42" },
+    { title: "週末家庭聚餐推薦 Top 5", channel: "家庭吃什麼", views: 38900, sentiment: "pos", len: "12:05" },
+    { title: "在地人帶路｜這家餐廳的真實評價", channel: "街訪實測", views: 29400, sentiment: "mixed", len: "6:18" },
+    { title: "網紅店踩雷？我們實測給你看", channel: "誠實開箱", views: 21700, sentiment: "neg", len: "10:21" },
+    { title: "家族聚餐 Vlog・小孩也愛的餐廳", channel: "媽咪 Vlog", views: 17500, sentiment: "pos", len: "7:33" },
+    { title: "30 分鐘車程值得嗎｜美食遠征", channel: "週末出走", views: 9400, sentiment: "mixed", len: "9:55" },
+    { title: "老饕品鑑｜家常料理的藝術", channel: "飲食觀察", views: 4930, sentiment: "pos", len: "14:02" }
+  ],
+  themes: [
+    { label: "招牌菜印象深刻", count: 5, tone: "pos" },
+    { label: "環境氛圍適合拍", count: 4, tone: "pos" },
+    { label: "出餐需要等", count: 3, tone: "neg" },
+    { label: "停車不易", count: 2, tone: "neg" }
+  ]
+};
+
+const THEMES_POS = [
+  { label: "餐點美味", count: 271, pct: 32, sample: "招牌菜一試難忘，調味拿捏得非常細膩" },
+  { label: "環境氛圍", count: 212, pct: 25, sample: "用餐區晚上超有氣氛，帶小孩也 OK" },
+  { label: "服務親切", count: 169, pct: 20, sample: "老闆會主動打招呼，像回家吃飯" },
+  { label: "用料實在", count: 94, pct: 11, sample: "看得到食材來源，不是用料理包打發客人" },
+  { label: "份量足", count: 59, pct: 7, sample: "兩人一份就飽，CP 值很高" }
+];
+
+const THEMES_NEG = [
+  { label: "出餐速度慢", count: 145, pct: 40, sample: "週六等了 45 分鐘，小孩都睡著了" },
+  { label: "停車不方便", count: 65, pct: 18, sample: "巷弄很難停，繞了 20 分鐘才找到位子" },
+  { label: "價格偏高", count: 43, pct: 12, sample: "一份 480 確實心痛但好吃" },
+  { label: "環境小瑕疵", count: 29, pct: 8, sample: "夏天戶外區蚊子多，被叮了好幾包" },
+  { label: "候位資訊不清", count: 22, pct: 6, sample: "不知道要等多久，也沒有取號系統" }
+];
+
+const TREND_90 = [
+  4.1, 4.1, 4.2, 4.2, 4.0, 4.1, 4.2, 4.2, 4.2, 4.3, 4.2, 4.1, 4.0,
+  4.1, 4.2, 4.2, 4.3, 4.3, 4.2, 4.2, 4.1, 4.0, 4.0, 4.1, 4.2, 4.2,
+  4.3, 4.3, 4.4, 4.3, 4.2, 4.2, 4.2, 4.3, 4.3, 4.3, 4.4, 4.3, 4.3,
+  4.2, 4.2, 4.3, 4.3, 4.3, 4.4, 4.4, 4.3, 4.3, 4.3, 4.3, 4.2, 4.2,
+  4.3, 4.3, 4.4, 4.4, 4.4, 4.3, 4.3, 4.3, 4.3, 4.3, 4.2, 4.1, 4.1,
+  4.2, 4.2, 4.3, 4.3, 4.3, 4.3, 4.3, 4.3, 4.3, 4.3, 4.3, 4.4, 4.4,
+  4.3, 4.3, 4.3, 4.3, 4.3, 4.3, 4.3, 4.3, 4.3, 4.3, 4.3, 4.3
+];
+
+const SENTIMENT = { positive: 68, neutral: 18, negative: 14 };
+
+const SWOT = {
+  strengths: [
+    { title: "真材實料的信任感", body: "「看得到用料」被 94 篇評論反覆提及，與同業形成記憶點。" },
+    { title: "用餐氛圍打卡力", body: "25% 的好評提及環境，打卡與家庭客群的主要驅動因子。" },
+    { title: "親切的服務調性", body: "20% 提及老闆／店員，品牌溫度是新客的轉化助力。" }
+  ],
+  weaknesses: [
+    { title: "尖峰出餐速度", body: "40% 的負評集中於此，是拉低評分的首要變數。週六最嚴重。" },
+    { title: "停車資訊斷層", body: "實際上已有合作停車場，但 70% 抱怨者不知道。溝通落差。" },
+    { title: "價值感表達不足", body: "12% 提及價格，同時份量與用料有好評——是表達問題而非定價問題。" }
+  ],
+  opportunities: [
+    { title: "外送市場尚未開啟", body: "社群有多則「可以外送嗎」詢問，外送菜單（避開易變質品項）可試。" },
+    { title: "在地食材故事可做", body: "招牌菜 = 跨族群記憶點，適合與地方觀光合作推廣。" },
+    { title: "企業團體訂單", body: "周邊有辦公商圈白領，平日下午 4–6 點閒置產能可開發。" }
+  ],
+  threats: [
+    { title: "鄰近新開餐廳 2 家", body: "同區 3 公里內，近 3 個月新增競品。需強化差異化溝通。" },
+    { title: "期待落差風險", body: "社群熱度高，若招牌品一致性下滑，評分會被放大扣分。" },
+    { title: "天氣敏感度高", body: "戶外用餐區在下雨與炎夏直接影響體驗，需備案。" }
+  ]
+};
+
+const REVIEWS = [
+  { name: "陳小姐", init: "陳", rating: 5, when: "3 天前",
+    text: "招牌菜真的很有記憶點，火候拿捏得恰到好處。老闆超親切，還推薦我下次可以點微辣版本。",
+    themes: ["餐點美味", "服務親切"], sentiment: "pos" },
+  { name: "J. Huang", init: "J", rating: 2, when: "5 天前",
+    text: "東西是真的不錯，但週六帶小孩來等了快一小時出餐，戶外區蚊子又多。下次可能不會在週末來了。",
+    themes: ["出餐速度慢", "環境小瑕疵"], sentiment: "neg" },
+  { name: "Daniel", init: "D", rating: 4, when: "1 週前",
+    text: "東西值得那個價，但第一次來完全不知道停車要停哪，繞了一圈。建議 Google 地圖加個停車攻略。",
+    themes: ["停車不方便", "餐點美味"], sentiment: "mixed" },
+  { name: "林先生", init: "林", rating: 5, when: "1 週前",
+    text: "第三次來了。環境依然是亮點，朋友從外地下來都說值得。推薦 4 點就到避開人潮。",
+    themes: ["環境氛圍", "出餐速度慢"], sentiment: "pos" }
+];
+
+const REPLIES = {
+  "出餐速度慢": {
+    tone: "真誠・具體・不推卸",
+    body: `親愛的顧客您好，
+
+讓您在週末等待這麼久，我們真的很抱歉。這不是「人手不足」四個字可以帶過的——是我們的尖峰流程還沒到位。
+
+我們這兩週正在做的事：
+• 週五、週六下午提前備好 3 款熱門品項
+• 在 17:30 之後增加 1 位廚房支援人手
+• 桌邊 QR 候位系統，讓您知道還要多久
+
+下次再來時，若出餐超過 25 分鐘，請直接告訴我們，我們會招待一杯手沖飲品。
+
+店主 敬上`
+  },
+  "停車不方便": {
+    tone: "資訊補強・不辯解",
+    body: `親愛的顧客您好，
+
+停車這件事，其實問題出在我們——我們有合作停車場，但太多人不知道。
+
+立即可用的資訊：
+• 本店正後方合作停車場，我們可折抵 30 元
+• 機車免費，入口在店左側小巷
+• 若在導航前告知，我們可以傳停車位置圖給您
+
+我們的 Google 商家資訊也會在本週更新停車攻略。謝謝您把這個盲點指出來。
+
+店主 敬上`
+  }
+};
+
+const WEEK_PLAN = [
+  { day: "週一", focus: "數據回顧", items: ["統計上週平均出餐時間", "盤點尖峰訂單模式", "設定本週目標：負評提及「慢」< 30%"] },
+  { day: "週二", focus: "備料前置", items: ["晨會培訓新備料 SOP", "主料預製量 +30%", "記錄實施前後 5 組平均時間"] },
+  { day: "週三", focus: "停車資訊", items: ["更新 Google 商家「停車攻略」", "IG 限動精選「怎麼停」", "桌卡放置停車折抵說明"] },
+  { day: "週四", focus: "價值溝通", items: ["菜單描述加入「手作 / 熟成 / 產地」短句", "推出平日 2 人 780 套餐", "收集 10 則客回饋"] },
+  { day: "週五", focus: "外場配置", items: ["17:30 增派 1 人支援前台", "測試桌邊 QR 候位", "整理 10 組負評回覆"] },
+  { day: "週六", focus: "實戰日", items: ["全員實施新流程", "每 30 分鐘記錄出餐時間", "收集 3 組即時顧客意見"] },
+  { day: "週日", focus: "收斂與對外", items: ["週會：對比改善前後數據", "對外：IG 發「我們本週做了什麼」", "決定下週焦點"] }
+];
+
+const MARKETING = [
+  { tag: "招牌品・故事導向", title: "當火候遇上時間",
+    body: `當火候遇上時間——\n這是我們堅持 8 年的畫面。\n\n這週推薦：招牌主菜\n把在地記憶，端上餐桌。\n\n📍 本店地址・示範區・樣板路 100 號\n本週三全品項 9 折。` },
+  { tag: "平日優惠・轉化導向", title: "平日晚餐，兩人 780",
+    body: `你不用等週末。\n\n平日 17:30–19:00\n任兩款主菜 + 沙拉 + 兩杯飲品\n780 元（原價 1,080）\n\n下班直接過來，5 分鐘車程。\n本週三起實施，額滿為止。` },
+  { tag: "社群話題・反差感", title: "我們不想當網紅店",
+    body: `我們真的沒有很想當網紅店。\n\n但最近被拍太多次，決定自首：\n是，我們的主料要前一天醃製。\n是，火候真的是師傅顧的。\n是，老闆真的會記得你上次點什麼。\n\n如果你想體驗「慢」的價值，歡迎。\n如果你趕時間，我們推薦你下次再來。` }
+];
+
+const TRAINING_SCRIPT = {
+  situation: "顧客抱怨出餐速度慢",
+  wrong: {
+    customer: "你們出餐也太慢了吧！我都等 30 分鐘了！",
+    staff: "抱歉喔，我們人手不足，你再等一下。其他客人也都在等。",
+    issues: ["只道歉沒有同理心", "把責任推給「人手」", "沒有提供解決方案", "「其他人也在等」讓顧客感覺被忽視"]
+  },
+  right: {
+    customer: "你們出餐也太慢了吧！我都等 30 分鐘了！",
+    staff: "非常抱歉讓您久等。我完全理解 30 分鐘真的太久。我立刻為您查訂單——您的主餐剩 5 分鐘就上桌。等待期間我先為您送上一杯招待的氣泡飲好嗎？我們會讓這份餐點值得您這 35 分鐘。",
+    highlights: ["具體道歉 + 明確承認", "主動查詢並給出時間", "當下補償（飲品）", "正面 ending 強調品質"]
+  },
+  principle: "3A 原則",
+  principleDetail: [
+    { k: "Acknowledge 承認", v: "我理解您的感受" },
+    { k: "Apologize 道歉", v: "非常抱歉造成不便" },
+    { k: "Action 行動", v: "讓我立刻為您⋯⋯" }
+  ]
+};
+
+const INTERNAL_EMAIL = {
+  subject: "給夥伴們——本週我們要一起做的三件事",
+  from: "店長",
+  to: "全體夥伴",
+  body: `親愛的夥伴，
+
+先說感謝。這一季 847 則評論裡，32% 提到「餐點美味」、25% 提到「環境」、20% 提到「服務親切」——這些都是你們的名字。
+
+也誠實地說，有三件事我們還沒做好：
+1. 週末出餐速度（40% 負評集中點）
+2. 停車資訊斷層（70% 抱怨者不知道有合作停車場）
+3. 價值感表達不足（份量好評 vs 嫌貴評論同時存在）
+
+這不是誰的錯。這是「我們還可以更好」的清單。
+
+下週的安排已經在牆上，這裡只說三個重點：
+• 週二起，備料前置 +30%，這會讓週五、週六的你們不用那麼累
+• 週三 Google 商家更新完，停車折抵的牌卡到桌邊
+• 週四推出的平日套餐，請大家先背熟菜色搭配
+
+表現優異的夥伴，本月服務之星獎金翻倍。
+
+有任何想法，直接來找我。我的門永遠開著。
+
+店長`
+};
+
+const ADVISOR_SUGGESTIONS = [
+  "週末出餐慢，是流程問題還是人力問題？",
+  "停車資訊要怎麼讓更多人看到？",
+  "份量被稱讚但還是有人嫌貴，怎麼回應？",
+  "要不要開外送？哪些品項適合？",
+  "YouTube 上有人拍到我們，要主動聯絡嗎？"
+];
+
+// ============================================================================
+// UI primitives — Logo / Stamp / Pill / Ticker / Bar / Sparkline / Donut /
+//                 Section / StarRow / Card / Btn / Rule
+// ============================================================================
+
+const Logo = ({ size = 28, showWord = true, tone = "dark" }) => {
+  const c = tone === "light" ? "var(--paper)" : "var(--ink)";
+  const b = tone === "light" ? "var(--paper)" : "var(--forest)";
+  return (
+    <div style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
+      <div style={{
+        width: size, height: size, background: b, color: "var(--paper)",
+        display: "grid", placeItems: "center", fontFamily: "var(--serif)",
+        fontWeight: 700, fontSize: size * 0.5, letterSpacing: "-0.04em",
+        borderRadius: 2
+      }}>
+        <span style={{ marginTop: -1 }}>i</span>
+      </div>
+      {showWord && (
+        <span style={{
+          fontFamily: "var(--serif)", fontWeight: 600, fontSize: size * 0.72,
+          color: c, letterSpacing: "-0.02em"
+        }}>
+          insight<span style={{ color: "var(--coral-2)" }}>x</span>
+        </span>
+      )}
+    </div>
+  );
+};
+
+const Stamp = ({ children, tone = "ink" }) => (
+  <span className="mono tracking-wide" style={{
+    fontSize: 10, textTransform: "uppercase", color: tone === "ink" ? "var(--ink-3)" : "var(--coral-2)",
+    fontWeight: 500, letterSpacing: "0.14em"
+  }}>{children}</span>
+);
+
+const Pill = ({ children, tone = "ink", outline }) => {
+  const bg = outline ? "transparent" : {
+    ink: "var(--ink)", coral: "var(--coral)", pos: "var(--pos)", neg: "var(--neg)",
+    paper: "var(--paper-3)", forest: "var(--forest)", ochre: "var(--ochre)",
+  }[tone];
+  const fg = outline ? "var(--ink)" : (tone === "paper" ? "var(--ink)" : "var(--paper)");
+  const border = outline ? "var(--ink)" : "transparent";
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center", gap: 6,
+      padding: "3px 9px", fontSize: 11, fontWeight: 500,
+      background: bg, color: fg, border: `1px solid ${border}`,
+      borderRadius: 999, fontFamily: "var(--sans)", lineHeight: 1.4
+    }}>{children}</span>
+  );
+};
+
+const Ticker = ({ items, speed = 40, tone = "ink" }) => {
+  const bg = tone === "ink" ? "var(--ink)" : "var(--paper-2)";
+  const fg = tone === "ink" ? "var(--paper)" : "var(--ink)";
+  const doubled = [...items, ...items];
+  return (
+    <div style={{
+      background: bg, color: fg, padding: "10px 0",
+      overflow: "hidden", position: "relative", borderTop: "1px solid var(--ink)",
+      borderBottom: "1px solid var(--ink)"
+    }}>
+      <div style={{
+        display: "flex", gap: 48, whiteSpace: "nowrap",
+        animation: `tickerSlide ${speed}s linear infinite`,
+        width: "max-content"
+      }}>
+        {doubled.map((it, i) => (
+          <span key={i} className="mono" style={{ fontSize: 12, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+            {it} <span style={{ color: tone === "ink" ? "var(--coral)" : "var(--coral-2)", margin: "0 4px" }}>◆</span>
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const Bar = ({ label, pct, value, tone = "ink", max = 100, subtle = false, delay = 0 }) => {
+  const barColor = {
+    ink: "var(--ink)", pos: "var(--pos)", neg: "var(--neg)",
+    coral: "var(--coral)", forest: "var(--forest)", ochre: "var(--ochre)"
+  }[tone] || "var(--ink)";
+  const width = (pct / max) * 100;
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+        <span style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>{label}</span>
+        <span className="mono" style={{ fontSize: 11, color: "var(--ink-3)", fontWeight: 500 }}>
+          {value != null ? value : `${pct}%`}
+        </span>
+      </div>
+      <div style={{ height: subtle ? 4 : 6, background: "var(--paper-3)", borderRadius: 0, overflow: "hidden" }}>
+        <div style={{
+          height: "100%", background: barColor, width: `${width}%`,
+          transformOrigin: "left",
+          animation: `growBar 0.8s cubic-bezier(.2,.8,.2,1) ${delay}s both`
+        }}/>
+      </div>
+    </div>
+  );
+};
+
+const Sparkline = ({ data, w = 240, h = 50, tone = "ink" }) => {
+  if (!data || data.length < 2) return null;
+  const min = Math.min(...data), max = Math.max(...data);
+  const range = max - min || 1;
+  const step = w / (data.length - 1);
+  const pts = data.map((v, i) => [i * step, h - ((v - min) / range) * h * 0.9 - h * 0.05]);
+  const d = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ");
+  const fillD = `${d} L${w},${h} L0,${h} Z`;
+  const color = tone === "coral" ? "var(--coral)" : "var(--forest)";
+  return (
+    <svg width={w} height={h} style={{ display: "block", overflow: "visible" }}>
+      <path d={fillD} fill={color} opacity="0.08" />
+      <path d={d} stroke={color} strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      <circle cx={pts[pts.length-1][0]} cy={pts[pts.length-1][1]} r="3" fill={color}/>
+      <circle cx={pts[pts.length-1][0]} cy={pts[pts.length-1][1]} r="5" fill={color} opacity="0.2"/>
+    </svg>
+  );
+};
+
+const Donut = ({ pos, neu, neg, size = 140 }) => {
+  const r = size / 2 - 10, c = 2 * Math.PI * r;
+  const total = (pos || 0) + (neu || 0) + (neg || 0) || 1;
+  const posLen = ((pos || 0) / total) * c;
+  const neuLen = ((neu || 0) / total) * c;
+  const negLen = ((neg || 0) / total) * c;
+  return (
+    <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
+      <circle cx={size/2} cy={size/2} r={r} stroke="var(--paper-3)" strokeWidth="1" fill="none"/>
+      <circle cx={size/2} cy={size/2} r={r} stroke="var(--pos)" strokeWidth="14" fill="none"
+              strokeDasharray={`${posLen} ${c}`} strokeDashoffset="0"/>
+      <circle cx={size/2} cy={size/2} r={r} stroke="var(--ochre)" strokeWidth="14" fill="none"
+              strokeDasharray={`${neuLen} ${c}`} strokeDashoffset={-posLen}/>
+      <circle cx={size/2} cy={size/2} r={r} stroke="var(--neg)" strokeWidth="14" fill="none"
+              strokeDasharray={`${negLen} ${c}`} strokeDashoffset={-(posLen + neuLen)}/>
+    </svg>
+  );
+};
+
+const Section = ({ num, kicker, title, children, className = "" }) => (
+  <section id={`section-${num}`} className={className} style={{ marginBottom: 64, scrollMarginTop: 80 }}>
+    <div style={{ display: "flex", alignItems: "baseline", gap: 16, marginBottom: 8 }}>
+      <span className="mono" style={{ fontSize: 11, color: "var(--ink-3)", letterSpacing: "0.16em" }}>
+        §{num}
+      </span>
+      <span className="mono tracking-wide" style={{ fontSize: 11, color: "var(--ink-3)", textTransform: "uppercase" }}>
+        {kicker}
+      </span>
+    </div>
+    <h2 className="serif" style={{
+      fontSize: "clamp(28px, 3.6vw, 44px)", fontWeight: 500,
+      margin: "0 0 28px", color: "var(--ink)", letterSpacing: "-0.02em",
+      lineHeight: 1.1, maxWidth: 820
+    }}>{title}</h2>
+    {children}
+  </section>
+);
+
+const StarRow = ({ rating, size = 14 }) => {
+  // P3.9: rating 缺值時不再硬畫 0 或 5 星 — 顯示 "—" 中性文字
+  if (rating == null || typeof rating !== "number" || rating <= 0) {
+    return (
+      <span className="mono" style={{ fontSize: size - 2, color: "var(--ink-3)" }}>—</span>
+    );
+  }
+  const full = Math.floor(rating);
+  const hasHalf = rating - full >= 0.5;
+  return (
+    <div style={{ display: "inline-flex", gap: 2, color: "var(--coral)" }}>
+      {[0,1,2,3,4].map(i => (
+        <StarFill key={i} size={size} style={{ opacity: i < full ? 1 : (i === full && hasHalf ? 0.5 : 0.2) }}/>
+      ))}
+    </div>
+  );
+};
+
+const Card = ({ children, style = {}, flush = false }) => (
+  <div style={{
+    background: "var(--card)", border: "1px solid var(--rule)",
+    padding: flush ? 0 : 24, ...style
+  }}>{children}</div>
+);
+
+const Btn = ({ children, tone = "ink", onClick, disabled, block, size = "md", ...p }) => {
+  const h = size === "lg" ? 52 : size === "sm" ? 32 : 44;
+  const fs = size === "lg" ? 15 : size === "sm" ? 12 : 14;
+  const styles = {
+    ink: { bg: "var(--ink)", fg: "var(--paper)", border: "var(--ink)" },
+    coral: { bg: "var(--coral-2)", fg: "var(--paper)", border: "var(--coral-2)" },
+    forest: { bg: "var(--forest)", fg: "var(--paper)", border: "var(--forest)" },
+    ghost: { bg: "transparent", fg: "var(--ink)", border: "var(--ink)" },
+    paper: { bg: "var(--paper-2)", fg: "var(--ink)", border: "var(--rule)" }
+  }[tone];
+  return (
+    <button onClick={onClick} disabled={disabled}
+      style={{
+        height: h, padding: `0 ${size === "sm" ? 14 : 22}px`,
+        background: styles.bg, color: styles.fg, border: `1px solid ${styles.border}`,
+        fontFamily: "var(--sans)", fontSize: fs, fontWeight: 500,
+        display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8,
+        width: block ? "100%" : "auto", cursor: disabled ? "not-allowed" : "pointer",
+        opacity: disabled ? 0.4 : 1,
+        transition: "transform .12s, background .2s, color .2s",
+        letterSpacing: "0.01em"
+      }}
+      onMouseDown={(e) => !disabled && (e.currentTarget.style.transform = "translateY(1px)")}
+      onMouseUp={(e) => (e.currentTarget.style.transform = "none")}
+      onMouseLeave={(e) => (e.currentTarget.style.transform = "none")}
+      {...p}
+    >{children}</button>
+  );
+};
+
+const Rule = ({ kicker, ink = false }) => (
+  <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "12px 0" }}>
+    <div style={{ flex: 1, height: 1, background: ink ? "var(--ink)" : "var(--rule)" }}/>
+    {kicker && (
+      <span className="mono tracking-wide" style={{ fontSize: 10, color: "var(--ink-3)", textTransform: "uppercase" }}>
+        {kicker}
+      </span>
+    )}
+    <div style={{ flex: 1, height: 1, background: ink ? "var(--ink)" : "var(--rule)" }}/>
+  </div>
+);
+
+// ============================================================================
+// Tweaks panel
+// ============================================================================
+
+const TweakGroup = ({ label, children }) => (
+  <div style={{ marginBottom: 16 }}>
+    <div className="mono tracking-wide" style={{ fontSize: 10, color: "var(--ink-3)", textTransform: "uppercase", marginBottom: 8 }}>
+      {label}
+    </div>
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>{children}</div>
+  </div>
+);
+
+const SwatchBtn = ({ label, active, color, onClick }) => (
+  <button onClick={onClick} style={{
+    display: "flex", alignItems: "center", gap: 6, padding: "6px 10px",
+    border: `1px solid ${active ? "var(--ink)" : "var(--rule)"}`,
+    background: active ? "var(--paper-2)" : "transparent",
+    fontSize: 12, cursor: "pointer", fontFamily: "var(--sans)"
+  }}>
+    <div style={{ width: 10, height: 10, background: color }}/>{label}
+  </button>
+);
+
+const PillBtn = ({ label, active, onClick }) => (
+  <button onClick={onClick} style={{
+    padding: "5px 10px", fontSize: 12,
+    border: `1px solid ${active ? "var(--ink)" : "var(--rule)"}`,
+    background: active ? "var(--ink)" : "transparent",
+    color: active ? "var(--paper)" : "var(--ink)", cursor: "pointer", fontFamily: "var(--sans)"
+  }}>{label}</button>
+);
+
+// ============================================================================
+// Landing hooks: mouse + scroll
+// ============================================================================
+
+const useMouse = () => {
+  const [m, setM] = React.useState({ x: 0.5, y: 0.5 });
+  React.useEffect(() => {
+    const h = (e) => setM({ x: e.clientX / window.innerWidth, y: e.clientY / window.innerHeight });
+    window.addEventListener("mousemove", h);
+    return () => window.removeEventListener("mousemove", h);
+  }, []);
+  return m;
+};
+
+const useScroll = () => {
+  const [y, setY] = React.useState(0);
+  React.useEffect(() => {
+    const h = () => setY(window.scrollY);
+    window.addEventListener("scroll", h, { passive: true });
+    return () => window.removeEventListener("scroll", h);
+  }, []);
+  return y;
+};
+
+// ============================================================================
+// Landing constellation data
+// ============================================================================
+
+const CONSTELLATION = [
+  { id: "n1",  x: 0.22, y: 0.18, r: 8,  tone: "pos", c: 0, t: "招牌菜有靈魂", a: "陳小姐", m: "Google · 5★" },
+  { id: "n2",  x: 0.14, y: 0.34, r: 6,  tone: "pos", c: 0, t: "用料實在", a: "Wen", m: "Google · 5★" },
+  { id: "n3",  x: 0.30, y: 0.48, r: 7,  tone: "pos", c: 0, t: "CP 值高", a: "匿名", m: "Google · 4★" },
+  { id: "n4",  x: 0.68, y: 0.22, r: 8,  tone: "neg", c: 1, t: "週末等 45 分鐘", a: "J. Huang", m: "Google · 2★" },
+  { id: "n5",  x: 0.82, y: 0.36, r: 6,  tone: "neg", c: 1, t: "出餐真的久", a: "街訪實測", m: "YouTube" },
+  { id: "n6",  x: 0.74, y: 0.54, r: 5,  tone: "neg", c: 1, t: "上菜可以再快", a: "匿名", m: "Google · 3★" },
+  { id: "n7",  x: 0.18, y: 0.68, r: 5,  tone: "pos", c: 2, t: "環境氣氛好", a: "Lin", m: "Google · 5★" },
+  { id: "n8",  x: 0.32, y: 0.82, r: 6,  tone: "pos", c: 2, t: "拍照超美", a: "媽咪 Vlog", m: "YouTube" },
+  { id: "n9",  x: 0.88, y: 0.74, r: 7,  tone: "neg", c: 3, t: "停車繞不到", a: "Daniel", m: "Google · 3★" },
+  { id: "n10", x: 0.72, y: 0.86, r: 5,  tone: "mix", c: 3, t: "交通不便但值得", a: "Yu", m: "Google · 4★" },
+  { id: "n11", x: 0.46, y: 0.14, r: 5,  tone: "pos", c: 0, t: "老闆記得我", a: "林先生", m: "Google · 5★" },
+  { id: "n12", x: 0.54, y: 0.88, r: 5,  tone: "pos", c: 2, t: "巷弄小店驚喜", a: "Yu", m: "Google · 5★" },
+  { id: "n13", x: 0.06, y: 0.52, r: 4,  tone: "pos", c: 0, t: "服務員態度好", a: "匿名", m: "Google · 5★" },
+  { id: "n14", x: 0.94, y: 0.20, r: 4,  tone: "neg", c: 1, t: "排隊排到懷疑人生", a: "實測", m: "YouTube" },
+  { id: "n15", x: 0.60, y: 0.68, r: 5,  tone: "mix", c: 3, t: "價格偏高但值得", a: "匿名", m: "Google · 4★" },
+];
+const EDGES = [
+  ["n1","n2"], ["n2","n3"], ["n1","n11"], ["n3","n13"], ["n1","n3"],
+  ["n4","n5"], ["n5","n6"], ["n4","n14"], ["n4","n6"],
+  ["n7","n8"], ["n8","n12"], ["n7","n12"],
+  ["n9","n10"], ["n10","n15"], ["n6","n15"],
+  ["n3","n15"], ["n11","n7"],
+];
+const CLUSTER_COLORS = {
+  0: "var(--pos)", 1: "var(--neg)", 2: "var(--ochre)", 3: "var(--coral-2)",
+};
+const TONE_COLORS = { pos: "var(--pos)", neg: "var(--neg)", mix: "var(--ochre)" };
+
+const Constellation = () => {
+  const [hovered, setHovered] = React.useState(null);
+  const [phase, setPhase] = React.useState(0);
+  const nodeById = React.useMemo(() => Object.fromEntries(CONSTELLATION.map(n => [n.id, n])), []);
+
+  React.useEffect(() => {
+    const t = setInterval(() => setPhase(p => (p + 1) % (EDGES.length + 8)), 180);
+    return () => clearInterval(t);
+  }, []);
+
+  return (
+    <svg viewBox="0 0 800 800" style={{
+      position: "absolute", inset: 0, width: "100%", height: "100%", zIndex: 2
+    }} preserveAspectRatio="xMidYMid slice">
+      <defs>
+        <radialGradient id="centerGlow" cx="0.5" cy="0.5" r="0.5">
+          <stop offset="0%" stopColor="var(--forest)" stopOpacity="0.22"/>
+          <stop offset="70%" stopColor="var(--forest)" stopOpacity="0"/>
+        </radialGradient>
+      </defs>
+      {[120, 220, 320].map((r, i) => (
+        <circle key={r} cx="400" cy="400" r={r}
+          fill="none" stroke="var(--rule)" strokeWidth="1"
+          strokeDasharray="2 6" opacity={0.55 - i * 0.12}/>
+      ))}
+      <line x1="400" y1="0" x2="400" y2="800" stroke="var(--rule)" strokeDasharray="1 8" opacity="0.5"/>
+      <line x1="0" y1="400" x2="800" y2="400" stroke="var(--rule)" strokeDasharray="1 8" opacity="0.5"/>
+      <circle cx="400" cy="400" r="380" fill="url(#centerGlow)"/>
+      {EDGES.map(([a, b], i) => {
+        const na = nodeById[a], nb = nodeById[b];
+        const ax = na.x * 800, ay = na.y * 800;
+        const bx = nb.x * 800, by = nb.y * 800;
+        const sameCluster = na.c === nb.c;
+        const visible = phase >= i;
+        const isDrawing = phase === i;
+        const stroke = sameCluster ? CLUSTER_COLORS[na.c] : "var(--ink-4)";
+        return (
+          <g key={i}>
+            <line x1={ax} y1={ay} x2={bx} y2={by}
+              stroke={stroke}
+              strokeWidth={isDrawing ? 1.8 : 1}
+              strokeDasharray={sameCluster ? "none" : "3 4"}
+              opacity={visible ? (sameCluster ? 0.55 : 0.28) : 0}
+              style={{ transition: "opacity .45s ease, stroke-width .3s" }}
+            />
+            {isDrawing && (
+              <circle cx={(ax + bx) / 2} cy={(ay + by) / 2} r="3" fill={stroke}>
+                <animate attributeName="r" from="2" to="10" dur="0.7s" fill="freeze"/>
+                <animate attributeName="opacity" from="1" to="0" dur="0.7s" fill="freeze"/>
+              </circle>
+            )}
+          </g>
+        );
+      })}
+      <g>
+        <circle cx="400" cy="400" r="42" fill="var(--paper)" stroke="var(--ink)" strokeWidth="1.5"/>
+        <circle cx="400" cy="400" r="32" fill="var(--ink)"/>
+        <circle cx="400" cy="400" r="42" fill="none" stroke="var(--coral)" strokeWidth="1" opacity="0.7">
+          <animate attributeName="r" from="42" to="110" dur="2.4s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" from="0.7" to="0" dur="2.4s" repeatCount="indefinite"/>
+        </circle>
+        <circle cx="400" cy="400" r="42" fill="none" stroke="var(--coral)" strokeWidth="1" opacity="0.7">
+          <animate attributeName="r" from="42" to="110" dur="2.4s" begin="1.2s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" from="0.7" to="0" dur="2.4s" begin="1.2s" repeatCount="indefinite"/>
+        </circle>
+        <text x="400" y="395" textAnchor="middle" fontFamily="var(--serif)" fontWeight="600"
+              fontSize="14" fill="var(--paper)" letterSpacing="-0.02em">insight</text>
+        <text x="400" y="412" textAnchor="middle" fontFamily="var(--serif)" fontWeight="700"
+              fontSize="16" fill="var(--coral)" letterSpacing="-0.02em">x</text>
+      </g>
+      <g style={{ transformOrigin: "400px 400px", animation: "sweepRotate 7s linear infinite" }}>
+        <defs>
+          <linearGradient id="sweepGrad" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="var(--forest)" stopOpacity="0"/>
+            <stop offset="100%" stopColor="var(--forest)" stopOpacity="0.35"/>
+          </linearGradient>
+        </defs>
+        <path d="M 400 400 L 780 400 A 380 380 0 0 0 620 110 Z" fill="url(#sweepGrad)"/>
+      </g>
+      {CONSTELLATION.map((n, i) => {
+        const cx = n.x * 800, cy = n.y * 800;
+        const isHover = hovered === n.id;
+        return (
+          <g key={n.id} style={{ cursor: "pointer" }}
+             onMouseEnter={() => setHovered(n.id)}
+             onMouseLeave={() => setHovered(null)}>
+            <circle cx={cx} cy={cy} r={n.r + 4} fill="none"
+              stroke={TONE_COLORS[n.tone]} strokeWidth="1" opacity="0.35">
+              <animate attributeName="r" from={n.r + 2} to={n.r + 14} dur="2.2s" begin={`${i * 0.15}s`} repeatCount="indefinite"/>
+              <animate attributeName="opacity" from="0.5" to="0" dur="2.2s" begin={`${i * 0.15}s`} repeatCount="indefinite"/>
+            </circle>
+            <circle cx={cx} cy={cy} r={isHover ? n.r + 2 : n.r}
+              fill="var(--paper)" stroke={TONE_COLORS[n.tone]} strokeWidth="1.8"
+              style={{ transition: "r .2s" }}/>
+            <circle cx={cx} cy={cy} r={n.r * 0.5} fill={TONE_COLORS[n.tone]}/>
+          </g>
+        );
+      })}
+      {hovered && (() => {
+        const n = nodeById[hovered];
+        const cx = n.x * 800, cy = n.y * 800;
+        const right = cx > 400;
+        const tx = right ? cx - 16 : cx + 16;
+        const anchor = right ? "end" : "start";
+        return (
+          <g style={{ pointerEvents: "none" }}>
+            <line x1={cx} y1={cy} x2={tx} y2={cy - 30} stroke="var(--ink)" strokeWidth="1"/>
+            <text x={tx} y={cy - 36} textAnchor={anchor}
+              fontFamily="var(--serif)" fontWeight="500" fontSize="16" fill="var(--ink)">
+              「{n.t}」
+            </text>
+            <text x={tx} y={cy - 18} textAnchor={anchor}
+              fontFamily="var(--mono)" fontSize="10" fill="var(--ink-3)" letterSpacing="0.5">
+              {n.a} · {n.m}
+            </text>
+          </g>
+        );
+      })()}
+    </svg>
+  );
+};
+
+const HUDFrame = () => (
+  <>
+    {[
+      { top: 0, left: 0, rotate: 0 },
+      { top: 0, right: 0, rotate: 90 },
+      { bottom: 0, right: 0, rotate: 180 },
+      { bottom: 0, left: 0, rotate: 270 },
+    ].map((pos, i) => (
+      <div key={i} style={{
+        position: "absolute", ...pos,
+        width: 22, height: 22, zIndex: 4, pointerEvents: "none",
+        transform: `rotate(${pos.rotate}deg)`,
+        borderTop: `1.5px solid var(--ink)`,
+        borderLeft: `1.5px solid var(--ink)`,
+      }}/>
+    ))}
+  </>
+);
+
+const HeroVisual = () => {
+  const [sourceIdx, setSourceIdx] = React.useState(0);
+  const sources = [
+    { label: "GOOGLE REVIEWS", n: 847 },
+    { label: "YOUTUBE MENTIONS", n: 14 },
+    { label: "CROSS-REFERENCED", n: 23 },
+  ];
+  React.useEffect(() => {
+    const t = setInterval(() => setSourceIdx(i => (i + 1) % sources.length), 2400);
+    return () => clearInterval(t);
+  }, []);
+  const current = sources[sourceIdx];
+
+  return (
+    <div style={{
+      position: "relative", width: "100%", aspectRatio: "1 / 1.05",
+      background: "radial-gradient(ellipse at center, var(--paper-2) 0%, var(--paper) 70%)",
+      border: "1px solid var(--ink)",
+      overflow: "hidden", minHeight: 460,
+    }}>
+      <Constellation/>
+      <HUDFrame/>
+      <div style={{
+        position: "absolute", top: 14, left: 14, zIndex: 5,
+        display: "flex", alignItems: "center", gap: 8,
+        background: "var(--card)", border: "1px solid var(--ink)",
+        padding: "6px 10px"
+      }}>
+        <div style={{
+          width: 6, height: 6, borderRadius: "50%", background: "var(--coral)",
+          animation: "pulseDot 1.2s ease-in-out infinite"
+        }}/>
+        <span className="mono tracking-wide" style={{ fontSize: 10, color: "var(--ink)", textTransform: "uppercase", letterSpacing: "0.16em" }}>
+          insightx · NEURAL MAP
+        </span>
+      </div>
+      <div style={{
+        position: "absolute", top: 14, right: 14, zIndex: 5,
+        background: "var(--ink)", color: "var(--paper)",
+        padding: "6px 10px", display: "flex", alignItems: "center", gap: 10, minWidth: 180,
+        fontVariantNumeric: "tabular-nums"
+      }}>
+        <span className="mono" style={{ fontSize: 9, opacity: 0.6, letterSpacing: "0.14em" }}>SRC</span>
+        <span className="mono" style={{ fontSize: 10, letterSpacing: "0.1em" }}>{current.label}</span>
+        <span className="mono" style={{ fontSize: 12, fontWeight: 600, marginLeft: "auto", color: "var(--coral)" }}>
+          {current.n.toLocaleString()}
+        </span>
+      </div>
+      <div style={{
+        position: "absolute", bottom: 14, left: 14, right: 14, zIndex: 5,
+        background: "var(--card)", border: "1px solid var(--ink)",
+        padding: "10px 14px",
+        display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap",
+      }}>
+        <div className="mono tracking-wide" style={{ fontSize: 9, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.14em" }}>
+          Topics found
+        </div>
+        {[
+          { c: "var(--pos)", t: "招牌菜" },
+          { c: "var(--neg)", t: "等待時間" },
+          { c: "var(--ochre)", t: "氛圍環境" },
+          { c: "var(--coral-2)", t: "停車交通" },
+        ].map((t, i) => (
+          <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11 }}>
+            <div style={{ width: 8, height: 8, background: t.c, borderRadius: "50%" }}/>
+            <span style={{ color: "var(--ink)" }}>{t.t}</span>
+          </div>
+        ))}
+        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}>
+          <div style={{ width: 5, height: 5, borderRadius: "50%", background: "var(--forest)", animation: "pulseDot 1.2s infinite" }}/>
+          <span className="mono tracking-wide" style={{ fontSize: 9, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.14em" }}>
+            ANALYZING
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ============================================================================
+// Landing — mode picker + flow + benefits + report + testimonials + FAQ + CTA
+// ============================================================================
+
+const MiniAnalyzeRunner = ({ steps, step, label }) => (
+  <div style={{ background: "var(--ink)", color: "var(--paper)", padding: 18 }}>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+      <Stamp tone="coral">{label || "Analyzing"}</Stamp>
+      <span className="mono" style={{ fontSize: 10, opacity: 0.6 }}>{Math.min(step, steps.length)} / {steps.length}</span>
+    </div>
+    <div style={{ height: 3, background: "oklch(0.35 0.02 160)", marginBottom: 16, overflow: "hidden" }}>
+      <div style={{
+        height: "100%", background: "var(--coral)",
+        width: `${(Math.min(step, steps.length) / steps.length) * 100}%`,
+        transition: "width .3s"
+      }}/>
+    </div>
+    {steps[Math.min(step, steps.length - 1)] && (
+      <div style={{ fontSize: 13, lineHeight: 1.5 }}>
+        <div style={{ fontWeight: 500 }}>{steps[Math.min(step, steps.length - 1)].k}</div>
+        <div style={{ fontSize: 11, opacity: 0.6, marginTop: 3 }}>{steps[Math.min(step, steps.length - 1)].d}</div>
+      </div>
+    )}
+  </div>
+);
+
+const ModeCard = ({ label, sub, brand, letter, font, active, onSelect, onStart, hint, url, setUrl, analyzing, step, steps, errorText, ytRole, setYtRole }) => {
+  return (
+    <div style={{
+      border: "1px solid var(--ink)",
+      background: "var(--card)",
+      transition: "all .3s cubic-bezier(.2,.8,.2,1)",
+      transform: active ? "translateY(-4px)" : "translateY(0)",
+      boxShadow: active ? "0 24px 60px -20px oklch(0.22 0.015 160 / 0.3)" : "none",
+      position: "relative", overflow: "hidden",
+      minHeight: active ? 340 : 220,
+    }}>
+      <div style={{
+        height: 6, background: brand,
+        transform: active ? "scaleX(1)" : "scaleX(0)",
+        transformOrigin: "left", transition: "transform .4s cubic-bezier(.2,.8,.2,1)"
+      }}/>
+      <div style={{ padding: 28, cursor: active ? "default" : "pointer" }}
+           onClick={() => !active && onSelect()}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{
+              width: 44, height: 44, background: brand, color: "#fff",
+              display: "grid", placeItems: "center",
+              fontFamily: font, fontWeight: 700,
+              fontSize: font.includes("serif") ? 24 : 18,
+              borderRadius: font.includes("serif") ? 6 : 3
+            }}>{letter}</div>
+            <div>
+              <div className="mono tracking-wide" style={{
+                fontSize: 10, color: "var(--ink-3)", textTransform: "uppercase", marginBottom: 3
+              }}>{sub}</div>
+              <h3 className="serif" style={{
+                fontSize: 26, fontWeight: 500, margin: 0, letterSpacing: "-0.02em"
+              }}>{label}</h3>
+            </div>
+          </div>
+          <div style={{
+            width: 28, height: 28, borderRadius: "50%",
+            border: `1.5px solid ${active ? brand : "var(--rule)"}`,
+            display: "grid", placeItems: "center",
+            transition: "all .3s"
+          }}>
+            {active
+              ? <div style={{ width: 10, height: 10, borderRadius: "50%", background: brand }}/>
+              : null}
+          </div>
+        </div>
+
+        <p style={{ fontSize: 13, color: "var(--ink-3)", margin: 0, lineHeight: 1.55 }}>{hint}</p>
+
+        <div style={{
+          maxHeight: active ? 340 : 0,
+          opacity: active ? 1 : 0,
+          overflow: "hidden",
+          transition: "max-height .4s cubic-bezier(.2,.8,.2,1), opacity .3s",
+          marginTop: active ? 20 : 0
+        }}>
+          {analyzing ? (
+            <MiniAnalyzeRunner steps={steps} step={step}/>
+          ) : (
+            <>
+              {label === "YouTube 頻道" && setYtRole && (
+                <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+                  {[["creator","創作者"],["brand","品牌"],["agency","行銷"]].map(([k, l]) => (
+                    <button key={k} onClick={() => setYtRole(k)} style={{
+                      padding: "5px 12px", fontSize: 11,
+                      border: `1px solid ${ytRole === k ? "var(--ink)" : "var(--rule)"}`,
+                      background: ytRole === k ? "var(--ink)" : "transparent",
+                      color: ytRole === k ? "var(--paper)" : "var(--ink)",
+                      cursor: "pointer", fontFamily: "var(--sans)"
+                    }}>{l}</button>
+                  ))}
+                </div>
+              )}
+              <div style={{
+                display: "flex", alignItems: "center", gap: 10,
+                borderBottom: "2px solid var(--ink)", padding: "6px 0"
+              }}>
+                <Link size={16} style={{ color: "var(--ink-3)" }}/>
+                <input
+                  value={url}
+                  onChange={e => setUrl(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && onStart()}
+                  placeholder={label === "Google 評論" ? "https://maps.app.goo.gl/..." : "https://www.youtube.com/watch?v=..."}
+                  style={{
+                    border: "none", outline: "none", background: "transparent",
+                    flex: 1, fontSize: 13, fontFamily: "var(--mono)", color: "var(--ink)",
+                    minWidth: 0, padding: "4px 0"
+                  }}
+                />
+              </div>
+              {errorText && (
+                <div style={{ marginTop: 10, fontSize: 12, color: "var(--neg)", lineHeight: 1.5 }}>
+                  {errorText}
+                </div>
+              )}
+              <button onClick={onStart} disabled={url.trim().length < 8} style={{
+                marginTop: 14, width: "100%", height: 46,
+                background: url.trim().length < 8 ? "var(--paper-3)" : "var(--ink)",
+                color: url.trim().length < 8 ? "var(--ink-4)" : "var(--paper)",
+                border: "none",
+                fontSize: 14, fontWeight: 500, cursor: url.trim().length < 8 ? "not-allowed" : "pointer",
+                fontFamily: "var(--sans)", transition: "background .2s",
+                display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8
+              }}>
+                開始分析 <ArrowRight size={14}/>
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const FlowV1 = () => (
+  <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center" }}>
+    <div style={{
+      width: "75%", background: "var(--card)", border: "1px solid var(--ink)",
+      padding: "10px 14px", display: "flex", alignItems: "center", gap: 10,
+      boxShadow: "3px 4px 0 var(--ink)"
+    }}>
+      <Link size={14} style={{ color: "var(--ink-3)" }}/>
+      <span className="mono" style={{ fontSize: 11, color: "var(--ink)", flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+        maps.app.goo.gl/demo<span style={{ animation: "dot 1s infinite" }}>|</span>
+      </span>
+    </div>
+    <div style={{
+      position: "absolute", top: 20, left: 20, fontSize: 10, color: "var(--ink-4)",
+    }} className="mono tracking-wide">PASTE</div>
+  </div>
+);
+
+const FlowV2 = () => (
+  <div style={{ position: "absolute", inset: 0, padding: 20, display: "flex", flexDirection: "column", gap: 6 }}>
+    {[0,1,2,3,4,5].map(i => (
+      <div key={i} style={{
+        height: 10, background: "var(--card)", border: "1px solid var(--rule)",
+        display: "flex", alignItems: "center", padding: "0 6px",
+        animation: `barScan 2s ease-in-out ${i * 0.12}s infinite`, opacity: 0.9
+      }}>
+        <div style={{
+          height: 3, background: "var(--forest)",
+          width: `${40 + Math.sin(i) * 30}%`,
+          animation: `grow 1.4s cubic-bezier(.2,.8,.2,1) ${i * 0.1}s infinite alternate`
+        }}/>
+      </div>
+    ))}
+    <div style={{
+      position: "absolute", top: 20, right: 20, fontSize: 10, color: "var(--coral-2)",
+      display: "flex", alignItems: "center", gap: 6
+    }} className="mono tracking-wide">
+      <div style={{ width: 5, height: 5, borderRadius: "50%", background: "var(--coral)", animation: "pulseDot 1s infinite" }}/>
+      READING
+    </div>
+  </div>
+);
+
+const FlowV3 = () => (
+  <div style={{ position: "absolute", inset: 0, padding: 20, display: "flex", gap: 10 }}>
+    <div style={{ flex: 1, background: "var(--card)", border: "1px solid var(--ink)", padding: 10 }}>
+      <div style={{ fontSize: 24, fontFamily: "var(--serif)", fontWeight: 600, color: "var(--ink)" }}>4.3</div>
+      <div className="mono" style={{ fontSize: 8, color: "var(--ink-3)", letterSpacing: "0.1em", textTransform: "uppercase" }}>RATING</div>
+      <div style={{ height: 4, background: "var(--pos)", width: "85%", marginTop: 8 }}/>
+    </div>
+    <div style={{ flex: 1.5, background: "var(--ink)", color: "var(--paper)", padding: 10 }}>
+      <div className="mono" style={{ fontSize: 8, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--coral)" }}>KEY FINDING</div>
+      <div style={{ fontSize: 11, marginTop: 6, lineHeight: 1.4, fontFamily: "var(--serif)" }}>
+        客人不是嫌慢，<br/>是嫌不知道要等多久。
+      </div>
+    </div>
+  </div>
+);
+
+const FlowSection = () => {
+  const steps = [
+    { n: "01", k: "貼上連結", d: "Google 地圖或 YouTube 頻道，任一即可。", visual: <FlowV1/> },
+    { n: "02", k: "AI 讀資料", d: "30 秒掃完幾百則評論，找出模式與盲點。", visual: <FlowV2/> },
+    { n: "03", k: "看經營報告", d: "像雜誌一樣好讀的建議，七天可行動。", visual: <FlowV3/> },
+  ];
+  return (
+    <section style={{ padding: "140px 0 120px", position: "relative" }}>
+      <div style={{ marginBottom: 72, display: "flex", alignItems: "baseline", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
+        <div>
+          <Stamp tone="coral">§01 · How it works</Stamp>
+          <h2 className="serif" style={{
+            fontSize: "clamp(40px, 5vw, 68px)", fontWeight: 500, margin: "12px 0 0",
+            letterSpacing: "-0.025em", lineHeight: 1.02, maxWidth: "16ch"
+          }}>30 秒，三個動作。</h2>
+        </div>
+        <span className="mono tracking-wide" style={{ fontSize: 11, color: "var(--ink-3)", textTransform: "uppercase" }}>
+          Vintage 2026
+        </span>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24 }} className="flow-grid">
+        {steps.map((s, i) => (
+          <div key={i} style={{
+            background: "var(--card)", border: "1px solid var(--ink)",
+            padding: 0, overflow: "hidden", position: "relative"
+          }}>
+            <div style={{
+              height: 200, background: "var(--paper-2)",
+              borderBottom: "1px solid var(--ink)",
+              position: "relative", overflow: "hidden"
+            }}>{s.visual}</div>
+            <div style={{ padding: "24px 24px 28px" }}>
+              <div className="mono tracking-wide" style={{ fontSize: 10, color: "var(--coral-2)", letterSpacing: "0.14em", marginBottom: 8 }}>
+                STEP {s.n}
+              </div>
+              <h3 className="serif" style={{
+                fontSize: 26, fontWeight: 500, margin: "0 0 10px", letterSpacing: "-0.02em"
+              }}>{s.k}</h3>
+              <p style={{ fontSize: 14, color: "var(--ink-3)", margin: 0, lineHeight: 1.6 }}>{s.d}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+};
+
+const BenefitIcon = ({ kind }) => {
+  const common = { width: 64, height: 64, stroke: "var(--ink)", strokeWidth: 1.25, fill: "none" };
+  if (kind === "radar") return (
+    <svg {...common} viewBox="0 0 64 64">
+      <circle cx="32" cy="32" r="28"/><circle cx="32" cy="32" r="18"/><circle cx="32" cy="32" r="8"/>
+      <line x1="32" y1="4" x2="32" y2="60"/><line x1="4" y1="32" x2="60" y2="32"/>
+      <line x1="32" y1="32" x2="52" y2="12" stroke="var(--coral-2)" strokeWidth="2">
+        <animateTransform attributeName="transform" type="rotate" from="0 32 32" to="360 32 32" dur="4s" repeatCount="indefinite"/>
+      </line>
+      <circle cx="46" cy="20" r="2.5" fill="var(--coral-2)" stroke="none"/>
+    </svg>
+  );
+  if (kind === "quote") return (
+    // P3.16 R3（使用者要求語意明確）：原文佐證 = 每個結論都有評論依據。改成
+    // **Pinpoint Citation** 視覺 — 左上大節點圓（AI 結論）→ 導引線 → 右下片段框
+    // （原文依據），讓「from claim to source」的因果關係一眼看懂。
+    // ⚙ Codex 備選幾何：不封滿的 editorial crop 框 + 兩條短文字線 + coral 底線指向
+    // 關鍵依據那一行。
+    <svg {...common} viewBox="0 0 64 64">
+      {/* 左上結論節點（AI 生成的觀點） */}
+      <circle cx="22" cy="22" r="7"/>
+
+      {/* 右下原文片段框（editorial crop 感：不封滿左上角） */}
+      <path d="M36 34 L50 34"/>
+      <path d="M50 34 L50 46"/>
+      <path d="M50 46 L34 46"/>
+      <path d="M34 46 L34 38"/>
+
+      {/* 框內 2 條短文字線模擬引文 */}
+      <path d="M38 38 L46 38"/>
+      <path d="M38 42 L44 42"/>
+
+      {/* 從結論節點到片段框的導引線 + 小 pinpoint */}
+      <path d="M27 26 L34 33"/>
+      <circle cx="34" cy="33" r="1.8" fill="var(--ink)" stroke="none"/>
+
+      {/* coral accent：底線指向「關鍵依據」的那一行 */}
+      <path d="M39 44 L45 44" stroke="var(--coral-2)" strokeWidth="2"/>
+    </svg>
+  );
+  if (kind === "action") return (
+    <svg {...common} viewBox="0 0 64 64">
+      <rect x="10" y="10" width="44" height="44"/>
+      <path d="M18 22h20M18 30h28M18 38h14" />
+      <circle cx="50" cy="42" r="8" stroke="var(--coral-2)" strokeWidth="1.5"/>
+      <path d="M47 42l2 2 4-4" stroke="var(--coral-2)" strokeWidth="1.5"/>
+    </svg>
+  );
+  if (kind === "chat") return (
+    <svg {...common} viewBox="0 0 64 64">
+      <path d="M10 14h40v30H32l-8 8v-8H10z"/>
+      <circle cx="22" cy="29" r="1.5" fill="var(--ink)" stroke="none"/>
+      <circle cx="30" cy="29" r="1.5" fill="var(--ink)" stroke="none"/>
+      <circle cx="38" cy="29" r="1.5" fill="var(--ink)" stroke="none"/>
+      <circle cx="52" cy="12" r="6" stroke="var(--coral-2)" fill="var(--coral-2)"/>
+    </svg>
+  );
+  return null;
+};
+
+const BenefitsSection = () => {
+  const benefits = [
+    { icon: "radar", t: "盲點掃描", d: "看見你沒注意的問題" },
+    { icon: "quote", t: "原文佐證", d: "每個結論都有評論依據" },
+    { icon: "action", t: "可行動", d: "不是儀表板，是建議" },
+    { icon: "chat", t: "AI 顧問", d: "你問，它根據資料回答" },
+  ];
+  return (
+    <section style={{ padding: "120px 0", borderTop: "1px solid var(--rule)", borderBottom: "1px solid var(--rule)" }}>
+      <div style={{ marginBottom: 72 }}>
+        <Stamp tone="coral">§02 · What you get</Stamp>
+        <h2 className="serif" style={{
+          fontSize: "clamp(40px, 5vw, 68px)", fontWeight: 500, margin: "12px 0 0",
+          letterSpacing: "-0.025em", lineHeight: 1.02, maxWidth: "14ch"
+        }}>不是儀表板，<br/>是顧問。</h2>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 0, border: "1px solid var(--ink)" }} className="benefits-grid">
+        {benefits.map((b, i) => (
+          <div key={i} style={{
+            padding: "40px 28px",
+            borderRight: i < 3 ? "1px solid var(--ink)" : "none",
+            background: "var(--card)", position: "relative",
+            minHeight: 260
+          }}>
+            <BenefitIcon kind={b.icon}/>
+            <h3 className="serif" style={{ fontSize: 22, fontWeight: 500, margin: "28px 0 6px", letterSpacing: "-0.02em" }}>{b.t}</h3>
+            <p style={{ fontSize: 13, color: "var(--ink-3)", margin: 0, lineHeight: 1.5 }}>{b.d}</p>
+            <span className="mono" style={{
+              position: "absolute", top: 16, right: 20, fontSize: 10, color: "var(--ink-4)", letterSpacing: "0.1em"
+            }}>0{i + 1}</span>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+};
+
+const ReportMock = () => {
+  const my = useMouse();
+  const tiltX = (my.y - 0.5) * 6;
+  const tiltY = (0.5 - my.x) * 6;
+  return (
+    <div style={{ position: "relative", perspective: 1400 }}>
+      <div style={{
+        transform: `rotateX(${tiltX}deg) rotateY(${tiltY}deg)`,
+        transformStyle: "preserve-3d",
+        transition: "transform .12s ease-out",
+        position: "relative"
+      }}>
+        <div style={{
+          position: "absolute", top: 20, left: 20, right: -20, bottom: -20,
+          background: "var(--paper-3)", border: "1px solid var(--rule)"
+        }}/>
+        <div style={{
+          position: "absolute", top: 10, left: 10, right: -10, bottom: -10,
+          background: "var(--paper-2)", border: "1px solid var(--rule)"
+        }}/>
+        <div style={{
+          position: "relative", background: "var(--card)", border: "1px solid var(--ink)",
+          padding: "32px 28px",
+          boxShadow: "0 40px 100px -30px oklch(0.22 0.015 160 / 0.4)",
+          minHeight: 480
+        }}>
+          <div style={{ borderBottom: "1px solid var(--ink)", paddingBottom: 16, marginBottom: 20 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
+              <Stamp tone="coral">AI Advisor Report</Stamp>
+              <span className="mono" style={{ fontSize: 10, color: "var(--ink-3)" }}>DEMO-0001</span>
+            </div>
+            <div className="serif" style={{ fontSize: 28, fontWeight: 500, letterSpacing: "-0.02em", lineHeight: 1.05 }}>
+              示範小館
+            </div>
+            <div style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 4 }}>範例市・樣板路 100 號</div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 20 }}>
+            <div style={{ border: "1px solid var(--rule)", padding: 12 }}>
+              <div className="mono" style={{ fontSize: 8, color: "var(--ink-3)", letterSpacing: "0.12em", textTransform: "uppercase" }}>Rating</div>
+              <div className="serif" style={{ fontSize: 42, fontWeight: 500, lineHeight: 1, letterSpacing: "-0.03em", marginTop: 4 }}>4.3</div>
+              <div style={{ fontSize: 10, color: "var(--pos)", marginTop: 2 }}>↑ +0.1</div>
+            </div>
+            <div style={{ background: "var(--ink)", color: "var(--paper)", padding: 12 }}>
+              <div className="mono" style={{ fontSize: 8, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--coral)" }}>Key finding</div>
+              <div className="serif" style={{ fontSize: 12, marginTop: 6, lineHeight: 1.4, fontWeight: 400 }}>
+                <span style={{ color: "var(--coral)" }}>評分上升，</span>負評集中在週末出餐與停車。
+              </div>
+            </div>
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <div className="mono" style={{ fontSize: 8, color: "var(--ink-3)", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 8 }}>
+              Top themes
+            </div>
+            {[
+              { l: "餐點美味", p: 78, c: "var(--pos)" },
+              { l: "環境氛圍", p: 62, c: "var(--pos)" },
+              { l: "出餐速度慢", p: 48, c: "var(--neg)" },
+              { l: "停車不便", p: 32, c: "var(--neg)" },
+            ].map((r, i) => (
+              <div key={i} style={{ marginBottom: 8 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, marginBottom: 3 }}>
+                  <span>{r.l}</span>
+                  <span className="mono" style={{ color: "var(--ink-3)" }}>{r.p}%</span>
+                </div>
+                <div style={{ height: 3, background: "var(--paper-3)" }}>
+                  <div style={{ height: "100%", background: r.c, width: `${r.p}%` }}/>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{
+            borderTop: "1px solid var(--rule)", paddingTop: 12,
+            display: "flex", justifyContent: "space-between", alignItems: "center"
+          }}>
+            <span className="mono" style={{ fontSize: 9, color: "var(--ink-3)", letterSpacing: "0.1em" }}>PAGE 01 / 21</span>
+            <span className="mono" style={{ fontSize: 9, color: "var(--ink-3)" }}>InsightX · 2026</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ReportPreview = () => (
+  <section style={{ padding: "120px 0", position: "relative" }}>
+    <div style={{ display: "grid", gridTemplateColumns: "minmax(0,0.85fr) minmax(0,1.15fr)", gap: 72, alignItems: "center" }} className="report-grid">
+      <div>
+        <Stamp tone="coral">§03 · Report preview</Stamp>
+        <h2 className="serif" style={{
+          fontSize: "clamp(40px, 5vw, 68px)", fontWeight: 500, margin: "12px 0 20px",
+          letterSpacing: "-0.025em", lineHeight: 1.02
+        }}>看一眼，<br/>就想往下讀。</h2>
+        <p style={{ fontSize: 16, color: "var(--ink-2)", lineHeight: 1.65, margin: "0 0 28px", maxWidth: 460 }}>
+          每份報告像一本小雜誌——大標、圖表、原文引用、行動建議。不是 Excel，不是儀表板。
+        </p>
+        <div style={{ display: "flex", alignItems: "center", gap: 16, fontSize: 12 }} className="mono">
+          <span style={{ color: "var(--ink-3)" }}>預計閱讀</span>
+          <span style={{ color: "var(--ink)", fontWeight: 600 }}>8 分鐘</span>
+          <span style={{ width: 1, height: 12, background: "var(--rule)" }}/>
+          <span style={{ color: "var(--ink-3)" }}>章節</span>
+          <span style={{ color: "var(--ink)", fontWeight: 600 }}>6</span>
+          <span style={{ width: 1, height: 12, background: "var(--rule)" }}/>
+          <span style={{ color: "var(--ink-3)" }}>頁數</span>
+          <span style={{ color: "var(--ink)", fontWeight: 600 }}>21</span>
+        </div>
+      </div>
+      <ReportMock/>
+    </div>
+  </section>
+);
+
+const Testimonials = () => {
+  const quotes = [
+    { t: "以為最大的問題是人手，結果顧問拿 400 則評論告訴我們：客人不是嫌慢，是嫌「不知道還要等多久」。一週後，我們裝了候位牌，負評少一半。", who: "W.", role: "家常料理・二代老闆", init: "W" },
+    { t: "我原本只看五星評論——那是做給自己看的。InsightX 逼我讀了所有兩星留言，才發現停車問題其實不是問題，是溝通問題。", who: "J.", role: "日式小酒館・店主", init: "J" },
+    { t: "YouTube 上被拍了七次我自己都不知道。有的正面有的批評，InsightX 幫我一次看完，還生成了回覆給那些 YouTuber。", who: "陳小姐", role: "咖啡店主理人", init: "陳" }
+  ];
+  return (
+    <section style={{ padding: "120px 0", background: "var(--ink)", color: "var(--paper)", margin: "0 -32px" }}>
+      <div style={{ maxWidth: 1280, margin: "0 auto", padding: "0 32px" }}>
+        <div style={{ marginBottom: 60 }}>
+          <span className="mono tracking-wide" style={{ fontSize: 10, color: "var(--coral)", letterSpacing: "0.14em", textTransform: "uppercase" }}>
+            §04 · What owners say
+          </span>
+          <h2 className="serif" style={{
+            fontSize: "clamp(40px, 5vw, 68px)", fontWeight: 500, margin: "12px 0 0",
+            letterSpacing: "-0.025em", lineHeight: 1.02, maxWidth: "20ch"
+          }}>
+            不是在聽顧客說話，<br/>是 AI 替你聽。
+          </h2>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 0 }} className="testimonials-grid">
+          {quotes.map((q, i) => (
+            <div key={i} style={{
+              padding: "32px 28px",
+              borderRight: i < 2 ? "1px solid oklch(0.4 0.02 160)" : "none",
+              borderLeft: i === 0 ? "1px solid oklch(0.4 0.02 160)" : "none",
+              borderTop: "1px solid oklch(0.4 0.02 160)",
+              borderBottom: "1px solid oklch(0.4 0.02 160)"
+            }}>
+              <Quote size={32} style={{ color: "var(--coral)", marginBottom: 20 }}/>
+              <p className="serif" style={{
+                fontSize: 18, lineHeight: 1.5, margin: "0 0 28px", fontWeight: 400, letterSpacing: "-0.01em"
+              }}>{q.t}</p>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{
+                  width: 36, height: 36, borderRadius: "50%", background: "oklch(0.4 0.02 160)",
+                  display: "grid", placeItems: "center",
+                  fontFamily: "var(--serif)", fontWeight: 500, fontSize: 14
+                }}>{q.init}</div>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 500 }}>{q.who}</div>
+                  <div className="mono" style={{ fontSize: 10, opacity: 0.6, letterSpacing: "0.1em" }}>{q.role}</div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};
+
+const FAQ_ITEMS = [
+  { q: "分析一家店要多久？", a: "30 秒到 1 分鐘。Google 評論越多分析越久，但我們會先顯示初步結果，剩下的邊看邊生成。" },
+  { q: "我的資料安全嗎？", a: "我們只讀取公開評論與影片，不碰你的 POS、財務或顧客名單。所有報告只有你看得到。" },
+  { q: "要收費嗎？", a: "範例店家完全免費。正式使用依分析次數計費，第一次分析免費試跑，後續每份報告約一杯咖啡的價格。" },
+  { q: "我不是餐廳，也能用嗎？", a: "可以。只要你的店在 Google 地圖上有評論，我們就能分析——美髮、健身房、醫美、民宿都有客戶在用。" },
+  { q: "AI 給的建議可信嗎？", a: "我們每條建議都會標註「根據幾則評論」。你永遠知道依據是什麼。AI 不會捏造顧客意見。" },
+  { q: "報告可以下載嗎？", a: "可以。PDF、Markdown、純文字三種格式。也能直接分享連結給夥伴。" },
+];
+
+const FAQSection = () => {
+  const [open, setOpen] = React.useState(0);
+  return (
+    <section style={{ padding: "120px 0" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "0.75fr 1.25fr", gap: 72, alignItems: "start" }} className="faq-grid">
+        <div>
+          <Stamp tone="coral">§05 · Questions</Stamp>
+          <h2 className="serif" style={{
+            fontSize: "clamp(40px, 5vw, 68px)", fontWeight: 500, margin: "12px 0 0",
+            letterSpacing: "-0.025em", lineHeight: 1.02
+          }}>常見<br/>疑問。</h2>
+        </div>
+        <div style={{ borderTop: "1px solid var(--ink)" }}>
+          {FAQ_ITEMS.map((it, i) => {
+            const isOpen = open === i;
+            return (
+              <div key={i} style={{ borderBottom: "1px solid var(--rule)" }}>
+                <button onClick={() => setOpen(isOpen ? -1 : i)} style={{
+                  width: "100%", textAlign: "left", border: "none", background: "transparent",
+                  padding: "24px 0", cursor: "pointer", fontFamily: "var(--sans)",
+                  display: "flex", alignItems: "center", gap: 20
+                }}>
+                  <span className="mono" style={{ fontSize: 11, color: "var(--ink-3)", width: 30 }}>
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  <span className="serif" style={{
+                    flex: 1, fontSize: 22, fontWeight: 500, color: "var(--ink)",
+                    letterSpacing: "-0.015em"
+                  }}>{it.q}</span>
+                  <div style={{
+                    width: 28, height: 28, display: "grid", placeItems: "center",
+                    transition: "transform .3s",
+                    transform: isOpen ? "rotate(45deg)" : "rotate(0)"
+                  }}>
+                    <Plus size={16}/>
+                  </div>
+                </button>
+                <div style={{
+                  maxHeight: isOpen ? 180 : 0,
+                  overflow: "hidden",
+                  transition: "max-height .35s cubic-bezier(.2,.8,.2,1)"
+                }}>
+                  <p style={{
+                    margin: 0, padding: "0 0 24px 50px",
+                    fontSize: 15, color: "var(--ink-2)", lineHeight: 1.65, maxWidth: 640
+                  }}>{it.a}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+};
+
+const FinalCTA = ({ onScrollTop }) => (
+  <section style={{
+    padding: "140px 32px 140px",
+    background: "var(--paper-2)",
+    margin: "0 -32px",
+    borderTop: "1px solid var(--ink)",
+    textAlign: "center"
+  }}>
+    <div style={{ maxWidth: 800, margin: "0 auto" }}>
+      <Stamp tone="coral">Ready?</Stamp>
+      <h2 className="serif" style={{
+        fontSize: "clamp(52px, 7vw, 96px)", fontWeight: 500,
+        margin: "20px 0 32px", letterSpacing: "-0.035em", lineHeight: 1
+      }}>
+        把顧客的話，<br/><span style={{ color: "var(--forest)" }}>讀進心裡。</span>
+      </h2>
+      <p style={{ fontSize: 16, color: "var(--ink-2)", lineHeight: 1.6, margin: "0 0 40px", maxWidth: 560, marginLeft: "auto", marginRight: "auto" }}>
+        30 秒，一份報告，一杯咖啡的時間。然後你會知道，顧客真的在意的是什麼。
+      </p>
+      <button onClick={onScrollTop} style={{
+        height: 58, padding: "0 36px", background: "var(--ink)", color: "var(--paper)",
+        border: "none", fontSize: 16, fontWeight: 500, cursor: "pointer",
+        fontFamily: "var(--sans)", display: "inline-flex", alignItems: "center", gap: 12
+      }}>
+        選擇分析管道 <ArrowRight size={16}/>
+      </button>
+    </div>
+  </section>
+);
+
+const navLink = {
+  fontSize: 13, color: "var(--ink-2)", cursor: "pointer", textDecoration: "none",
+  fontFamily: "var(--sans)", transition: "color .15s"
+};
+
+// ============================================================================
+// LandingPage — real API wire-up via runAnalyzeStream
+// ============================================================================
+
+const STEPS_GOOGLE = [
+  { k: "抓取 Google 評論", d: "翻閱 Google 地圖評論" },
+  { k: "清洗資料", d: "去除廣告、重複" },
+  { k: "主題聚類", d: "歸納可行動主題" },
+  { k: "情感判讀", d: "正向 / 中性 / 負面" },
+  { k: "對照內部直覺", d: "找出認知差距" },
+  { k: "生成報告", d: "產出經營報告" },
+];
+const STEPS_YOUTUBE = [
+  { k: "搜尋 YouTube 影片", d: "抓取影片資訊" },
+  { k: "抽取留言與字幕", d: "找出提及片段" },
+  { k: "去除噪音", d: "過濾跑題與廣告" },
+  { k: "情感與主題分群", d: "鬆散留言結構化" },
+  { k: "鎖定聲量熱點", d: "辨識影響力 KOL" },
+  { k: "生成報告", d: "YouTube 專屬報告" },
+];
+
+const LandingPage = ({ onComplete }) => {
+  const ix = useIX();
+  const state = ix?.state;
+  const dispatch = ix?.dispatch;
+  const Adapters = ix?.lib?.Adapters;
+
+  const [mode, setMode] = React.useState(() => state?.mode?.currentPlatform || null);
+  const [googleUrl, setGoogleUrl] = React.useState(() => state?.input?.googleUrl || "");
+  const [youtubeUrl, setYoutubeUrl] = React.useState(() => state?.input?.youtubeUrl || "");
+  const [ytRole, setYtRole] = React.useState(() => state?.mode?.ytRoleSelection || "creator");
+  const my = useMouse();
+  const sy = useScroll();
+  const controllerRef = React.useRef(null);
+
+  const url = mode === "youtube" ? youtubeUrl : googleUrl;
+  const setUrl = mode === "youtube" ? setYoutubeUrl : setGoogleUrl;
+  const STEPS = mode === "youtube" ? STEPS_YOUTUBE : STEPS_GOOGLE;
+
+  // progress step derived from stream phase — rough UI pacing
+  const phase = state?.stream?.phase || "idle";
+  const isAnalyzing = phase === "connecting" || phase === "streaming";
+  const isSucceeded = phase === "succeeded";
+  const isFailed = phase === "failed";
+  const streamError = state?.stream?.error;
+
+  const [fakeStep, setFakeStep] = React.useState(0);
+  React.useEffect(() => {
+    if (!isAnalyzing) { setFakeStep(0); return; }
+    setFakeStep(0);
+    const t = setInterval(() => {
+      setFakeStep(s => Math.min(s + 1, STEPS.length - 1));
+    }, 900);
+    return () => clearInterval(t);
+  }, [isAnalyzing, STEPS.length]);
+
+  // When result arrives, route to dashboard.
+  // P3.13 fix：原本只看 isSucceeded === true 就跳，但使用者從 dashboard 點 logo 回
+  // landing 時，stream.phase 還是 "succeeded"（上次留下的），LandingPage mount 一渲染
+  // useEffect 立刻把使用者彈回 dashboard，無法停在首頁。
+  // 改成只監聽 isSucceeded 從 false → true 的「轉換瞬間」才跳，現況是 true（不論之前
+  // 是什麼）不觸發。
+  const prevSucceededRef = React.useRef(isSucceeded);
+  React.useEffect(() => {
+    const wasNotSucceeded = !prevSucceededRef.current;
+    prevSucceededRef.current = isSucceeded;
+    if (wasNotSucceeded && isSucceeded && state?.features?.analyze?.data) {
+      const t = setTimeout(() => onComplete && onComplete(), 500);
+      return () => clearTimeout(t);
+    }
+  }, [isSucceeded, state?.features?.analyze?.data]);
+
+  React.useEffect(() => () => {
+    if (controllerRef.current?.close) controllerRef.current.close();
+  }, []);
+
+  const start = () => {
+    if (!Adapters || !dispatch) return;
+    const trimmed = (url || "").trim();
+    if (trimmed.length < 8 || !mode) return;
+    // persist mode + url
+    dispatch({ type: "SWITCH_PLATFORM", platform: mode });
+    dispatch({ type: "INPUT_CHANGE", platform: mode, value: trimmed });
+    if (mode === "youtube") {
+      dispatch({ type: "SWITCH_YT_ROLE", ytRole });
+    }
+    // close previous stream if any
+    if (controllerRef.current?.close) controllerRef.current.close();
+    controllerRef.current = Adapters.runAnalyzeStream({
+      url: trimmed,
+      platform: mode,
+      ytRole: mode === "youtube" ? ytRole : undefined,
+      dispatch,
+    });
+  };
+
+  const scrollTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
+
+  return (
+    <div style={{ background: "var(--paper)", color: "var(--ink)", position: "relative", overflow: "hidden" }}>
+      <div style={{
+        position: "fixed", zIndex: 0, pointerEvents: "none",
+        width: 600, height: 600,
+        left: `calc(${my.x * 100}% - 300px)`,
+        top: `calc(${my.y * 100}% - 300px)`,
+        background: "radial-gradient(circle, oklch(0.72 0.12 85 / 0.08) 0%, transparent 60%)",
+        transition: "left .4s ease-out, top .4s ease-out",
+        filter: "blur(30px)"
+      }}/>
+      <header style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "20px 32px", position: "sticky", top: 0,
+        background: sy > 40 ? "oklch(0.975 0.006 85 / 0.85)" : "var(--paper)",
+        backdropFilter: sy > 40 ? "blur(12px)" : "none",
+        zIndex: 10,
+        borderBottom: sy > 40 ? "1px solid var(--rule)" : "1px solid transparent",
+        transition: "background .3s, border-color .3s"
+      }}>
+        <Logo size={26}/>
+        <nav style={{ display: "flex", alignItems: "center", gap: 28 }} className="hide-sm">
+          <a onClick={() => document.getElementById("flow")?.scrollIntoView({ behavior: "smooth" })} style={navLink}>流程</a>
+          <a onClick={() => document.getElementById("benefits")?.scrollIntoView({ behavior: "smooth" })} style={navLink}>特色</a>
+          <a onClick={() => document.getElementById("report")?.scrollIntoView({ behavior: "smooth" })} style={navLink}>範例</a>
+          <a onClick={() => document.getElementById("faq")?.scrollIntoView({ behavior: "smooth" })} style={navLink}>FAQ</a>
+        </nav>
+        <div className="mono tracking-wide" style={{ fontSize: 10, color: "var(--ink-3)", textTransform: "uppercase" }}>
+          v{state?.meta?.appVersion || "4.0.0"} · live
+        </div>
+      </header>
+
+      <main style={{ maxWidth: 1280, margin: "0 auto", padding: "0 32px", position: "relative", zIndex: 1 }}>
+        <section style={{ padding: "80px 0 96px", position: "relative" }}>
+          <div style={{
+            display: "grid", gridTemplateColumns: "minmax(0,1.05fr) minmax(0,0.95fr)",
+            gap: 64, alignItems: "center"
+          }} className="hero-grid">
+            <div style={{ transform: `translateY(${sy * -0.1}px)` }}>
+              <Stamp tone="coral">AI · Shop Intelligence</Stamp>
+              <h1 className="serif" style={{
+                fontSize: "clamp(60px, 10vw, 140px)", fontWeight: 500,
+                lineHeight: 0.9, letterSpacing: "-0.045em",
+                margin: "24px 0 24px", maxWidth: "10ch"
+              }}>
+                AI<br/>管理顧問
+              </h1>
+              <p className="serif" style={{
+                fontSize: "clamp(20px, 2.4vw, 28px)", fontWeight: 400,
+                lineHeight: 1.35, letterSpacing: "-0.015em",
+                margin: "0 0 40px", color: "var(--ink-2)",
+                maxWidth: "22ch", fontStyle: "italic"
+              }}>
+                把顧客的每句話，<br/>
+                <span style={{ color: "var(--forest)", fontStyle: "normal" }}>讀給老闆聽。</span>
+              </p>
+              <div style={{ display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap" }}>
+                <button onClick={() => document.getElementById("pick")?.scrollIntoView({ behavior: "smooth" })}
+                  style={{
+                    height: 54, padding: "0 30px", background: "var(--ink)", color: "var(--paper)",
+                    border: "none", fontSize: 15, fontWeight: 500, cursor: "pointer",
+                    fontFamily: "var(--sans)", display: "inline-flex", alignItems: "center", gap: 10
+                  }}>
+                  開始分析 <ArrowRight size={14}/>
+                </button>
+                <div className="mono" style={{ fontSize: 11, color: "var(--ink-3)", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                  <div style={{ width: 5, height: 5, background: "var(--forest)", borderRadius: "50%", animation: "pulseDot 1.5s infinite" }}/>
+                  30 秒完成
+                </div>
+              </div>
+            </div>
+            <div style={{ transform: `translateY(${sy * 0.04}px)` }}>
+              <HeroVisual/>
+            </div>
+          </div>
+        </section>
+
+        <section id="pick" style={{ padding: "60px 0 140px", position: "relative" }}>
+          <div style={{ marginBottom: 56 }}>
+            <Stamp tone="coral">Choose your source</Stamp>
+            <h2 className="serif" style={{
+              fontSize: "clamp(36px, 4.5vw, 60px)", fontWeight: 500, margin: "12px 0 16px",
+              letterSpacing: "-0.025em", lineHeight: 1.05, maxWidth: "16ch"
+            }}>
+              先選你要分析的管道。
+            </h2>
+            <p style={{ fontSize: 15, color: "var(--ink-3)", margin: 0, maxWidth: 520, lineHeight: 1.6 }}>
+              Google 評論擅長告訴你顧客<em>怎麼想</em>；YouTube 告訴你外人<em>怎麼看</em>。兩個管道要分開分析，一次挑一個即可。
+            </p>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }} className="mode-grid">
+            <ModeCard
+              label="Google 評論" sub="Reviews · structured" brand="#4285F4" letter="G" font="var(--serif)"
+              active={mode === "google"}
+              onSelect={() => setMode("google")}
+              onStart={start}
+              hint="從 Google 地圖抓取評論原文、星等、時間，找出顧客真正在意的主題。"
+              url={googleUrl} setUrl={setGoogleUrl}
+              analyzing={isAnalyzing && mode === "google"}
+              step={fakeStep} steps={STEPS_GOOGLE}
+              errorText={mode === "google" && isFailed ? (streamError?.message || "分析失敗，請檢查 URL 後再試一次。") : null}
+            />
+            <ModeCard
+              label="YouTube 頻道" sub="Comments · unstructured" brand="#FF0000" letter="▶" font="var(--sans)"
+              active={mode === "youtube"}
+              onSelect={() => setMode("youtube")}
+              onStart={start}
+              hint="貼上單支 YouTube 影片連結，分析留言的情緒、主題與成長切入點。"
+              url={youtubeUrl} setUrl={setYoutubeUrl}
+              analyzing={isAnalyzing && mode === "youtube"}
+              step={fakeStep} steps={STEPS_YOUTUBE}
+              ytRole={ytRole} setYtRole={setYtRole}
+              errorText={mode === "youtube" && isFailed ? (streamError?.message || "分析失敗，請檢查 URL 後再試一次。") : null}
+            />
+          </div>
+        </section>
+
+        <div id="flow"><FlowSection/></div>
+        <div id="benefits"><BenefitsSection/></div>
+        <div id="report"><ReportPreview/></div>
+        <Testimonials/>
+        <div id="faq"><FAQSection/></div>
+        <FinalCTA onScrollTop={scrollTop}/>
+      </main>
+
+      <footer style={{
+        borderTop: "1px solid var(--ink)", padding: "28px 32px",
+        display: "flex", justifyContent: "space-between", alignItems: "center",
+        flexWrap: "wrap", gap: 16
+      }}>
+        <Logo size={22}/>
+        <span className="mono tracking-wide" style={{ fontSize: 10, color: "var(--ink-3)", textTransform: "uppercase" }}>
+          Powered by Gemini × Serper × YouTube · v{state?.meta?.appVersion || "4.0.0"}
+        </span>
+      </footer>
+    </div>
+  );
+};
+
+// ============================================================================
+// Dashboard — report view (uses live analyze data when available)
+// ============================================================================
+
+function formatRatingCount(n) {
+  if (typeof n !== "number") return "—";
+  return n.toLocaleString();
+}
+
+function buildDashboardVM(analyzeData) {
+  const raw = unwrapAnalyze(analyzeData);
+  if (!raw) return { isMock: true, restaurant: RESTAURANT, sentiment: SENTIMENT,
+    themesPos: THEMES_POS, themesNeg: THEMES_NEG, trend: TREND_90, reviews: REVIEWS };
+
+  const shop = buildShopViewModel(raw);
+  const sentiment = buildSentiment(raw) || SENTIMENT;
+  const themes = buildThemes(raw);
+  const reviews = buildReviews(raw);
+
+  const restaurant = {
+    nameZh: shop?.name || RESTAURANT.nameZh,
+    nameEn: shop?.name || RESTAURANT.nameEn,
+    address: shop?.address || RESTAURANT.address,
+    category: shop?.category || RESTAURANT.category,
+    reportId: "IX-" + String(Date.now()).slice(-6),
+    analyzedAt: new Date().toLocaleDateString("zh-TW"),
+    rating: shop?.rating ?? RESTAURANT.rating,
+    reviewCount: shop?.analyzedCount ?? RESTAURANT.reviewCount,
+    totalReviews: shop?.totalReviews ?? null,
+  };
+
+  return {
+    isMock: false,
+    platform: shop?.platform || "google",
+    restaurant,
+    sentiment,
+    themesPos: themes?.pos?.length ? themes.pos : THEMES_POS,
+    themesNeg: themes?.neg?.length ? themes.neg : THEMES_NEG,
+    trend: TREND_90, // 後端暫無 90d 資料，保留 mock 視覺
+    reviews: reviews?.length ? reviews : REVIEWS,
+  };
+}
+
+// ============================================================================
+// 兩層 VM 架構（Codex 審計建議）
+//
+// 原則：Dashboard 視覺可以 fallback mock；Toolkit / feature endpoints 絕對不能。
+// 否則「真分析模式下顯示／傳給 LLM 餐廳罐頭」是長期 bug 源頭。
+//
+//   useDashboardDisplayVM() — Dashboard 用，缺欄補 mock（顯示視覺占位）
+//   useAnalyzeFactsVM()    — Toolkit/feature 用，只回真資料；缺欄 = null/[]
+// ============================================================================
+
+// Dashboard display VM（保留 mock fallback；只用於視覺顯示）
+const useDashboardDisplayVM = () => {
+  const ix = useIX();
+  const analyze = ix?.state?.features?.analyze;
+  return React.useMemo(
+    () => buildDashboardVM(analyze?.status === "ready" ? analyze.data : null),
+    [analyze?.status, analyze?.requestId]
+  );
+};
+
+// Strict facts VM — 給 Toolkit 與 feature endpoints 用。
+// 沒真資料就回 isReady:false / 空陣列，不補 mock。
+//
+// P3.9-5R（Codex round 2）：必須同時擋兩種 mock 來源
+//   (a) 後端 LLM 失敗時 routes.py 回 mock_fallback + _fallback=true（200 OK，會走進這裡）
+//   (b) 前端 buildThemes/buildReviews 在沒 LLM 回值時 fallback 到 THEMES_POS/THEMES_NEG/REVIEWS 常數
+// 所以判斷雙重防線：先看 raw._fallback，再看 reference equality。
+function buildAnalyzeFacts(rawIn, requestId) {
+  const empty = {
+    isReady: false,
+    analyzeRequestId: null,
+    shop: null,
+    themesPos: [],
+    themesNeg: [],
+    reviews: [],
+    sentiment: null,
+  };
+  if (!rawIn) return empty;
+  // P3.9-5R-R3 fix #1：unwrapAnalyze 會把 SSE 包裝層 {_fallback, data:{...}} 的 _fallback 吃掉，
+  // 所以要在 unwrap 之前先檢查 top-level _fallback，再檢查 unwrap 後的。
+  if (rawIn._fallback === true) {
+    return { ...empty, analyzeRequestId: requestId || null };
+  }
+  const raw = unwrapAnalyze(rawIn);
+  if (!raw) return empty;
+  if (raw._fallback === true) {
+    return { ...empty, analyzeRequestId: requestId || null };
+  }
+  const shop = buildShopViewModel(raw);
+  const themes = buildThemes(raw);
+  const reviews = buildReviews(raw);
+  // buildThemes 在沒 LLM 回值時也會 fallback THEMES_POS/THEMES_NEG（display 用）。
+  // 這裡用「結果是不是 mock 常數本身」的 reference 判斷。
+  const realPos = themes?.pos && themes.pos !== THEMES_POS ? themes.pos : [];
+  const realNeg = themes?.neg && themes.neg !== THEMES_NEG ? themes.neg : [];
+  const realReviews = reviews && reviews !== REVIEWS ? reviews : [];
+  // P3.9-5R-R3 fix #6：sentiment 在沒 reviews 時 buildSentiment 會回 SENTIMENT mock 常數，
+  // strict VM 不能洩漏假數字 → 用 reference equality 過濾掉。
+  const rawSentiment = buildSentiment(raw);
+  const realSentiment = (rawSentiment && rawSentiment !== SENTIMENT) ? rawSentiment : null;
+  return {
+    isReady: true,
+    analyzeRequestId: requestId || null,
+    shop,
+    themesPos: realPos,
+    themesNeg: realNeg,
+    reviews: realReviews,
+    sentiment: realSentiment,
+  };
+}
+
+const useAnalyzeFactsVM = () => {
+  const ix = useIX();
+  const analyze = ix?.state?.features?.analyze;
+  return React.useMemo(
+    () => buildAnalyzeFacts(
+      analyze?.status === "ready" ? analyze.data : null,
+      analyze?.requestId
+    ),
+    [analyze?.status, analyze?.requestId]
+  );
+};
+
+const Masthead = ({ vm }) => {
+  // P3.14：YouTube 模式沒地址（raw.address 不存在 → fallback 到 mock 餐廳地址會誤導）。
+  // 同時「reviews analyzed」對 YouTube 應該是「comments analyzed」+ 用 analyzedCount
+  // （comment 數）而非 reviewCount（YouTube 下 = view_count = 觀看數，不是分析的單位）。
+  const platform = vm?.platform || "google";
+  const isYT = platform === "youtube";
+  const subAnalyzed = isYT
+    ? `${formatRatingCount(vm.restaurant.analyzedCount ?? vm.restaurant.reviewCount)} comments analyzed`
+    : `${formatRatingCount(vm.restaurant.reviewCount)} reviews analyzed`;
+  return (
+    <div style={{ borderBottom: "1px solid var(--ink)", background: "var(--paper)" }}>
+      <div style={{ maxWidth: 1280, margin: "0 auto", padding: "28px 32px 20px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 16 }}>
+          <div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 16, marginBottom: 10 }}>
+              <Stamp tone="coral">AI Advisor Report</Stamp>
+              <span className="mono" style={{ fontSize: 11, color: "var(--ink-3)" }}>{vm.restaurant.reportId}</span>
+            </div>
+            <h1 className="serif" style={{
+              fontSize: "clamp(36px, 5vw, 56px)", fontWeight: 500, letterSpacing: "-0.025em",
+              margin: 0, lineHeight: 1.05
+            }}>{vm.restaurant.nameZh}</h1>
+            <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 10, flexWrap: "wrap" }}>
+              {!isYT && (
+                <>
+                  <span style={{ fontSize: 13, color: "var(--ink-3)", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                    <MapPin size={14}/> {vm.restaurant.address}
+                  </span>
+                  <span style={{ width: 3, height: 3, background: "var(--ink-4)", borderRadius: "50%" }}/>
+                </>
+              )}
+              <span style={{ fontSize: 13, color: "var(--ink-3)" }}>{isYT ? "YouTube 影片" : vm.restaurant.category}</span>
+            </div>
+          </div>
+          <div style={{ textAlign: "right", fontSize: 12, color: "var(--ink-3)" }} className="mono">
+            <div>Analyzed {vm.restaurant.analyzedAt}</div>
+            <div style={{ marginTop: 4 }}>{subAnalyzed}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const LegRow = ({ c, label, v }) => (
+  <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: "1px solid var(--rule-2)" }}>
+    <div style={{ width: 8, height: 8, background: c }}/>
+    <span style={{ flex: 1, color: "var(--ink-2)" }}>{label}</span>
+    <span className="mono" style={{ color: "var(--ink)" }}>{v}%</span>
+  </div>
+);
+
+const HeroStat = ({ vm }) => {
+  // P3.14：YouTube 模式下 raw.rating = like_count（影片讚數，字串如 "7380"）、
+  // raw.rating_count = view_count（觀看數）— 這兩個欄位是借用店家的 schema，但 UI label
+  // 寫「目前評分」+ ★ 星等會誤導使用者把 7380 當「7380 顆星評分」。改成 platform-aware：
+  //   - YouTube：「影片讚數」+ 整數格式（不 toFixed(1)）+ 不畫 ★ + 「次觀看」
+  //   - Google：保留原本「目前評分」+ toFixed(1) + ★ 星等 + 「則」
+  const platform = vm?.platform || "google";
+  const isYT = platform === "youtube";
+  const ratingRaw = vm.restaurant.rating;
+  const ratingNum = ratingRaw != null && ratingRaw !== "" ? Number(ratingRaw) : NaN;
+  const ratingDisplay = !Number.isFinite(ratingNum)
+    ? "—"
+    : isYT
+      ? formatRatingCount(ratingNum)            // 7380 → "7,380"
+      : ratingNum.toFixed(1);                   // 4.3 → "4.3"
+  const stampLabel = isYT ? "Video likes" : "Current rating";
+  const pillLabel = isYT ? "影片讚數" : "目前評分";
+  const countSuffix = isYT ? "次觀看" : "則";
+  return (
+    <section style={{ marginBottom: 72 }}>
+      <div style={{
+        display: "grid", gridTemplateColumns: "repeat(12, 1fr)",
+        gap: 0, border: "1px solid var(--rule)"
+      }} className="hero-stat-grid">
+        <div style={{ gridColumn: "span 5", padding: "36px 32px", borderRight: "1px solid var(--rule)" }} className="span-5-sm-12">
+          <Stamp>{stampLabel}</Stamp>
+          <div style={{ display: "flex", alignItems: "flex-end", gap: 20, marginTop: 12 }}>
+            <span className="serif" style={{ fontSize: 96, fontWeight: 500, lineHeight: 0.9, letterSpacing: "-0.04em" }}>
+              {ratingDisplay}
+            </span>
+            <div style={{ paddingBottom: 12 }}>
+              {!isYT && <StarRow rating={Number.isFinite(ratingNum) ? ratingNum : 0} size={18}/>}
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 6 }}>
+                <Pill tone="pos">{pillLabel}</Pill>
+                <span className="mono" style={{ fontSize: 11, color: "var(--ink-3)" }}>
+                  {/* P3.14：YouTube「次觀看」應該用 totalReviews（= view_count），不是
+                      reviewCount（在 buildDashboardVM 裡 = analyzedCount = comment 數）。
+                      Google「則」也應該用 totalReviews（= rating_count = Google Maps 總則數），
+                      reviewCount=analyzedCount 不適合表達「總共有幾則」。 */}
+                  {formatRatingCount(vm.restaurant.totalReviews ?? vm.restaurant.reviewCount)} {countSuffix}
+                </span>
+              </div>
+            </div>
+          </div>
+          <div style={{ marginTop: 20 }}>
+            <Sparkline data={vm.trend} w={360} h={48} tone="forest"/>
+            <div className="mono" style={{ fontSize: 10, color: "var(--ink-3)", letterSpacing: "0.1em", marginTop: 4, display: "flex", justifyContent: "space-between" }}>
+              <span>90 天前</span><span>今天</span>
+            </div>
+          </div>
+        </div>
+        <div style={{ gridColumn: "span 4", padding: "36px 32px", borderRight: "1px solid var(--rule)" }} className="span-4-sm-12">
+          <Stamp>Sentiment breakdown</Stamp>
+          <div style={{ display: "flex", alignItems: "center", gap: 24, marginTop: 12 }}>
+            <div style={{ position: "relative" }}>
+              <Donut pos={vm.sentiment.positive} neu={vm.sentiment.neutral} neg={vm.sentiment.negative} size={120}/>
+              <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", pointerEvents: "none" }}>
+                <div style={{ textAlign: "center" }}>
+                  <div className="serif" style={{ fontSize: 28, fontWeight: 500, lineHeight: 1 }}>{vm.sentiment.positive}%</div>
+                  <div className="mono" style={{ fontSize: 9, color: "var(--ink-3)", letterSpacing: "0.1em", marginTop: 2 }}>POSITIVE</div>
+                </div>
+              </div>
+            </div>
+            <div style={{ flex: 1, fontSize: 12 }}>
+              <LegRow c="var(--pos)" label="正向" v={vm.sentiment.positive}/>
+              <LegRow c="var(--ochre)" label="中性" v={vm.sentiment.neutral}/>
+              <LegRow c="var(--neg)" label="負面" v={vm.sentiment.negative}/>
+            </div>
+          </div>
+        </div>
+        <div style={{ gridColumn: "span 3", padding: "36px 24px", background: "var(--ink)", color: "var(--paper)" }} className="span-3-sm-12">
+          <Stamp tone="coral">下一步</Stamp>
+          <p className="serif" style={{ fontSize: 21, fontWeight: 400, lineHeight: 1.35, letterSpacing: "-0.01em", margin: "14px 0 16px" }}>
+            <span style={{ color: "var(--coral)" }}>想了解更多細節，</span>
+            請往下捲動，讀「全部評論」。
+          </p>
+          <a
+            href="#section-04"
+            onClick={(e) => {
+              e.preventDefault();
+              const el = typeof document !== "undefined" ? document.getElementById("section-04") : null;
+              if (el && typeof el.scrollIntoView === "function") {
+                el.scrollIntoView({ behavior: "smooth", block: "start" });
+              }
+            }}
+            className="mono"
+            style={{
+              fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase",
+              opacity: 0.7, color: "var(--paper)", textDecoration: "none",
+              borderBottom: "1px dashed rgba(255,255,255,0.4)", paddingBottom: 2,
+            }}
+          >
+            前往 04 · 全部評論 →
+          </a>
+        </div>
+      </div>
+    </section>
+  );
+};
+
+const ThemesSection = ({ vm }) => (
+  <Section num="02" kicker="What customers talk about" title="他們實際在談的，不是你以為的。">
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0, border: "1px solid var(--rule)" }} className="themes-grid">
+      <div style={{ padding: "28px 28px", borderRight: "1px solid var(--rule)" }}>
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 20 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ width: 10, height: 10, background: "var(--pos)" }}/>
+            <h3 className="serif" style={{ fontSize: 22, fontWeight: 500, margin: 0, letterSpacing: "-0.015em" }}>正向主題</h3>
+          </div>
+          <span className="mono" style={{ fontSize: 11, color: "var(--ink-3)" }}>
+            Top {vm.themesPos.length}
+          </span>
+        </div>
+        {vm.themesPos.map((t, i) => (
+          <div key={i} style={{ marginBottom: 18 }}>
+            <Bar
+              label={t.label}
+              pct={t.pct != null ? t.pct : 0}
+              value={t.pct != null ? `${t.pct}%` : "—"}
+              tone="pos"
+              delay={i * 0.08}
+            />
+            {t.sample ? (
+              <div style={{ fontSize: 12, color: "var(--ink-3)", fontStyle: "italic", lineHeight: 1.5, marginTop: -6 }}>
+                ↳ 「{t.sample}」
+              </div>
+            ) : null}
+          </div>
+        ))}
+      </div>
+      <div style={{ padding: "28px 28px", background: "var(--paper-2)" }}>
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 20 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ width: 10, height: 10, background: "var(--neg)" }}/>
+            <h3 className="serif" style={{ fontSize: 22, fontWeight: 500, margin: 0, letterSpacing: "-0.015em" }}>負面主題</h3>
+          </div>
+          <span className="mono" style={{ fontSize: 11, color: "var(--ink-3)" }}>
+            Top {vm.themesNeg.length} · 可行動
+          </span>
+        </div>
+        {vm.themesNeg.map((t, i) => {
+          const pct = t.pct != null ? t.pct : 0;
+          return (
+            <div key={i} style={{ marginBottom: 18 }}>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 6 }}>
+                <span style={{ fontSize: 13, fontWeight: 500, flex: 1 }}>{t.label}</span>
+                <span className="mono" style={{ fontSize: 11, color: "var(--ink-3)" }}>
+                  {t.pct != null ? `${t.pct}%` : "—"}
+                </span>
+              </div>
+              <div style={{ height: 6, background: "var(--paper-3)", marginBottom: 4 }}>
+                <div style={{
+                  height: "100%", background: "var(--neg)", width: `${Math.max(2, Math.min(pct, 100))}%`,
+                  animation: `growBar 0.8s cubic-bezier(.2,.8,.2,1) ${i * 0.08}s both`, transformOrigin: "left"
+                }}/>
+              </div>
+              {t.sample ? (
+                <div style={{ fontSize: 12, color: "var(--ink-3)", fontStyle: "italic", lineHeight: 1.5 }}>
+                  ↳ 「{t.sample}」
+                </div>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  </Section>
+);
+
+const SwotCell = ({ label, items, tone, num, borderR, borderB }) => {
+  const color = {
+    forest: "var(--forest)", coral: "var(--coral-2)",
+    ochre: "var(--ochre)", slate: "var(--slate)"
+  }[tone];
+  return (
+    <div style={{
+      padding: "28px 28px",
+      borderRight: borderR ? "1px solid var(--ink)" : "none",
+      borderBottom: borderB ? "1px solid var(--ink)" : "none",
+      background: "var(--card)"
+    }}>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 14, marginBottom: 20 }}>
+        <span className="serif" style={{ fontSize: 42, fontWeight: 500, color, lineHeight: 0.9, letterSpacing: "-0.04em" }}>{num}</span>
+        <div>
+          <Stamp>{label}</Stamp>
+          <div className="mono" style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 4 }}>
+            {(items || []).length} items · evidence-backed
+          </div>
+        </div>
+      </div>
+      <div>
+        {(items || []).map((it, i) => (
+          <div key={i} style={{ padding: "14px 0", borderTop: i > 0 ? "1px solid var(--rule-2)" : "none" }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+              <span className="mono" style={{ fontSize: 10, color: "var(--ink-4)", width: 16 }}>{String(i+1).padStart(2,"0")}</span>
+              <div style={{ flex: 1 }}>
+                <h4 style={{ fontSize: 14, fontWeight: 600, margin: "0 0 4px", color: "var(--ink)" }}>{it.title}</h4>
+                <p style={{ fontSize: 13, color: "var(--ink-2)", margin: 0, lineHeight: 1.55 }}>{it.body}</p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+function normalizeSwotFromApi(swot) {
+  if (!swot) return null;
+  const toItems = (arr) =>
+    (arr || []).map((x, i) => {
+      if (!x) return null;
+      if (typeof x === "string") return { title: x.slice(0, 20), body: x };
+      return {
+        title: x.title || x.point || x.header || `項目 ${i + 1}`,
+        body: x.body || x.detail || x.description || x.evidence || ""
+      };
+    }).filter(Boolean);
+  return {
+    strengths: toItems(swot.strengths),
+    weaknesses: toItems(swot.weaknesses),
+    opportunities: toItems(swot.opportunities),
+    threats: toItems(swot.threats),
+  };
+}
+
+const SwotSection = () => {
+  const ix = useIX();
+  const state = ix?.state;
+  const dispatch = ix?.dispatch;
+  const Adapters = ix?.lib?.Adapters;
+  const analyze = state?.features?.analyze;
+  const swotSlice = state?.features?.swot;
+  const platform = state?.stream?.platform || state?.mode?.currentPlatform || "google";
+  // P3.16 R3（⚙ Codex debug SWOT 失敗時指出）：adapter 支援 yt_role 但 caller 沒傳 →
+  // contract completeness 補上。目前 llm.generate_swot 還沒用到 yt_role，但補齊讓未來
+  // YouTube creator/shop/brand 分支 prompt 有機會吃到正確 role。
+  const ytRole = state?.stream?.ytRole || state?.mode?.ytRoleSelection || null;
+
+  const analyzeRunId = analyze?.requestId;
+  const haveData = analyze?.status === "ready" && analyze?.data;
+
+  React.useEffect(() => {
+    if (!haveData || !dispatch || !Adapters) return;
+    if (swotSlice?.status === "loading" || swotSlice?.status === "ready") return;
+    const raw = unwrapAnalyze(analyze.data);
+    const good = raw?.good || raw?.strengths || [];
+    const bad = raw?.bad || raw?.weaknesses || [];
+    Adapters.fetchSwot({
+      good, bad, platform, ytRole,
+      dispatch,
+    }).catch(() => {});
+    // eslint-disable-next-line
+  }, [haveData, analyzeRunId]);
+
+  const apiSwot = normalizeSwotFromApi(swotSlice?.data?.swot || swotSlice?.data);
+  // P3.9-5R-R3 fix #8：真分析就緒時，SWOT 沒回來不再 fallback SWOT mock。
+  // - 主分析未就緒（落地頁 / demo 預覽）→ 仍可用 SWOT mock 做版面 baseline
+  // - 主分析已就緒但 SWOT 還在 loading / failed → 顯示空態，避免假四象限被當真話用
+  const loading = swotSlice?.status === "loading";
+  const swotFailed = swotSlice?.status === "failed";
+  const useMockBaseline = !haveData;
+  const swot = apiSwot || (useMockBaseline ? SWOT : null);
+
+  return (
+    <Section num="03" kicker="SWOT / Strategic posture" title="你站在哪裡，你能去哪裡。">
+      {loading && (
+        <div style={{ marginBottom: 12, fontSize: 12, color: "var(--ink-3)" }} className="mono">
+          · SWOT 分析中…
+        </div>
+      )}
+      {swot ? (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0, border: "1px solid var(--ink)" }} className="swot-grid">
+          <SwotCell label="Strengths / 優勢" items={swot.strengths} tone="forest" num="S" borderR borderB/>
+          <SwotCell label="Weaknesses / 劣勢" items={swot.weaknesses} tone="coral" num="W" borderB/>
+          <SwotCell label="Opportunities / 機會" items={swot.opportunities} tone="ochre" num="O" borderR/>
+          <SwotCell label="Threats / 威脅" items={swot.threats} tone="slate" num="T"/>
+        </div>
+      ) : (
+        <div style={{ border: "1px dashed var(--rule)", padding: "44px 32px", textAlign: "center", background: "var(--paper-2)" }}>
+          <Stamp tone={swotFailed ? "coral" : undefined}>{swotFailed ? "AI 暫時無法生成 SWOT" : "SWOT 撰寫中"}</Stamp>
+          <p style={{ fontSize: 13, color: "var(--ink-3)", margin: "12px 0 0", lineHeight: 1.6 }}>
+            {swotFailed
+              ? "稍後重試或重新分析；不會用罐頭範例填位以免誤導決策。"
+              : "AI 正在根據真實評論生成 SWOT 四象限，完成後會自動顯示。"}
+          </p>
+        </div>
+      )}
+    </Section>
+  );
+};
+
+const ReviewCard = ({ review }) => {
+  const { name, init, rating, likes, kind, when, text, themes, sentiment } = review;
+  // P3.9: unknown / 缺評分 → 中性 rule 色，不再灌成 mixed amber
+  const edge = sentiment === "pos" ? "var(--pos)"
+             : sentiment === "neg" ? "var(--neg)"
+             : sentiment === "mixed" ? "var(--ochre)"
+             : "var(--rule)";
+  // P3.15：YouTube 留言（kind === "comment"）沒有星等概念，改顯示 "♥ N" 讚數。
+  // 之前畫 StarRow rating={like_count cap 5}，把 12 個讚畫成 2.4 顆星，完全胡謅。
+  const isComment = kind === "comment";
+  return (
+    <article style={{
+      padding: "20px 20px", borderRight: "1px solid var(--rule)",
+      borderBottom: "1px solid var(--rule)", background: "var(--card)",
+      position: "relative"
+    }}>
+      <div style={{ position: "absolute", top: 0, left: 0, width: 3, height: "100%", background: edge }}/>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+        <div style={{
+          width: 32, height: 32, borderRadius: "50%", background: "var(--paper-3)",
+          display: "grid", placeItems: "center", fontSize: 13, fontWeight: 500, color: "var(--ink)"
+        }}>{init}</div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 13, fontWeight: 500 }}>{name}</div>
+          <div className="mono" style={{ fontSize: 10, color: "var(--ink-3)" }}>{when}</div>
+        </div>
+        {isComment ? (
+          // YouTube 留言：顯示讚數，沒讚則隱藏（不顯示「♥ 0」沒意義）
+          likes != null && likes > 0 ? (
+            <span className="mono" style={{ fontSize: 11, color: "var(--ink-3)" }}>
+              ♥ {likes.toLocaleString()}
+            </span>
+          ) : null
+        ) : (
+          // Google 評論：1-5 星等
+          <StarRow rating={rating} size={11}/>
+        )}
+      </div>
+      <p style={{ fontSize: 13, lineHeight: 1.6, color: "var(--ink-2)", margin: "0 0 14px" }}>
+        「{text}」
+      </p>
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+        {(themes || []).map((t, i) => <Pill key={i} outline>{t}</Pill>)}
+      </div>
+    </article>
+  );
+};
+
+// P3.12-R2（2026-04-23 使用者澄清）：後端不 cap，照抓所有 Serper 給的含文字評論並全部
+// 餵給 LLM。UI §04 只是「呈現面」要限制 — 否則上千則會炸畫面。
+//   - 篩選按鈕「全部」改成「精選」（讓店家知道這不是真正的全部，避免「分析不完整」誤解）
+//   - 篩選按鈕的 count 顯示「畫面顯示的數」（min(reviews.length, 50)）
+//   - 各 sentiment count 也用「畫面顯示這 50 則的分布」（顯示什麼就統計什麼，避免按下去看到的數和按鈕數不對）
+//   - caption 加一段說明：當 reviews.length > MAX 時告訴店家「實際分析了 N 則，下方顯示其中 50 則樣本」
+//                      reviews.length <= MAX 時只顯示「分析了 N 則」
+//   - 抓所有評論的 honest scope：「Google Maps 共 M 則評分」依然顯示（M > N 時）
+const MAX_REVIEWS_DISPLAY = 50;
+const ReviewsSection = ({ vm }) => {
+  const [filter, setFilter] = React.useState("all");
+  const reviews = vm.reviews || [];
+  // 先 slice 顯示上限（保留前端餵給使用者的「樣本」），避免上千則炸畫面
+  const displayed = reviews.slice(0, MAX_REVIEWS_DISPLAY);
+  const filtered = displayed.filter(r => filter === "all" || r.sentiment === filter);
+  const totalReviews = vm.restaurant?.totalReviews;
+  const platform = vm.platform || "google";
+  const truncated = reviews.length > MAX_REVIEWS_DISPLAY;
+  // 第一句：「實際分析了 N 則」 — 讓店家知道 LLM 看了多少
+  const analyzedLabel = platform === "youtube"
+    ? `本次分析了 ${reviews.length} 則影片留言`
+    : `本次分析了 ${reviews.length} 則含文字評論`;
+  // 第二句：truncated 時補「下方顯示其中 50 則樣本」 — 解釋為什麼按鈕數小於分析數
+  const sampleHint = truncated
+    ? `下方顯示其中精選的 ${MAX_REVIEWS_DISPLAY} 則樣本`
+    : "";
+  // 第三句（店家獨有）：補 Google Maps 公布的總則數，讓店家對齊認知
+  const sourceHint = platform === "google" && typeof totalReviews === "number" && totalReviews > reviews.length
+    ? `Google Maps 共 ${formatRatingCount(totalReviews)} 則評分（含未寫文字者）`
+    : "";
+  const captionParts = [analyzedLabel, sampleHint, sourceHint].filter(Boolean);
+  return (
+    <Section num="04" kicker="Original material" title="這是他們原本說的話。">
+      <div style={{ display: "flex", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
+        {/* P3.15：YouTube 留言目前 sentiment 全是 "unknown"（buildReviews 不從 like_count 推），
+             顯示「正向 0 / 負面 0 / 混合 0」會很怪。等 LLM 給標籤前，YouTube 只顯示一顆「全部 / 精選」按鈕。 */}
+        {(platform === "youtube"
+          ? [["all", truncated ? "精選" : "全部", displayed.length]]
+          : [
+              ["all", truncated ? "精選" : "全部", displayed.length],
+              ["pos","正向",displayed.filter(r=>r.sentiment==="pos").length],
+              ["neg","負面",displayed.filter(r=>r.sentiment==="neg").length],
+              ["mixed","混合",displayed.filter(r=>r.sentiment==="mixed").length],
+            ]
+         ).map(([k, l, n]) => (
+          <button key={k} onClick={() => setFilter(k)}
+            style={{
+              padding: "6px 14px", fontSize: 12, fontWeight: 500,
+              background: filter === k ? "var(--ink)" : "transparent",
+              color: filter === k ? "var(--paper)" : "var(--ink-2)",
+              border: `1px solid ${filter === k ? "var(--ink)" : "var(--rule)"}`,
+              cursor: "pointer", fontFamily: "var(--sans)"
+            }}>
+            {l} <span className="mono" style={{ opacity: 0.6, marginLeft: 6 }}>{n}</span>
+          </button>
+        ))}
+      </div>
+      <div style={{ marginBottom: 24, fontSize: 12, lineHeight: 1.6, color: "var(--ink-3)" }}>
+        {captionParts.join(" · ")}
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 0,
+        border: "1px solid var(--rule)" }}>
+        {filtered.map((r, i) => (
+          <ReviewCard key={i} review={r}/>
+        ))}
+      </div>
+    </Section>
+  );
+};
+
+const Dashboard = () => {
+  const ix = useIX();
+  const state = ix?.state;
+  const analyze = state?.features?.analyze;
+  const vm = React.useMemo(
+    () => buildDashboardVM(analyze?.status === "ready" ? analyze.data : null),
+    [analyze?.status, analyze?.requestId]
+  );
+  return (
+    <div className="dashboard-scroll" style={{ background: "var(--paper)" }}>
+      <Masthead vm={vm}/>
+      <div style={{ maxWidth: 1280, margin: "0 auto", padding: "48px 32px 120px" }}>
+        <HeroStat vm={vm}/>
+        <ThemesSection vm={vm}/>
+        <SwotSection/>
+        <ReviewsSection vm={vm}/>
+      </div>
+    </div>
+  );
+};
+
+const TweaksPanel = ({ active, setActive, state, setState }) => {
+  if (!active) return null;
+  const updateKey = (k, v) => {
+    setState(s => ({ ...s, [k]: v }));
+  };
+
+  return (
+    <div style={{
+      position: "fixed", right: 20, bottom: 20, width: 300, zIndex: 1000,
+      background: "var(--card)", border: "1px solid var(--ink)",
+      boxShadow: "0 24px 60px -20px oklch(0.22 0.015 160 / 0.25)",
+      fontFamily: "var(--sans)"
+    }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "12px 16px", borderBottom: "1px solid var(--ink)", background: "var(--ink)", color: "var(--paper)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <Settings size={14}/>
+          <span className="mono tracking-wide" style={{ fontSize: 11, textTransform: "uppercase" }}>Tweaks</span>
+        </div>
+        <button onClick={() => setActive(false)} style={{ border: "none", background: "transparent", color: "var(--paper)", cursor: "pointer" }}>
+          <X size={14}/>
+        </button>
+      </div>
+
+      <div style={{ padding: 18 }}>
+        <TweakGroup label="強調色">
+          {[["coral","珊瑚"],["forest","墨綠"],["ochre","赭黃"],["slate","石板"]].map(([k, l]) => (
+            <SwatchBtn key={k} label={l} active={state.accent === k}
+              color={{coral:"var(--coral)", forest:"var(--forest)", ochre:"var(--ochre)", slate:"var(--slate)"}[k]}
+              onClick={() => updateKey("accent", k)}/>
+          ))}
+        </TweakGroup>
+
+        <TweakGroup label="密度">
+          {[["tight","緊湊"],["comfortable","舒適"],["loose","寬鬆"]].map(([k, l]) => (
+            <PillBtn key={k} label={l} active={state.density === k} onClick={() => updateKey("density", k)}/>
+          ))}
+        </TweakGroup>
+
+        <TweakGroup label="進階">
+          <label style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13, cursor: "pointer", padding: "6px 0" }}>
+            <input type="checkbox" checked={state.showAdvisorBadge}
+              onChange={e => updateKey("showAdvisorBadge", e.target.checked)}/>
+            Advisor 新功能標籤
+          </label>
+        </TweakGroup>
+      </div>
+    </div>
+  );
+};
+
+// ============================================================
+// components/toolkit.jsx — Manager Toolkit (5 tabs, all wired)
+// ============================================================
+const Toolkit = () => {
+  const [tab, setTab] = React.useState("replies");
+  const tabs = [
+    { k: "replies", label: "負評回覆草稿", icon: MessageCircle, n: "01" },
+    { k: "marketing", label: "行銷文案", icon: Sparkle, n: "02" },
+    { k: "week", label: "週行動計畫", icon: Calendar, n: "03" },
+    { k: "training", label: "員工培訓話術", icon: BookOpen, n: "04" },
+    { k: "email", label: "內部公告信", icon: Mail, n: "05" },
+  ];
+  return (
+    <div>
+      <div style={{ borderBottom: "1px solid var(--ink)", background: "var(--paper)" }}>
+        <div style={{ maxWidth: 1280, margin: "0 auto", padding: "36px 32px 0" }}>
+          <Stamp tone="coral">§ Manager Toolkit</Stamp>
+          <h1 className="serif" style={{ fontSize: "clamp(32px, 4vw, 48px)", fontWeight: 500, margin: "10px 0 8px", letterSpacing: "-0.025em" }}>
+            從洞察到行動，五件可以今天就做的事。
+          </h1>
+          <p style={{ fontSize: 15, color: "var(--ink-3)", margin: "0 0 28px", maxWidth: 640, lineHeight: 1.55 }}>
+            這些內容都是根據你輸入的網址生成——不是罐頭模板。可以直接複製使用，或修改成你的語氣。
+          </p>
+
+          <div className="no-scrollbar" style={{ display: "flex", gap: 0, overflowX: "auto", marginBottom: -1 }}>
+            {tabs.map(t => {
+              const active = tab === t.k;
+              const Ic2 = t.icon;
+              return (
+                <button key={t.k} onClick={() => setTab(t.k)}
+                  style={{
+                    padding: "14px 20px", fontSize: 13, fontWeight: 500,
+                    background: active ? "var(--ink)" : "transparent",
+                    color: active ? "var(--paper)" : "var(--ink-3)",
+                    border: "none", borderBottom: active ? "none" : "1px solid transparent",
+                    borderLeft: active ? "1px solid var(--ink)" : "none",
+                    borderRight: active ? "1px solid var(--ink)" : "none",
+                    borderTop: active ? "1px solid var(--ink)" : "none",
+                    cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 10,
+                    fontFamily: "var(--sans)", whiteSpace: "nowrap", transition: "color .15s"
+                  }}>
+                  <span className="mono" style={{ fontSize: 10, opacity: 0.6 }}>{t.n}</span>
+                  <Ic2 size={14}/>
+                  {t.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      <div style={{ maxWidth: 1280, margin: "0 auto", padding: "48px 32px 120px" }}>
+        <div className="fade-up" key={tab}>
+          {tab === "replies" && <RepliesTool/>}
+          {tab === "marketing" && <MarketingTool/>}
+          {tab === "week" && <WeekPlanTool/>}
+          {tab === "training" && <TrainingTool/>}
+          {tab === "email" && <EmailTool/>}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Copy button with feedback
+const CopyBtn = ({ text, size = "sm" }) => {
+  const [copied, setCopied] = React.useState(false);
+  const fire = () => {
+    try { navigator.clipboard?.writeText(text); } catch {}
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1600);
+  };
+  return (
+    <Btn tone={copied ? "forest" : "ghost"} size={size} onClick={fire}>
+      {copied ? <><Check size={13}/> 已複製</> : <><Copy size={13}/> 複製</>}
+    </Btn>
+  );
+};
+
+// Helper：strict 取 strengths / weaknesses；不存在就空陣列
+//   1) SWOT slice ready → 用真 LLM 結果
+//   2) 否則但 facts 已就緒 → 用 facts.themesPos.label / themesNeg.label 當代理
+//   3) 都沒有 → 空陣列；上層 useEffect 看到空就早退，不發 fetch
+const useSwotSummary = () => {
+  const ix = useIX();
+  const facts = useAnalyzeFactsVM();
+  const swotSlice = ix?.state?.features?.swot;
+  const data = swotSlice?.status === "ready" ? swotSlice.data : null;
+  const norm = (arr) => (arr || []).map(it => {
+    if (typeof it === "string") return it;
+    if (it?.title) return it.title;
+    if (it?.point) return it.point;
+    return null;
+  }).filter(Boolean);
+  if (data?.strengths?.length || data?.weaknesses?.length) {
+    return {
+      strengths: norm(data.strengths || []),
+      weaknesses: norm(data.weaknesses || []),
+    };
+  }
+  if (facts.isReady) {
+    return {
+      strengths: facts.themesPos.map(t => t.label).filter(Boolean),
+      weaknesses: facts.themesNeg.map(t => t.label).filter(Boolean),
+    };
+  }
+  return { strengths: [], weaknesses: [] };
+};
+
+// Helper：從 chat.context 推 platform / ytRole（拿來打 feature endpoints）
+const useFeatureContext = () => {
+  const ix = useIX();
+  const platform = ix?.state?.mode?.currentPlatform || "google";
+  const ytRole = ix?.state?.mode?.ytRoleSelection || null;
+  return { platform, ytRole, dispatch: ix?.dispatch };
+};
+
+// ---- RepliesTool ----
+// 主題清單一律從真分析的 facts.themesNeg 來；沒分析就空態。
+// cache key 加 namespace（analyzeRequestId + platform + ytRole + label）——
+// 重新分析（新 requestId）後舊 cache 自然失效，不會把舊店家回覆套到新主題。
+const RepliesTool = () => {
+  const ix = useIX();
+  const { platform, ytRole, dispatch } = useFeatureContext();
+  const facts = useAnalyzeFactsVM();
+  const themes = (facts.themesNeg || []).map(t => t.label).filter(Boolean);
+  const cacheNs = `${facts.analyzeRequestId || "none"}|${platform}|${ytRole || ""}`;
+  const [sel, setSel] = React.useState(themes[0] || null);
+  const [cache, setCache] = React.useState({}); // {`${ns}::${topic}`: replyText}
+  const pendingTopicRef = React.useRef(null);
+  const lastReqRef = React.useRef(null);
+  const replySlice = ix?.state?.features?.reply;
+
+  // analyze 換了 → 重置 cache + 預設主題
+  React.useEffect(() => {
+    setCache({});
+    setSel(themes[0] || null);
+    pendingTopicRef.current = null;
+    lastReqRef.current = null;
+  }, [cacheNs]);
+
+  // sel 為 null 但 themes 出來了 → 預設選第一個
+  React.useEffect(() => {
+    if (!sel && themes.length) setSel(themes[0]);
+  }, [themes.length]);
+
+  // 訂閱 reply slice，新的 ready 結果寫進 cache[ns::pendingTopic]
+  React.useEffect(() => {
+    if (replySlice?.status !== "ready" || !replySlice.data) return;
+    if (replySlice.requestId === lastReqRef.current) return;
+    lastReqRef.current = replySlice.requestId;
+    const text = replySlice.data?.reply || replySlice.data?.draft || replySlice.data?.text
+      || (typeof replySlice.data === "string" ? replySlice.data : null);
+    const topic = pendingTopicRef.current || sel;
+    if (text && topic) {
+      const k = `${cacheNs}::${topic}`;
+      setCache(c => ({ ...c, [k]: text }));
+    }
+  }, [replySlice?.status, replySlice?.requestId]);
+
+  // 切換主題時自動 fetch（若沒 cache）
+  React.useEffect(() => {
+    if (!Adapters || !dispatch || !sel) return;
+    const k = `${cacheNs}::${sel}`;
+    if (cache[k]) return;
+    if (replySlice?.status === "loading" && pendingTopicRef.current === sel) return;
+    pendingTopicRef.current = sel;
+    Adapters.fetchReply({ topic: sel, platform, ytRole, dispatch }).catch(() => {});
+  }, [sel, cacheNs]);
+
+  // 空態：尚未分析
+  if (!facts.isReady || themes.length === 0) {
+    return (
+      <div style={{
+        border: "1px dashed var(--rule)", padding: "60px 32px", textAlign: "center",
+        background: "var(--paper-2)"
+      }}>
+        <Stamp>尚未準備好</Stamp>
+        <h3 className="serif" style={{ fontSize: 22, fontWeight: 500, margin: "12px 0 8px", letterSpacing: "-0.02em" }}>
+          先回 Dashboard 完成分析，這裡才會有主題可以回覆。
+        </h3>
+        <p style={{ fontSize: 13, color: "var(--ink-3)", margin: 0, lineHeight: 1.6 }}>
+          回覆草稿是針對「真實出現在你客戶評論裡的負面主題」生成，不是罐頭。
+        </p>
+      </div>
+    );
+  }
+
+  const cacheKey = `${cacheNs}::${sel}`;
+  const aiText = cache[cacheKey];
+  const isLoading = replySlice?.status === "loading" && !aiText;
+  const isFailed = replySlice?.status === "failed" && !aiText && pendingTopicRef.current === sel;
+
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "260px 1fr", gap: 0, border: "1px solid var(--rule)" }}
+         className="tool-split">
+      <aside style={{ borderRight: "1px solid var(--rule)", background: "var(--paper-2)", padding: "24px 0" }}>
+        <div style={{ padding: "0 20px 12px" }}>
+          <Stamp>負面主題</Stamp>
+          <div className="mono" style={{ fontSize: 10, color: "var(--ink-3)", marginTop: 6 }}>{themes.length} 主題（來自真實評論）</div>
+        </div>
+        {themes.map(t => {
+          const hasCache = !!cache[`${cacheNs}::${t}`];
+          return (
+            <button key={t} onClick={() => setSel(t)} style={{
+              display: "flex", width: "100%", padding: "14px 20px", gap: 10,
+              background: sel === t ? "var(--card)" : "transparent",
+              border: "none", borderLeft: sel === t ? "2px solid var(--coral)" : "2px solid transparent",
+              cursor: "pointer", textAlign: "left", fontFamily: "var(--sans)",
+              borderTop: "1px solid var(--rule-2)"
+            }}>
+              <span style={{ fontSize: 14, fontWeight: sel === t ? 600 : 400, color: "var(--ink)" }}>{t}</span>
+              {hasCache && <span style={{ marginLeft: "auto", width: 6, height: 6, background: "var(--pos)", borderRadius: "50%", alignSelf: "center" }}/>}
+              <ChevronRight size={14} style={{ marginLeft: hasCache ? 4 : "auto", alignSelf: "center", color: "var(--ink-4)" }}/>
+            </button>
+          );
+        })}
+      </aside>
+
+      <div style={{ padding: "28px 32px", background: "var(--card)" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20, gap: 16, flexWrap: "wrap" }}>
+          <div>
+            <Stamp>{aiText ? "Reply draft · AI 生成" : (isLoading ? "Reply draft · 撰寫中" : "Reply draft")}</Stamp>
+            <h3 className="serif" style={{ fontSize: 26, fontWeight: 500, margin: "8px 0 6px", letterSpacing: "-0.015em" }}>
+              給抱怨「{sel}」的顧客
+            </h3>
+            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+              <span className="mono" style={{ fontSize: 11, color: "var(--ink-3)" }}>建議 48hr 內回覆</span>
+              {isLoading && <span className="mono" style={{ fontSize: 11, color: "var(--coral-2)" }}>AI 撰寫中…</span>}
+              {isFailed && <span className="mono" style={{ fontSize: 11, color: "var(--coral-2)" }}>生成失敗，請點重試</span>}
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <Btn tone="ghost" size="sm" onClick={() => {
+              setCache(c => { const n = { ...c }; delete n[cacheKey]; return n; });
+              if (Adapters && dispatch) {
+                pendingTopicRef.current = sel;
+                Adapters.fetchReply({ topic: sel, platform, ytRole, dispatch }).catch(() => {});
+              }
+            }}><Refresh size={13}/> {aiText ? "換一版" : "重試"}</Btn>
+            {aiText && <CopyBtn text={aiText}/>}
+          </div>
+        </div>
+
+        <div style={{
+          background: "var(--paper-2)", border: "1px solid var(--rule)", padding: "24px 28px",
+          position: "relative", minHeight: 180
+        }}>
+          <div style={{
+            position: "absolute", top: -10, left: 24, background: "var(--paper-2)",
+            padding: "0 8px", fontSize: 10, color: "var(--ink-3)", letterSpacing: "0.1em"
+          }} className="mono">DRAFT · 可直接貼到{platform === "youtube" ? " YouTube 留言" : " Google 商家"}</div>
+          {aiText ? (
+            <pre style={{
+              fontFamily: "var(--sans)", fontSize: 14, lineHeight: 1.7,
+              whiteSpace: "pre-wrap", margin: 0, color: "var(--ink)"
+            }}>{aiText}</pre>
+          ) : (
+            <div style={{ fontSize: 13, color: "var(--ink-3)", lineHeight: 1.7, fontStyle: "italic" }}>
+              {isLoading ? "正在為這個主題撰寫回覆草稿…" :
+               isFailed ? "上一次撰寫失敗，請點上方「重試」。" :
+               "選擇左側主題後會自動生成。"}
+            </div>
+          )}
+        </div>
+
+        <div style={{ marginTop: 24, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }} className="hide-cols-sm">
+          <GuideNote title="為什麼這樣寫" items={[
+            "承認問題，不用「人手不足」當藉口",
+            "給具體時間，讓顧客信",
+            "下次來的補償，比現在的折價券更強"
+          ]}/>
+          <GuideNote title="要避開的寫法" items={[
+            "「感謝您的寶貴意見」這類 AI 味開頭",
+            "過多 emoji 與 markdown 符號（**、##）",
+            "承諾做不到的事（例如「永不再發生」）"
+          ]} neg/>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const GuideNote = ({ title, items, neg }) => (
+  <div style={{ border: "1px solid var(--rule)", padding: "18px 20px", background: "var(--card)" }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+      {neg ? <X size={14} style={{ color: "var(--neg)" }}/> : <Check size={14} style={{ color: "var(--pos)" }}/>}
+      <h4 style={{ fontSize: 13, fontWeight: 600, margin: 0 }}>{title}</h4>
+    </div>
+    <ul style={{ margin: 0, paddingLeft: 20, fontSize: 13, color: "var(--ink-2)", lineHeight: 1.7 }}>
+      {items.map((it, i) => <li key={i}>{it}</li>)}
+    </ul>
+  </div>
+);
+
+// ---- MarketingTool ----
+// 真分析模式下不顯示 MARKETING 餐廳靜態 demo (V1/V2/V3 「招牌主菜」「家庭來店日」等罐頭文案)。
+// 規則：facts 沒就緒 → 空態；facts 就緒但 strengths 為空 → 「等 SWOT」；其餘狀態都靠 AI 卡。
+const MarketingTool = () => {
+  const ix = useIX();
+  const { platform, ytRole, dispatch } = useFeatureContext();
+  const facts = useAnalyzeFactsVM();
+  const { strengths } = useSwotSummary();
+  const strengthsStr = (strengths || []).filter(Boolean).join("、");
+  const slice = ix?.state?.features?.marketing;
+  const aiText = slice?.status === "ready"
+    ? (slice.data?.marketing || slice.data?.copy || slice.data?.text || (typeof slice.data === "string" ? slice.data : null))
+    : null;
+
+  // P3.9-5R fix #3：context key 含 platform/ytRole，避免切平台後仍套舊 ready 資料。
+  const ctxKey = `${facts.analyzeRequestId || "none"}|${platform}|${ytRole || ""}|${strengthsStr}`;
+  const lastCtxRef = React.useRef(null);
+  React.useEffect(() => {
+    if (!Adapters || !dispatch) return;
+    if (!facts.isReady) return;
+    if (!strengthsStr) return;
+    if (lastCtxRef.current === ctxKey && (slice?.status === "loading" || slice?.status === "ready")) return;
+    lastCtxRef.current = ctxKey;
+    Adapters.fetchMarketing({ strengths: strengthsStr, platform, ytRole, dispatch }).catch(() => {});
+  }, [ctxKey]);
+
+  if (!facts.isReady) {
+    return (
+      <div style={{ border: "1px dashed var(--rule)", padding: "60px 32px", textAlign: "center", background: "var(--paper-2)" }}>
+        <Stamp>尚未準備好</Stamp>
+        <h3 className="serif" style={{ fontSize: 22, fontWeight: 500, margin: "12px 0 8px", letterSpacing: "-0.02em" }}>
+          先回 Dashboard 完成分析，這裡才會生成行銷文案。
+        </h3>
+        <p style={{ fontSize: 13, color: "var(--ink-3)", margin: 0 }}>行銷文案會根據你真實評論裡的優勢撰寫。</p>
+      </div>
+    );
+  }
+
+  if (!strengthsStr && slice?.status !== "loading") {
+    return (
+      <div style={{ border: "1px dashed var(--rule)", padding: "60px 32px", textAlign: "center", background: "var(--paper-2)" }}>
+        <Stamp tone="coral">等 SWOT</Stamp>
+        <h3 className="serif" style={{ fontSize: 22, fontWeight: 500, margin: "12px 0 8px", letterSpacing: "-0.02em" }}>
+          你目前的評論裡還抓不出明顯優勢。
+        </h3>
+        <p style={{ fontSize: 13, color: "var(--ink-3)", margin: 0 }}>等 SWOT 完成或讓系統取得更多評論後，這裡才會出現可用的行銷文案。</p>
+      </div>
+    );
+  }
+
+  const stampLabel = aiText
+    ? "Marketing · AI 生成"
+    : (slice?.status === "loading" ? "Marketing · AI 撰寫中" : "Marketing");
+  const headerTitle = aiText
+    ? "為你量身訂做的社群貼文"
+    : (slice?.status === "loading" ? "AI 正在生成文案…" : "尚未生成");
+
+  return (
+    <div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 420px", gap: 0, border: "1px solid var(--rule)" }}
+           className="tool-split">
+        <div style={{ padding: "36px 40px", background: "var(--card)" }}>
+          <Stamp>{stampLabel}</Stamp>
+          <h3 className="serif" style={{ fontSize: 34, fontWeight: 500, margin: "14px 0 24px", letterSpacing: "-0.02em", lineHeight: 1.15 }}>
+            {headerTitle}
+          </h3>
+          {aiText && (
+            <pre style={{
+              fontFamily: "var(--sans)", fontSize: 15, lineHeight: 1.8,
+              whiteSpace: "pre-wrap", margin: 0, color: "var(--ink)"
+            }}>{aiText}</pre>
+          )}
+          {slice?.status === "loading" && (
+            <div className="mono" style={{ fontSize: 11, color: "var(--coral-2)", marginTop: 14 }}>AI 行銷文案撰寫中…</div>
+          )}
+          {slice?.status === "failed" && (
+            <div className="mono" style={{ fontSize: 11, color: "var(--coral-2)", marginTop: 14 }}>AI 生成失敗：{_fmtErr(slice.error).slice(0, 120)}</div>
+          )}
+          <div style={{ marginTop: 32, display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <CopyBtn text={aiText || ""} size="md"/>
+            <Btn tone="ghost" size="md" onClick={() => {
+              if (Adapters && dispatch && strengthsStr) Adapters.fetchMarketing({ strengths: strengthsStr, platform, ytRole, dispatch }).catch(() => {});
+            }}><Refresh size={14}/> 再生成</Btn>
+            <Btn tone="ghost" size="md" disabled={!aiText}><Download size={14}/> 存成圖卡</Btn>
+          </div>
+        </div>
+
+        <aside style={{ background: "var(--ink)", color: "var(--paper)", padding: "36px 32px" }}>
+          <Stamp tone="coral">Why this works</Stamp>
+          <div style={{ marginTop: 20, fontSize: 13, lineHeight: 1.7 }}>
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 11, opacity: 0.5, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }} className="mono">對應的優勢</div>
+              <div>{strengths.slice(0, 3).map((s, i) => <div key={i}>· {s}</div>)}</div>
+            </div>
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 11, opacity: 0.5, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }} className="mono">建議投放位置</div>
+              <ul style={{ margin: 0, paddingLeft: 18, opacity: 0.85 }}>
+                {platform === "youtube"
+                  ? <><li>下一支影片片頭</li><li>社群短文預告</li><li>觀眾通知欄</li></>
+                  : <><li>IG 貼文＋限動</li><li>Google 商家近期貼文</li><li>店內桌卡</li></>}
+              </ul>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, opacity: 0.5, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }} className="mono">下一步</div>
+              <div style={{ opacity: 0.85 }}>
+                {platform === "youtube"
+                  ? "把這篇文案搭配下一支影片發布，並追蹤觀看與訂閱來源，看看哪個平台帶來最多新觀眾。"
+                  : "把這篇文案放上店家貼文與社群，搭配本週要做的事一起執行，並用評論回覆數驗證觸及效果。"}
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+  );
+};
+
+// ---- WeekPlanTool ----
+// 真分析模式下不顯示 WEEK_PLAN 餐廳靜態 demo。
+// 規則：facts 沒就緒 → 空態；facts 就緒但 weaknesses 為空 → 「等 SWOT」；其餘狀態都靠 AI 卡。
+const WeekPlanTool = () => {
+  const ix = useIX();
+  const { platform, ytRole, dispatch } = useFeatureContext();
+  const facts = useAnalyzeFactsVM();
+  const { weaknesses } = useSwotSummary();
+  const weaknessesStr = (weaknesses || []).filter(Boolean).join("、");
+  const slice = ix?.state?.features?.weeklyPlan;
+  const aiText = slice?.status === "ready"
+    ? (slice.data?.plan || slice.data?.weekly_plan || slice.data?.text || (typeof slice.data === "string" ? slice.data : null))
+    : null;
+
+  // P3.9-5R fix #3 + R3 #7：context key 含 platform/ytRole/analyzeRequestId/weaknesses；
+  // 並補 facts.isReady guard 避免 useSwotSummary 在分析未就緒時回 themesNeg fallback 的舊值。
+  const ctxKey = `${facts.analyzeRequestId || "none"}|${platform}|${ytRole || ""}|${weaknessesStr}`;
+  const lastCtxRef = React.useRef(null);
+  React.useEffect(() => {
+    if (!Adapters || !dispatch) return;
+    if (!facts.isReady) return;
+    if (!weaknessesStr) return;
+    if (lastCtxRef.current === ctxKey && (slice?.status === "loading" || slice?.status === "ready")) return;
+    lastCtxRef.current = ctxKey;
+    Adapters.fetchWeeklyPlan({ weaknesses: weaknessesStr, platform, ytRole, dispatch }).catch(() => {});
+  }, [ctxKey, facts.isReady]);
+
+  if (!facts.isReady) {
+    return (
+      <div style={{ border: "1px dashed var(--rule)", padding: "60px 32px", textAlign: "center", background: "var(--paper-2)" }}>
+        <Stamp>尚未準備好</Stamp>
+        <h3 className="serif" style={{ fontSize: 22, fontWeight: 500, margin: "12px 0 8px", letterSpacing: "-0.02em" }}>
+          先回 Dashboard 完成分析，這裡才會生成週計畫。
+        </h3>
+        <p style={{ fontSize: 13, color: "var(--ink-3)", margin: 0 }}>週計畫會根據你真實評論裡的負面主題排出本週要做的事。</p>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
+        <div>
+          <Stamp>這一週 · Week plan</Stamp>
+          <h3 className="serif" style={{ fontSize: 28, fontWeight: 500, margin: "8px 0 0", letterSpacing: "-0.02em" }}>一週，三個焦點。</h3>
+          {slice?.status === "loading" && <div className="mono" style={{ fontSize: 11, color: "var(--coral-2)", marginTop: 6 }}>AI 週計畫生成中…</div>}
+          {slice?.status === "failed" && <div className="mono" style={{ fontSize: 11, color: "var(--coral-2)", marginTop: 6 }}>生成失敗：{_fmtErr(slice.error).slice(0, 120)}</div>}
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <Btn tone="ghost" size="sm" onClick={() => {
+            if (Adapters && dispatch && weaknessesStr) Adapters.fetchWeeklyPlan({ weaknesses: weaknessesStr, platform, ytRole, dispatch }).catch(() => {});
+          }}><Refresh size={13}/> 重新生成</Btn>
+        </div>
+      </div>
+
+      {aiText ? (
+        <div style={{ border: "1px solid var(--ink)", background: "var(--card)", padding: "28px 32px" }}>
+          <Stamp tone="forest">AI 週計畫</Stamp>
+          <pre style={{ fontFamily: "var(--sans)", fontSize: 14, lineHeight: 1.8, whiteSpace: "pre-wrap", margin: "12px 0 0", color: "var(--ink)" }}>{aiText}</pre>
+          <div style={{ marginTop: 18 }}><CopyBtn text={aiText} size="md"/></div>
+        </div>
+      ) : (
+        <div style={{ border: "1px dashed var(--rule)", padding: "44px 32px", textAlign: "center", background: "var(--paper-2)" }}>
+          <p style={{ fontSize: 13, color: "var(--ink-3)", margin: 0, lineHeight: 1.6 }}>
+            {weaknessesStr ? "正在生成本週行動計畫…" : "等 SWOT 分析完成才能排這一週的焦點。"}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ---- TrainingTool ----
+// 真分析模式下不傳入 TRAINING_SCRIPT 餐廳情境（避免 LLM 接到罐頭 prompt）。
+// issue = facts.themesNeg[0].label，沒抓到就空態。
+const TrainingTool = () => {
+  const ix = useIX();
+  const { platform, ytRole, dispatch } = useFeatureContext();
+  const facts = useAnalyzeFactsVM();
+  const slice = ix?.state?.features?.trainingScript;
+  const issue = (facts.themesNeg && facts.themesNeg[0]?.label) || "";
+  const aiText = slice?.status === "ready"
+    ? (slice.data?.script || slice.data?.training_script || slice.data?.text || (typeof slice.data === "string" ? slice.data : null))
+    : null;
+
+  // P3.9-5R fix #3 + R3 #7：context key 含 platform/ytRole/analyzeRequestId/issue + facts.isReady guard。
+  const ctxKey = `${facts.analyzeRequestId || "none"}|${platform}|${ytRole || ""}|${issue}`;
+  const lastCtxRef = React.useRef(null);
+  React.useEffect(() => {
+    if (!Adapters || !dispatch) return;
+    if (!facts.isReady) return;
+    if (!issue) return;
+    if (lastCtxRef.current === ctxKey && (slice?.status === "loading" || slice?.status === "ready")) return;
+    lastCtxRef.current = ctxKey;
+    Adapters.fetchTrainingScript({ issue, platform, ytRole, dispatch }).catch(() => {});
+  }, [ctxKey, facts.isReady]);
+
+  if (!facts.isReady || !issue) {
+    return (
+      <div style={{ border: "1px dashed var(--rule)", padding: "60px 32px", textAlign: "center", background: "var(--paper-2)" }}>
+        <Stamp>尚未準備好</Stamp>
+        <h3 className="serif" style={{ fontSize: 22, fontWeight: 500, margin: "12px 0 8px", letterSpacing: "-0.02em" }}>
+          先回 Dashboard 完成分析，這裡才會生成培訓劇本。
+        </h3>
+        <p style={{ fontSize: 13, color: "var(--ink-3)", margin: 0, lineHeight: 1.6 }}>
+          劇本會針對你評論裡最常出現的負面主題寫對話示範，不是罐頭。
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div style={{ marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 12 }}>
+        <div>
+          <Stamp>Training · Top issue</Stamp>
+          <h3 className="serif" style={{ fontSize: 30, fontWeight: 500, margin: "10px 0 6px", letterSpacing: "-0.02em" }}>
+            情境：顧客抱怨「{issue}」
+          </h3>
+          <p style={{ color: "var(--ink-3)", margin: 0, fontSize: 14 }}>
+            給{platform === "youtube" ? "頻道團隊（剪輯／企劃）" : "前台夥伴"}的示範話術。可直接複製到晨會資料，或印成卡片。
+          </p>
+          {slice?.status === "loading" && <div className="mono" style={{ fontSize: 11, color: "var(--coral-2)", marginTop: 6 }}>AI 培訓劇本撰寫中…</div>}
+          {slice?.status === "failed" && <div className="mono" style={{ fontSize: 11, color: "var(--coral-2)", marginTop: 6 }}>生成失敗：{_fmtErr(slice.error).slice(0, 120)}</div>}
+        </div>
+        <Btn tone="ghost" size="sm" onClick={() => {
+          if (Adapters && dispatch && issue) Adapters.fetchTrainingScript({ issue, platform, ytRole, dispatch }).catch(() => {});
+        }}><Refresh size={13}/> 重新生成</Btn>
+      </div>
+
+      {aiText ? (
+        <div style={{ border: "1px solid var(--ink)", background: "var(--card)", padding: "28px 32px" }}>
+          <Stamp tone="forest">AI 培訓劇本</Stamp>
+          <pre style={{ fontFamily: "var(--sans)", fontSize: 14, lineHeight: 1.8, whiteSpace: "pre-wrap", margin: "12px 0 0", color: "var(--ink)" }}>{aiText}</pre>
+          <div style={{ marginTop: 18 }}><CopyBtn text={aiText} size="md"/></div>
+        </div>
+      ) : (
+        <div style={{ border: "1px dashed var(--rule)", padding: "44px 32px", textAlign: "center", background: "var(--paper-2)" }}>
+          <p style={{ fontSize: 13, color: "var(--ink-3)", margin: 0, lineHeight: 1.6 }}>
+            正在針對「{issue}」撰寫培訓劇本…
+          </p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const ScriptPanel = ({ label, tone, data, issuesLabel, borderL }) => {
+  const color = tone === "pos" ? "var(--pos)" : "var(--neg)";
+  const bg = tone === "pos" ? "var(--card)" : "var(--paper-2)";
+  return (
+    <div style={{ padding: "28px 28px", background: bg, borderLeft: borderL ? "1px solid var(--ink)" : "none" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+        <div style={{ width: 10, height: 10, background: color }}/>
+        <h4 className="serif" style={{ fontSize: 20, fontWeight: 500, margin: 0 }}>{label}</h4>
+      </div>
+      <DialogueLine who="顧客" text={data.customer}/>
+      <DialogueLine who="員工" text={data.staff} tone={color}/>
+      <div style={{ marginTop: 20 }}>
+        <div className="mono" style={{ fontSize: 10, color: "var(--ink-3)", letterSpacing: "0.12em", marginBottom: 8 }}>{issuesLabel}</div>
+        <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12, color: "var(--ink-2)", lineHeight: 1.7 }}>
+          {(data.issues || data.highlights).map((it, i) => <li key={i}>{it}</li>)}
+        </ul>
+      </div>
+    </div>
+  );
+};
+
+const DialogueLine = ({ who, text, tone }) => (
+  <div style={{ marginBottom: 16 }}>
+    <div className="mono" style={{ fontSize: 10, color: tone || "var(--ink-3)", letterSpacing: "0.14em", marginBottom: 6 }}>
+      {who.toUpperCase()}
+    </div>
+    <div style={{
+      fontSize: 13, lineHeight: 1.7, color: "var(--ink)",
+      paddingLeft: 12, borderLeft: `2px solid ${tone || "var(--rule)"}`
+    }}>
+      {text}
+    </div>
+  </div>
+);
+
+// ---- EmailTool ----
+const EmailTool = () => {
+  const ix = useIX();
+  const { platform, ytRole, dispatch } = useFeatureContext();
+  const facts = useAnalyzeFactsVM();
+  const { strengths, weaknesses } = useSwotSummary();
+  const strengthsStr = (strengths || []).filter(Boolean).join("、");
+  const weaknessesStr = (weaknesses || []).filter(Boolean).join("、");
+  const slice = ix?.state?.features?.internalEmail;
+  const aiText = slice?.status === "ready"
+    ? (slice.data?.email || slice.data?.body || slice.data?.text || (typeof slice.data === "string" ? slice.data : null))
+    : null;
+  const aiSubject = slice?.status === "ready"
+    ? (slice.data?.subject || slice.data?.title || null)
+    : null;
+
+  // P3.9-5R fix #3：context key 含 platform/ytRole/analyzeRequestId/strengths/weaknesses。
+  const ctxKey = `${facts.analyzeRequestId || "none"}|${platform}|${ytRole || ""}|${strengthsStr}|${weaknessesStr}`;
+  const lastCtxRef = React.useRef(null);
+  React.useEffect(() => {
+    if (!Adapters || !dispatch) return;
+    if (!facts.isReady) return;
+    if (!strengthsStr || !weaknessesStr) return;
+    if (lastCtxRef.current === ctxKey && (slice?.status === "loading" || slice?.status === "ready")) return;
+    lastCtxRef.current = ctxKey;
+    Adapters.fetchInternalEmail({ strengths: strengthsStr, weaknesses: weaknessesStr, platform, ytRole, dispatch }).catch(() => {});
+  }, [ctxKey]);
+
+  // 真實狀態
+  const isLoading = slice?.status === "loading";
+  const failed = slice?.status === "failed";
+  const isEmpty = !facts.isReady || (!strengthsStr && !weaknessesStr);
+  const subject = aiSubject || "";
+  const body = aiText || "";
+
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 0, border: "1px solid var(--rule)" }}
+         className="tool-split">
+      <div style={{ background: "var(--card)", padding: 0 }}>
+        <div style={{ padding: "20px 28px", borderBottom: "1px solid var(--rule)", display: "grid", gridTemplateColumns: "80px 1fr", rowGap: 6, fontSize: 13 }}>
+          <span className="mono" style={{ color: "var(--ink-3)", fontSize: 11 }}>FROM</span>
+          <span style={{ color: "var(--ink-2)" }}>{platform === "youtube" ? "頻道營運" : "店長"}</span>
+          <span className="mono" style={{ color: "var(--ink-3)", fontSize: 11 }}>TO</span>
+          <span style={{ color: "var(--ink-2)" }}>{platform === "youtube" ? "團隊夥伴" : "全體夥伴"}</span>
+          <span className="mono" style={{ color: "var(--ink-3)", fontSize: 11 }}>SUBJECT</span>
+          <span style={{ fontWeight: 600 }}>{subject || <span style={{ color: "var(--ink-3)", fontWeight: 400 }}>—</span>}</span>
+        </div>
+        <div style={{ padding: "32px 40px" }}>
+          {isEmpty && (
+            <div className="mono" style={{ fontSize: 12, color: "var(--ink-3)", padding: "40px 0" }}>
+              先在首頁完成分析，AI 會根據真實 SWOT 撰寫內部信。
+            </div>
+          )}
+          {!isEmpty && isLoading && <div className="mono" style={{ fontSize: 11, color: "var(--coral-2)", marginBottom: 12 }}>AI 內部信撰寫中…</div>}
+          {!isEmpty && failed && <div className="mono" style={{ fontSize: 11, color: "var(--coral-2)", marginBottom: 12 }}>AI 撰寫失敗，請重試。</div>}
+          {!isEmpty && !isLoading && !failed && body && (
+            <pre style={{
+              fontFamily: "var(--sans)", fontSize: 14.5, lineHeight: 1.8,
+              whiteSpace: "pre-wrap", margin: 0, color: "var(--ink)", maxWidth: 680
+            }}>{body}</pre>
+          )}
+          {!isEmpty && (
+            <div style={{ marginTop: 32, display: "flex", gap: 10 }}>
+              <CopyBtn text={body} size="md"/>
+              <Btn tone="ghost" size="md" disabled={!body}><Send size={13}/> 寄出</Btn>
+              <Btn tone="ghost" size="md" onClick={() => {
+                if (Adapters && dispatch && strengthsStr && weaknessesStr) Adapters.fetchInternalEmail({ strengths: strengthsStr, weaknesses: weaknessesStr, platform, ytRole, dispatch }).catch(() => {});
+              }}><Refresh size={13}/> 重寫</Btn>
+            </div>
+          )}
+        </div>
+      </div>
+      <aside style={{ background: "var(--paper-2)", padding: "32px 28px", borderLeft: "1px solid var(--rule)" }}>
+        <Stamp>Editor notes</Stamp>
+        <ul style={{ margin: "16px 0", padding: 0, listStyle: "none", fontSize: 13, lineHeight: 1.6 }}>
+          {[
+            "開頭先肯定——避免「又要改善」的疲勞感",
+            "用真實數字取代空話",
+            "三個具體動作，而不是五個抽象原則",
+            "結尾留門，降低內部阻力"
+          ].map((n, i) => (
+            <li key={i} style={{ display: "flex", gap: 10, padding: "10px 0", borderTop: i > 0 ? "1px solid var(--rule)" : "none" }}>
+              <span className="mono" style={{ fontSize: 10, color: "var(--coral-2)" }}>{String(i+1).padStart(2,"0")}</span>
+              <span style={{ color: "var(--ink-2)" }}>{n}</span>
+            </li>
+          ))}
+        </ul>
+      </aside>
+    </div>
+  );
+};
+
+// ============================================================
+// components/advisor.jsx — AI 顧問（接 /api/chat）
+// ============================================================
+const formatTime = (ts) => {
+  const d = ts ? new Date(ts) : new Date();
+  return `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+};
+
+const Advisor = () => {
+  const ix = useIX();
+  const { platform, ytRole, dispatch } = useFeatureContext();
+  const messages = ix?.state?.chat?.messages || [];
+  const chatStatus = ix?.state?.chat?.status || "idle";
+  const typing = chatStatus === "loading";
+  const [input, setInput] = React.useState("");
+  const endRef = React.useRef(null);
+
+  React.useEffect(() => {
+    endRef.current?.parentElement?.scrollTo?.({ top: 99999, behavior: "smooth" });
+  }, [messages.length, typing]);
+
+  const send = (textOverride) => {
+    const text = (textOverride || input).trim();
+    if (!text) return;
+    if (!Adapters || !dispatch) return;
+    setInput("");
+    const context = "";
+    Adapters.sendChat({ message: text, context, platform, ytRole, dispatch }).catch(() => {});
+  };
+
+  // 顯示用 list：直接用 reducer 的 chat.messages
+  const displayMsgs = messages.length === 0
+    ? [{ role: "ai", content: "我可以根據你剛才分析的內容，幫你回答經營／創作上的問題。試著問：「下週要做什麼最有效？」", createdAt: Date.now() }]
+    : messages;
+
+  return (
+    <div style={{ maxWidth: 1280, margin: "0 auto", padding: "40px 32px 0", minHeight: "calc(100vh - 64px)", display: "flex", flexDirection: "column" }}>
+      <div style={{ marginBottom: 24 }}>
+        <Stamp tone="coral">§ AI Advisor · beta</Stamp>
+        <h1 className="serif" style={{ fontSize: "clamp(32px, 4vw, 48px)", fontWeight: 500, margin: "10px 0 6px", letterSpacing: "-0.025em" }}>
+          問它關於你{platform === "youtube" ? "頻道" : "店"}的事，它讀過你所有的{platform === "youtube" ? "留言" : "評論"}。
+        </h1>
+        <p style={{ fontSize: 14, color: "var(--ink-3)", margin: 0, maxWidth: 640, lineHeight: 1.55 }}>
+          不是通用 ChatGPT——這個顧問只看你的資料，也只給你可以今天就執行的答案。
+        </p>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 280px", gap: 24, flex: 1, minHeight: 0 }}
+           className="advisor-grid">
+        <div style={{ display: "flex", flexDirection: "column", border: "1px solid var(--rule)", background: "var(--card)", minHeight: 560 }}>
+          <div style={{ flex: 1, overflowY: "auto", padding: "24px 28px" }} className="chat-scroll">
+            {displayMsgs.map((m, i) => <Msg key={i} m={m}/>)}
+            {typing && <Typing/>}
+            <div ref={endRef}/>
+          </div>
+          <div style={{ borderTop: "1px solid var(--rule)", padding: "16px 20px", background: "var(--paper-2)" }}>
+            <div style={{ display: "flex", gap: 10, alignItems: "flex-end" }}>
+              <textarea
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
+                }}
+                rows={1}
+                placeholder={platform === "youtube" ? "例如：怎麼讓觀眾留言更踴躍？" : "例如：週末出餐慢要怎麼解？"}
+                style={{
+                  flex: 1, background: "var(--card)", border: "1px solid var(--rule)",
+                  padding: "12px 14px", fontSize: 14, resize: "none",
+                  fontFamily: "var(--sans)", color: "var(--ink)", outline: "none",
+                  minHeight: 44, maxHeight: 160
+                }}
+              />
+              <Btn tone="ink" onClick={() => send()} disabled={!input.trim() || typing}>
+                <Send size={14}/> 送出
+              </Btn>
+            </div>
+          </div>
+        </div>
+
+        <aside style={{ minWidth: 0 }}>
+          <div style={{ border: "1px solid var(--rule)", background: "var(--paper-2)", padding: "20px 20px" }}>
+            <Stamp>建議提問</Stamp>
+            <div style={{ marginTop: 12 }}>
+              {ADVISOR_SUGGESTIONS.map((s, i) => (
+                <button key={i} onClick={() => send(s)} style={{
+                  display: "block", width: "100%", textAlign: "left",
+                  padding: "12px 14px", background: "var(--card)", border: "1px solid var(--rule)",
+                  marginBottom: 8, cursor: "pointer", fontFamily: "var(--sans)",
+                  fontSize: 13, color: "var(--ink)", lineHeight: 1.4,
+                  transition: "background .15s"
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = "var(--paper-3)"}
+                onMouseLeave={e => e.currentTarget.style.background = "var(--card)"}
+                >
+                  <ArrowRight size={12} style={{ color: "var(--coral-2)", marginRight: 8, verticalAlign: "middle" }}/>
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div style={{ border: "1px solid var(--rule)", background: "var(--ink)", color: "var(--paper)", padding: "20px", marginTop: 16 }}>
+            <Stamp tone="coral">Context window</Stamp>
+            <ul style={{ margin: "12px 0 0", padding: 0, listStyle: "none", fontSize: 12, lineHeight: 1.7 }}>
+              <li style={{ opacity: 0.85 }}>✓ 已分析的{platform === "youtube" ? "影片留言" : "店家評論"}全文</li>
+              <li style={{ opacity: 0.85 }}>✓ 正/負主題分布</li>
+              <li style={{ opacity: 0.85 }}>✓ SWOT 與重點主題</li>
+              <li style={{ opacity: 0.5 }}>✗ 內部 POS / 財務資料</li>
+            </ul>
+          </div>
+        </aside>
+      </div>
+    </div>
+  );
+};
+
+const Msg = ({ m }) => {
+  const role = m.role === "user" ? "user" : "ai";
+  const text = m.content || m.text || "";
+  const time = formatTime(m.createdAt);
+  if (role === "user") {
+    return (
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 18 }}>
+        <div style={{ maxWidth: "75%" }}>
+          <div style={{
+            background: "var(--ink)", color: "var(--paper)", padding: "12px 16px",
+            fontSize: 14, lineHeight: 1.6, whiteSpace: "pre-wrap"
+          }}>{text}</div>
+          <div className="mono" style={{ fontSize: 10, color: "var(--ink-3)", marginTop: 4, textAlign: "right" }}>{time}</div>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div style={{ display: "flex", gap: 12, marginBottom: 22 }}>
+      <div style={{
+        width: 32, height: 32, background: "var(--forest)", color: "var(--paper)",
+        display: "grid", placeItems: "center", flexShrink: 0,
+        fontFamily: "var(--serif)", fontWeight: 600, fontSize: 14
+      }}>i</div>
+      <div style={{ flex: 1 }}>
+        <div style={{
+          background: "var(--paper-2)", border: "1px solid var(--rule)",
+          padding: "14px 18px", fontSize: 14, lineHeight: 1.7, whiteSpace: "pre-wrap",
+          color: "var(--ink)"
+        }}>{text}</div>
+        <div className="mono" style={{ fontSize: 10, color: "var(--ink-3)", marginTop: 4 }}>
+          InsightX · {time}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const Typing = () => (
+  <div style={{ display: "flex", gap: 12, marginBottom: 22 }}>
+    <div style={{ width: 32, height: 32, background: "var(--forest)", color: "var(--paper)",
+      display: "grid", placeItems: "center", flexShrink: 0,
+      fontFamily: "var(--serif)", fontWeight: 600, fontSize: 14 }}>i</div>
+    <div style={{
+      background: "var(--paper-2)", border: "1px solid var(--rule)",
+      padding: "14px 18px", display: "inline-flex", gap: 4
+    }}>
+      {[0,1,2].map(i => (
+        <div key={i} style={{
+          width: 6, height: 6, background: "var(--ink-3)", borderRadius: "50%",
+          animation: `dot 1.2s ease-in-out ${i * 0.15}s infinite`
+        }}/>
+      ))}
+    </div>
+  </div>
+);
+
+// ============================================================
+// components/topnav.jsx — 內頁頂部導覽
+// ============================================================
+const TopNav = ({ view, setView, onBack, showBadge, vm }) => {
+  const items = [
+    { k: "dashboard", l: "報告", ic: ChartBar },
+    { k: "toolkit", l: "工具箱", ic: Tools },
+    { k: "advisor", l: "AI 顧問", ic: Sparkle, badge: showBadge }
+  ];
+  return (
+    <header style={{
+      position: "sticky", top: 0, background: "var(--paper)", zIndex: 50,
+      borderBottom: "1px solid var(--ink)"
+    }}>
+      <div style={{ maxWidth: 1280, margin: "0 auto", padding: "12px 32px",
+        display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+          <button onClick={onBack} style={{ border: "none", background: "transparent", cursor: "pointer", padding: 0, display: "flex", alignItems: "center", gap: 10 }}>
+            <Logo size={24}/>
+          </button>
+          <div style={{ width: 1, height: 20, background: "var(--rule)" }} className="hide-sm"/>
+          <div className="hide-sm" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ fontSize: 13, fontWeight: 500 }}>{vm?.nameZh || vm?.name || "InsightX"}</div>
+            {vm?.rating != null && (
+              // P3.14：YouTube 模式 vm.rating = like_count（如 7380），加 ★ 會誤導成「7380 顆星」。
+              vm?.platform === "youtube"
+                ? <Pill tone="paper">{formatRatingCount(Number(vm.rating) || 0)} 讚</Pill>
+                : <Pill tone="paper">{vm.rating} ★</Pill>
+            )}
+          </div>
+        </div>
+
+        <nav className="hide-sm" style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          {items.map(it => {
+            const Ic2 = it.ic;
+            const active = view === it.k;
+            return (
+              <button key={it.k} onClick={() => setView(it.k)} style={{
+                padding: "10px 16px", fontSize: 13, fontWeight: 500,
+                background: active ? "var(--ink)" : "transparent",
+                color: active ? "var(--paper)" : "var(--ink-2)",
+                border: "none", cursor: "pointer", fontFamily: "var(--sans)",
+                display: "inline-flex", alignItems: "center", gap: 8, position: "relative"
+              }}>
+                <Ic2 size={14}/>{it.l}
+                {it.badge && !active && (
+                  <span style={{
+                    width: 6, height: 6, background: "var(--coral)", borderRadius: "50%",
+                    position: "absolute", top: 6, right: 8
+                  }}/>
+                )}
+              </button>
+            );
+          })}
+        </nav>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <Btn tone="ghost" size="sm" className="hide-sm"><Download size={12}/> 下載報告</Btn>
+        </div>
+      </div>
+
+      <div className="show-sm mobile-nav" style={{ display: "none", borderTop: "1px solid var(--rule)" }}>
+        <div style={{ display: "flex" }}>
+          {items.map(it => {
+            const Ic2 = it.ic;
+            const active = view === it.k;
+            return (
+              <button key={it.k} onClick={() => setView(it.k)} style={{
+                flex: 1, padding: "10px 0", fontSize: 11,
+                background: active ? "var(--ink)" : "transparent",
+                color: active ? "var(--paper)" : "var(--ink-3)",
+                border: "none", cursor: "pointer", fontFamily: "var(--sans)",
+                display: "flex", flexDirection: "column", alignItems: "center", gap: 4
+              }}>
+                <Ic2 size={14}/>{it.l}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </header>
+  );
+};
+
+// ============================================================
+// components/app.jsx — 路由 + Provider
+// ============================================================
+const App = () => {
+  // 連 reducer
+  const reducer = useAppReducer ? useAppReducer() : null;
+  const ixCtx = React.useMemo(() => {
+    if (!reducer) return null;
+    return {
+      state: reducer.state,
+      dispatch: reducer.dispatch,
+      lib: { Adapters, Async },
+    };
+  }, [reducer?.state, reducer?.dispatch]);
+
+  const [view, setView] = React.useState(() => {
+    try { return localStorage.getItem("ix_view") || "landing"; } catch { return "landing"; }
+  });
+  const [tweaksOpen, setTweaksOpen] = React.useState(false);
+  const [tweaks, setTweaks] = React.useState({ accent: "coral", density: "comfortable", showAdvisorBadge: true });
+
+  React.useEffect(() => {
+    try { localStorage.setItem("ix_view", view); } catch {}
+    window.scrollTo?.({ top: 0, behavior: "instant" });
+  }, [view]);
+
+  // Edit mode protocol（保留接口，但不嘗試 postMessage 出去）
+  React.useEffect(() => {
+    const listener = (e) => {
+      const d = e.data || {};
+      if (d.type === "__activate_edit_mode") setTweaksOpen(true);
+      if (d.type === "__deactivate_edit_mode") setTweaksOpen(false);
+    };
+    window.addEventListener("message", listener);
+    return () => window.removeEventListener("message", listener);
+  }, []);
+
+  // accent css var
+  React.useEffect(() => {
+    const map = { coral: "var(--coral)", forest: "var(--forest)", ochre: "var(--ochre)", slate: "var(--slate)" };
+    const map2 = { coral: "var(--coral-2)", forest: "var(--forest-ink)", ochre: "oklch(0.62 0.13 85)", slate: "oklch(0.45 0.06 240)" };
+    document.documentElement.style.setProperty("--accent", map[tweaks.accent] || map.coral);
+    document.documentElement.style.setProperty("--accent-2", map2[tweaks.accent] || map2.coral);
+  }, [tweaks.accent]);
+
+  // 分析完成後自動切到 dashboard
+  const phase = ixCtx?.state?.stream?.phase;
+  React.useEffect(() => {
+    if (phase === "succeeded" && view === "landing") {
+      const t = setTimeout(() => setView("dashboard"), 600);
+      return () => clearTimeout(t);
+    }
+  }, [phase]);
+
+  const goLanding = () => setView("landing");
+  const goDashboard = () => setView("dashboard");
+
+  // 給 TopNav 用的 vm
+  const vm = React.useMemo(() => {
+    const raw = ixCtx?.state?.features?.analyze?.data;
+    if (!raw) return null;
+    return buildShopViewModel(raw);
+  }, [ixCtx?.state?.features?.analyze?.data]);
+
+  const inner = view === "landing" ? (
+    <>
+      <LandingPage onComplete={goDashboard}/>
+      <TweaksPanel active={tweaksOpen} setActive={setTweaksOpen} state={tweaks} setState={setTweaks}/>
+    </>
+  ) : (
+    <div style={{ background: "var(--paper)", minHeight: "100vh" }}>
+      <TopNav view={view} setView={setView} onBack={goLanding} showBadge={tweaks.showAdvisorBadge} vm={vm}/>
+      <main>
+        {view === "dashboard" && <Dashboard/>}
+        {view === "toolkit" && <Toolkit/>}
+        {view === "advisor" && <Advisor/>}
+      </main>
+      <TweaksPanel active={tweaksOpen} setActive={setTweaksOpen} state={tweaks} setState={setTweaks}/>
+    </div>
+  );
+
+  return (
+    <IXContext.Provider value={ixCtx}>{inner}</IXContext.Provider>
+  );
+};
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+
+</script>
+</body>
+</html>
