@@ -69,5 +69,3 @@ agent-handoff-custom.skill
 agent-handoff-memory.skill
 auto-debug.skill
 
-# 暫存輸出（.skill/.plugin/測試 dump）
-outputs/
