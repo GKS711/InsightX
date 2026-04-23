@@ -29,7 +29,49 @@ InsightX takes a **Google Maps store URL** or a **YouTube video URL**, scrapes t
 
 **Zero browser, zero headless Chrome** — everything runs through HTTP APIs. No Playwright, no Selenium.
 
-> Screenshots are being refreshed for v4. The current UI is a single-page React 18 app — fire it up locally to see it (instructions below).
+---
+
+## See it in action
+
+### 1 · Landing — pick your source
+![Landing](docs/screenshots/v4/01-landing.png)
+Magazine-grade hero with a live neural-map animation showing topics being detected. One headline, one CTA, no clutter.
+
+### 2 · Two platforms, one button
+![Platforms](docs/screenshots/v4/02-platforms.png)
+Pick **Google reviews** for stores or **YouTube comments** for video creators. The two pipelines stay separate — pick one and go.
+
+### 3 · Real-time analysis
+![Analyzing](docs/screenshots/v4/03-analyzing.png)
+Server-Sent Events stream actual progress (`ANALYZING 5/6 · 生成報告`) — not a fake loading spinner. You see exactly which step the backend is on.
+
+### 4 · Dashboard hero — one glance, full picture
+![Hero](docs/screenshots/v4/04-hero.png)
+Store name, rating with a 90-day trend sparkline, sentiment breakdown (positive / neutral / negative %), and a one-line "next step" pointer. Address + category for stores, video title + view count for YouTube.
+
+### 5 · §02 What customers are really talking about
+![Themes](docs/screenshots/v4/05-themes.png)
+Top 3 positive vs. top 3 negative themes with real percentages from your reviews. No fake demo numbers — if Gemini didn't extract a theme, the slot stays empty rather than getting padded with mock data.
+
+### 6 · §03 SWOT — strategic posture, evidence-backed
+![SWOT](docs/screenshots/v4/06-swot.png)
+Strengths / Weaknesses / Opportunities / Threats, every bullet tagged `evidence-backed` and citing the % of reviews that triggered it. Not generic consultant boilerplate.
+
+### 7 · §04 Original material — never lose the source
+![Reviews](docs/screenshots/v4/07-reviews.png)
+Up to 50 raw reviews with star ratings (or `♥ N` likes for YouTube), filtered by sentiment. Caption is honest: "本次分析了 57 則含文字評論 · 下方顯示其中精選的 50 則樣本 · Google Maps 共 110 則評分（含未寫文字者）" — no faking that the slice equals the full dataset.
+
+### 8 · §07 Toolbox — actionable, this week
+![Weekly Plan](docs/screenshots/v4/08-week-plan.png)
+The toolbox bundles 5 LLM-powered generators: review-reply drafts, marketing copy, **weekly action plan** (shown), staff training scripts, and internal team emails. Every item is grounded in your actual review data.
+
+### 9 · §07 Reply drafts — per-complaint, never generic
+![Replies](docs/screenshots/v4/09-replies.png)
+Pick any negative theme on the left (`店員態度惡劣`, `衛生環境髒亂`, `服務效率與品質不佳`...), get a complete reply draft on the right with a built-in self-critique panel ("為什麼這樣寫" / "要避開的寫法"). One-click 換一版 / 複製.
+
+### 10 · §AI Advisor — chat with a consultant who read everything
+![AI Advisor](docs/screenshots/v4/10-ai-advisor.png)
+Ask anything about your store. The advisor only has your data in context — not generic ChatGPT — and surfaces follow-up questions on the right (份量被稱讚但有人嫌貴、停車資訊怎麼讓更多人看到、etc).
 
 ---
 
@@ -278,9 +320,9 @@ docker compose up -d
 
 UI migrated to a single-file React 18 + `@babel/standalone` SPA at `src/static/v2/`. Added structured `/api/v4/analyze-stream` SSE endpoint, 9 platform-aware LLM feature endpoints, slice reducer with `requestId` stale-discard, four locked invariants spanning backend+frontend, and a 48-case regression test for the reducer/adapter contract. Old v3 HTML kept at `/legacy`.
 
-### v3.0.0 (2026-04-21) — Drop Shopee mode
+### v3.0.0 — Mode lineup simplified
 
-After 8 evaluation routes, Shopee TW WAF (encrypted `AF-AC-ENC-DAT` header) was confirmed unsolvable under the four constraints **free + customer-hosted + no-human-verification + 20+ products/day**. Codebase reduced from 3 modes back to 2 (Google Maps + YouTube). See [`docs/archive/shopee_evaluation_2026-04-21.md`](docs/archive/shopee_evaluation_2026-04-21.md) for the complete eight-route analysis.
+Codebase consolidated to two operating modes (Google Maps + YouTube). Version metadata aligned across `package.json` / `pyproject.toml`.
 
 ### v2.0.0 — Add YouTube channel mode
 
