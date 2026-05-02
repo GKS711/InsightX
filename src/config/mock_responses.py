@@ -298,27 +298,65 @@ Pizza Shalom 團隊 敬上"""
 """
 }
 
-def get_mock_response(response_type, topic=None, strengths=None, weaknesses=None, issue=None):
-    """根據類型返回模擬的 AI 回應"""
-    
+def get_mock_response(response_type, topic=None, strengths=None, weaknesses=None, issue=None,
+                      platform="google"):
+    """根據類型返回模擬的 AI 回應。
+
+    Bug fix: 原本忽略 platform，YouTube 模式 LLM 失敗時也會回店家風格 mock
+    （提到 Pizza Shalom、廚房備料、披薩窯烤等不相關內容）。
+
+    現況：mock_responses 內只有店家版完整文案，沒寫 YouTube 完整版。短期修法是
+    YouTube 模式回中性 placeholder，避免店家風格污染。前端理論上會偵測到上層
+    `_fallback:true` 走 ErrorVM「AI 暫時無法產生」UI，使用者不會直接看到此文字；
+    但若前端某天 regress 沒擋住、或 dev tools/network log 被使用者開啟，至少
+    placeholder 不會誤導 YouTuber 用戶。
+    """
+    is_youtube = (platform or "").lower() == "youtube"
+
     if response_type == "reply_to_complaint":
-        return mock_responses["reply_to_complaint"].get(topic, 
-            f"感謝您的反饋。我們會針對「{topic}」進行改善，期待再次為您服務！")
-    
+        if is_youtube:
+            return f"感謝你的留言回饋。我們會針對「{topic}」在下一支影片改善，希望你繼續支持頻道！"
+        return mock_responses["reply_to_complaint"].get(
+            topic,
+            f"感謝您的反饋。我們會針對「{topic}」進行改善，期待再次為您服務！"
+        )
+
     elif response_type == "root_cause_analysis":
-        return mock_responses["root_cause_analysis"].get(topic,
-            f"## 針對「{topic}」的分析\n\n我們會深入研究此問題並提出改善方案。")
-    
+        if is_youtube:
+            return (f"【根源問題分析：{topic}】\n\n"
+                    "AI 暫時無法產生詳細分析，請稍後重試。\n"
+                    "（若持續失敗，可能是 Gemini API quota 不足或服務暫時異常。）")
+        return mock_responses["root_cause_analysis"].get(
+            topic,
+            f"## 針對「{topic}」的分析\n\n我們會深入研究此問題並提出改善方案。"
+        )
+
     elif response_type == "marketing_copy":
+        if is_youtube:
+            return ("AI 暫時無法產生新影片宣傳貼文，請稍後重試。\n"
+                    "（若持續失敗，可能是 Gemini API quota 不足或服務暫時異常。）")
         return mock_responses["marketing_copy"]
-    
+
     elif response_type == "weekly_plan":
+        if is_youtube:
+            return ("【頻道本週行動計畫】\n\n"
+                    "AI 暫時無法產生本週創作計畫，請稍後重試。\n"
+                    "（若持續失敗，可能是 Gemini API quota 不足或服務暫時異常。）")
         return mock_responses["weekly_plan"]
-    
+
     elif response_type == "training_script":
+        if is_youtube:
+            return ("【製作 SOP】\n\n"
+                    "AI 暫時無法產生製作 SOP，請稍後重試。\n"
+                    "（若持續失敗，可能是 Gemini API quota 不足或服務暫時異常。）")
         return mock_responses["training_script"]
-    
+
     elif response_type == "internal_email":
+        if is_youtube:
+            return ("親愛的團隊夥伴：\n\n"
+                    "AI 暫時無法產生本週團隊週報，請稍後重試。\n"
+                    "（若持續失敗，可能是 Gemini API quota 不足或服務暫時異常。）\n\n"
+                    "頻道主理人")
         return mock_responses["internal_email"]
-    
+
     return "AI 回應生成中..."

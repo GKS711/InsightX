@@ -60,7 +60,13 @@ def _attach_scrape_context(target: dict, scrape_result: dict, platform: str) -> 
         else:
             total_reviews = scrape_result.get("total_reviews") or scrape_result.get("rating_count")
             if total_reviews not in (None, ""):
-                target["total_reviews"] = total_reviews
+                # Bug fix: Serper place_info["ratingCount"] 是 int，但 frontend / LLM contract
+                # 都是 string「共分析約 N 則評論」。直接賦值會讓 frontend 拿到 int，render
+                # 結果變成裸數字「151」、或對 string method 操作時 throw TypeError。
+                if isinstance(total_reviews, int):
+                    target["total_reviews"] = f"Google Maps 共 {total_reviews} 則評分"
+                else:
+                    target["total_reviews"] = total_reviews
 
 # ---- Request Models ----
 
@@ -384,7 +390,7 @@ async def generate_reply(request: ReplyRequest):
         )
     except Exception as e:
         warnings.append(f"llm error: {str(e)[:80]}")
-        reply = get_mock_response("reply_to_complaint", topic=request.topic)
+        reply = get_mock_response("reply_to_complaint", topic=request.topic, platform=request.platform)
         return attach_metadata(
             {"reply": reply},
             effective_yt_role=effective_yt_role,
@@ -408,7 +414,7 @@ async def analyze_issue(request: ReplyRequest):
         )
     except Exception as e:
         warnings.append(f"llm error: {str(e)[:80]}")
-        analysis = get_mock_response("root_cause_analysis", topic=request.topic)
+        analysis = get_mock_response("root_cause_analysis", topic=request.topic, platform=request.platform)
         return attach_metadata(
             {"analysis": analysis},
             effective_yt_role=effective_yt_role,
@@ -432,7 +438,7 @@ async def generate_marketing(request: MarketingRequest):
         )
     except Exception as e:
         warnings.append(f"llm error: {str(e)[:80]}")
-        copy = get_mock_response("marketing_copy", strengths=request.strengths)
+        copy = get_mock_response("marketing_copy", strengths=request.strengths, platform=request.platform)
         return attach_metadata(
             {"copy": copy},
             effective_yt_role=effective_yt_role,
@@ -456,7 +462,7 @@ async def generate_weekly_plan(request: WeeklyPlanRequest):
         )
     except Exception as e:
         warnings.append(f"llm error: {str(e)[:80]}")
-        plan = get_mock_response("weekly_plan", weaknesses=request.weaknesses)
+        plan = get_mock_response("weekly_plan", weaknesses=request.weaknesses, platform=request.platform)
         return attach_metadata(
             {"plan": plan},
             effective_yt_role=effective_yt_role,
@@ -480,7 +486,7 @@ async def generate_training_script(request: TrainingScriptRequest):
         )
     except Exception as e:
         warnings.append(f"llm error: {str(e)[:80]}")
-        script = get_mock_response("training_script", issue=request.issue)
+        script = get_mock_response("training_script", issue=request.issue, platform=request.platform)
         return attach_metadata(
             {"script": script},
             effective_yt_role=effective_yt_role,
@@ -508,7 +514,8 @@ async def generate_internal_email(request: InternalEmailRequest):
         warnings.append(f"llm error: {str(e)[:80]}")
         email = get_mock_response("internal_email",
                                   strengths=request.strengths,
-                                  weaknesses=request.weaknesses)
+                                  weaknesses=request.weaknesses,
+                                  platform=request.platform)
         return attach_metadata(
             {"email": email},
             effective_yt_role=effective_yt_role,

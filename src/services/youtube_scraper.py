@@ -89,8 +89,14 @@ class YouTubeScraper:
             fallback_result = await self._scrape_via_ytdlp(url, video_id, max_comments)
             if fallback_result["status"] != "error":
                 return fallback_result
-            # 兩個都失敗：回傳較有資訊的那一個
-            return result if result.get("error") else fallback_result
+            # 兩個都失敗：把兩個錯誤訊息合併，避免「備用沒裝 / 備用 import 失敗」這種
+            # 二級資訊被 main API 的 error 蓋掉。
+            # 原本的 `return result if result.get("error") else fallback_result` 是 dead code
+            # ──`_err()` 一定會設 error=msg，result.get("error") 永遠 truthy → 永遠回 result，
+            # 永遠看不到 fallback 的錯訊息。
+            main_err = result.get("error") or "main API failed"
+            fb_err = fallback_result.get("error") or "fallback failed"
+            return {**result, "error": f"{main_err} | fallback: {fb_err}"}
 
         return result
 
