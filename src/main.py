@@ -8,13 +8,15 @@ if sys.platform == 'win32':
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from src.api.routes import router
+from src.api.routes import router as v4_router
+from src.api.v5 import router as v5_router
 import uvicorn
 
-app = FastAPI(title="InsightX API")
+app = FastAPI(title="InsightX API", version="5.0.0-alpha")
 
-# API first (important)
-app.include_router(router, prefix="/api")
+# API first (important) — v5 router has its own /api/v5 prefix; v4 mounts at /api
+app.include_router(v5_router)  # /api/v5/*
+app.include_router(v4_router, prefix="/api")  # /api/* (v4 legacy, kept for backward compat)
 
 # v4.0.0 UI routing:
 #   /         → src/static/v2/ (v2-design Babel-standalone React 單檔 + core/ + hooks/)

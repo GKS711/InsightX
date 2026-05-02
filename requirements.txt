@@ -1,4 +1,4 @@
-# InsightX Python Dependencies (v3.0.0)
+# InsightX Python Dependencies (v5.0.0-alpha)
 # Install: pip install -r requirements.txt
 # 對齊 pyproject.toml；此檔供 Dockerfile 使用
 
@@ -10,3 +10,13 @@ jinja2>=3.1.3
 google-genai>=1.59.0
 requests>=2.31.0
 youtube-comment-downloader>=0.1.76
+
+# v5: persistence + background jobs + reports
+sqlalchemy>=2.0
+alembic>=1.13
+aiosqlite>=0.19
+asyncpg>=0.29
+redis>=5.0
+rq>=1.15
+reportlab>=4.0
+python-docx>=1.1

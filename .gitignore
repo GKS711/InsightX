@@ -71,3 +71,9 @@ auto-debug.skill
 
 圖片/
 ppt/InsightX_v4.0.0.pdf
+
+# v5 dev artifacts
+insightx.db
+insightx.db-journal
+outputs/reports/
+.claude/v5-work/

@@ -1,0 +1,155 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─────────────────────────────────────────────────────────────────────
+   Linear-inspired global styles
+   ─────────────────────────────────────────────────────────────────────
+   Per /DESIGN.md — Inter Variable with cv01 + ss03 OpenType features.
+*/
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  background: #08090a;
+  color: #f7f8f8;
+}
+
+body {
+  font-family: "Inter", "Inter Variable", "SF Pro Display", -apple-system,
+    system-ui, "Segoe UI", Roboto, sans-serif;
+  font-feature-settings: "cv01", "ss03";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Linear's signature: borders are semi-transparent white, not solid dark */
+.border-subtle {
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+.border-standard {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Card surface: translucent white over dark, never solid */
+.surface-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+}
+.surface-card:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.surface-elevated {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+}
+
+/* Linear primary button — brand indigo */
+.btn-primary {
+  background: #5e6ad2;
+  color: #ffffff;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-weight: 510;
+  transition: background 150ms ease;
+}
+.btn-primary:hover {
+  background: #828fff;
+}
+
+/* Linear ghost button — near-transparent on dark */
+.btn-ghost {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #d0d6e0;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-weight: 510;
+  transition: background 150ms ease;
+}
+.btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #f7f8f8;
+}
+
+/* Pill / badge */
+.pill {
+  background: transparent;
+  color: #d0d6e0;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 9999px;
+  padding: 2px 10px;
+  font-size: 12px;
+  font-weight: 510;
+}
+
+.pill-success {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #10b981;
+}
+.pill-error {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+}
+.pill-running {
+  background: rgba(94, 106, 210, 0.15);
+  border-color: rgba(94, 106, 210, 0.3);
+  color: #7170ff;
+}
+
+/* Display headlines — Linear's compressed feel */
+.display-xl {
+  font-size: 4.5rem;
+  font-weight: 510;
+  line-height: 1;
+  letter-spacing: -0.022em;
+}
+.display-lg {
+  font-size: 3rem;
+  font-weight: 510;
+  line-height: 1;
+  letter-spacing: -0.022em;
+}
+.heading-1 {
+  font-size: 2rem;
+  font-weight: 590;
+  line-height: 1.13;
+  letter-spacing: -0.022em;
+}
+.heading-2 {
+  font-size: 1.5rem;
+  font-weight: 590;
+  line-height: 1.33;
+  letter-spacing: -0.012em;
+}
+.heading-3 {
+  font-size: 1.25rem;
+  font-weight: 590;
+  line-height: 1.33;
+  letter-spacing: -0.012em;
+}
+
+/* Subtle scrollbar (dark) */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
