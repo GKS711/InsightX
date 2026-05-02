@@ -77,3 +77,4 @@ insightx.db
 insightx.db-journal
 outputs/reports/
 .claude/v5-work/
+.claude/

@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>InsightX 工作區</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  /* ════════════════════════════════════════════════════════════════════
+     v5 Workspace — 沿用 v4 視覺 token（從 src/static/v2/index.html 抄出來）
+     OKLCH editorial palette · 無圓角 · 雜誌風 · 1px rule borders
+     ════════════════════════════════════════════════════════════════════ */
+  :root {
+    --ink: oklch(0.22 0.015 160);
+    --ink-2: oklch(0.35 0.02 160);
+    --ink-3: oklch(0.52 0.015 160);
+    --ink-4: oklch(0.72 0.01 160);
+    --rule: oklch(0.88 0.01 160);
+    --rule-2: oklch(0.93 0.008 160);
+    --paper: oklch(0.975 0.006 85);
+    --paper-2: oklch(0.955 0.01 85);
+    --paper-3: oklch(0.92 0.012 85);
+    --card: oklch(0.99 0.003 85);
+
+    --forest: oklch(0.28 0.045 170);
+    --forest-2: oklch(0.38 0.05 170);
+    --forest-ink: oklch(0.18 0.035 170);
+
+    --coral: oklch(0.68 0.16 45);
+    --coral-2: oklch(0.58 0.18 40);
+    --coral-soft: oklch(0.92 0.04 45);
+
+    --slate: oklch(0.55 0.06 240);
+    --slate-soft: oklch(0.93 0.02 240);
+
+    --ochre: oklch(0.72 0.12 85);
+    --ochre-soft: oklch(0.94 0.04 85);
+
+    --pos: oklch(0.55 0.09 155);
+    --pos-soft: oklch(0.93 0.03 155);
+    --neg: oklch(0.58 0.15 30);
+    --neg-soft: oklch(0.93 0.04 30);
+
+    --serif: "Noto Serif TC", "Songti TC", Georgia, serif;
+    --sans: "IBM Plex Sans", "Noto Sans TC", -apple-system, BlinkMacSystemFont, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: var(--sans);
+    background: var(--paper);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    font-feature-settings: "ss01", "ss02", "cv11";
+    line-height: 1.5;
+  }
+  button { font-family: inherit; cursor: pointer; border-radius: 0; }
+  input, textarea, select { font-family: inherit; border-radius: 0; }
+  ::selection { background: var(--forest); color: var(--paper); }
+  :focus-visible { outline: 2px solid var(--forest); outline-offset: 2px; }
+
+  .serif { font-family: var(--serif); letter-spacing: -0.01em; }
+  .mono { font-family: var(--mono); }
+  .tracking-wide { letter-spacing: 0.14em; text-transform: uppercase; }
+
+  /* keyframes — 從 v4 抄 */
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes pulseDot { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(1.2); } }
+  .fade-up { animation: fadeUp 350ms cubic-bezier(0.4, 0, 0.2, 1) both; }
+  .fade-in { animation: fadeIn 350ms ease both; }
+
+  /* Layout */
+  .ws-shell { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
+  .ws-side {
+    background: var(--paper-2);
+    border-right: 1px solid var(--rule);
+    padding: 32px 20px;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  .ws-main { padding: 48px 56px; max-width: 1280px; width: 100%; }
+
+  .ws-brand { display: flex; align-items: baseline; gap: 8px; margin-bottom: 32px; padding-bottom: 16px; border-bottom: 1px solid var(--rule); }
+  .ws-brand-mark { font-family: var(--serif); font-size: 22px; font-weight: 600; color: var(--coral); letter-spacing: -0.02em; }
+  .ws-brand-txt { font-size: 14px; color: var(--ink-2); }
+  .ws-brand-ver { font-family: var(--mono); font-size: 10px; color: var(--ink-4); margin-left: auto; }
+
+  .ws-nav { display: flex; flex-direction: column; gap: 4px; }
+  .ws-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    color: var(--ink-2);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    border-left: 2px solid transparent;
+    transition: background 150ms, color 150ms, border-color 150ms;
+  }
+  .ws-nav-item:hover { background: var(--paper-3); color: var(--ink); }
+  .ws-nav-item.active {
+    background: var(--paper-3);
+    color: var(--ink);
+    border-left-color: var(--coral);
+    font-weight: 600;
+  }
+  .ws-nav-divider { height: 1px; background: var(--rule); margin: 16px 0; }
+  .ws-side-foot { margin-top: auto; padding-top: 16px; border-top: 1px solid var(--rule); font-family: var(--mono); font-size: 11px; color: var(--ink-4); }
+
+  /* Headlines */
+  .ws-eyebrow { font-family: var(--mono); font-size: 11px; color: var(--ink-3); letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 8px; }
+  .ws-h1 { font-family: var(--serif); font-size: 48px; font-weight: 600; line-height: 1.1; letter-spacing: -0.02em; color: var(--ink); margin: 0 0 12px; }
+  .ws-h2 { font-family: var(--serif); font-size: 28px; font-weight: 600; line-height: 1.2; letter-spacing: -0.015em; color: var(--ink); margin: 0 0 12px; }
+  .ws-h3 { font-family: var(--serif); font-size: 20px; font-weight: 600; color: var(--ink); margin: 0 0 8px; }
+  .ws-lede { font-size: 16px; color: var(--ink-2); margin: 0 0 32px; max-width: 64ch; }
+
+  /* Buttons (v4-style: square corners) */
+  .ws-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 18px; font-size: 14px; font-weight: 500; border: 1px solid var(--ink); background: var(--paper); color: var(--ink); transition: background 150ms, color 150ms; }
+  .ws-btn:hover { background: var(--ink); color: var(--paper); }
+  .ws-btn-primary { background: var(--forest); color: var(--paper); border-color: var(--forest); }
+  .ws-btn-primary:hover { background: var(--forest-ink); border-color: var(--forest-ink); }
+  .ws-btn-accent { background: var(--coral); color: var(--paper); border-color: var(--coral); }
+  .ws-btn-accent:hover { background: var(--coral-2); border-color: var(--coral-2); }
+  .ws-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .ws-link { color: var(--coral); text-decoration: none; font-weight: 500; }
+  .ws-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+  /* Card (v4-style: square corners, 1px rule) */
+  .ws-card { background: var(--card); border: 1px solid var(--rule); padding: 24px; }
+  .ws-card-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+
+  /* Pill */
+  .ws-pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px; font-family: var(--mono); font-size: 11px; font-weight: 500; border: 1px solid var(--rule); color: var(--ink-2); }
+  .ws-pill-success { color: var(--pos); border-color: var(--pos); background: var(--pos-soft); }
+  .ws-pill-error   { color: var(--neg); border-color: var(--neg); background: var(--neg-soft); }
+  .ws-pill-running { color: var(--coral); border-color: var(--coral); background: var(--coral-soft); }
+  .ws-pill-running::before { content: ""; width: 6px; height: 6px; background: var(--coral); border-radius: 50%; animation: pulseDot 1.4s ease-in-out infinite; }
+  .ws-pill-queued  { color: var(--ochre); border-color: var(--ochre); background: var(--ochre-soft); }
+
+  /* Form input (v4-style) */
+  .ws-input { width: 100%; padding: 10px 12px; font-size: 14px; border: 1px solid var(--rule); background: var(--card); color: var(--ink); }
+  .ws-input:focus { outline: none; border-color: var(--ink); }
+
+  /* Grid */
+  .ws-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+
+  /* Store card */
+  .ws-store-card { padding: 20px; cursor: pointer; transition: border-color 150ms; }
+  .ws-store-card:hover { border-color: var(--ink); }
+  .ws-store-card-name { font-family: var(--serif); font-size: 18px; font-weight: 600; color: var(--ink); }
+  .ws-store-card-meta { font-family: var(--mono); font-size: 11px; color: var(--ink-4); margin-top: 8px; }
+
+  /* Section spacing */
+  .ws-section { margin-bottom: 48px; }
+  .ws-section-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid var(--ink); }
+
+  /* Reviews list */
+  .ws-review { padding: 12px 0; border-bottom: 1px solid var(--rule-2); }
+  .ws-review-meta { display: flex; gap: 8px; font-family: var(--mono); font-size: 11px; color: var(--ink-3); margin-bottom: 4px; }
+  .ws-review-text { font-size: 14px; color: var(--ink-2); line-height: 1.6; }
+
+  /* Run card */
+  .ws-run { padding: 14px 20px; }
+  .ws-run-row { display: flex; align-items: center; justify-content: space-between; }
+
+  /* Empty state */
+  .ws-empty { padding: 48px 24px; text-align: center; color: var(--ink-3); }
+
+  /* Output JSON viewer */
+  .ws-pre { background: var(--paper-3); padding: 14px; font-family: var(--mono); font-size: 11px; color: var(--ink-2); overflow-x: auto; line-height: 1.5; max-height: 300px; }
+
+  /* Rule */
+  .ws-rule { background: var(--rule); height: 1px; width: 100%; }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    .ws-shell { grid-template-columns: 1fr; }
+    .ws-side { position: static; height: auto; flex-direction: row; flex-wrap: wrap; }
+    .ws-main { padding: 32px 24px; }
+  }
+
+  /* Star rating */
+  .ws-star { color: var(--ochre); font-size: 12px; }
+
+  /* Loading dots */
+  .ws-loading { display: inline-block; }
+  .ws-loading::after { content: "···"; animation: pulseDot 1.4s steps(3) infinite; }
+
+  /* Hidden */
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+
+<div id="root"></div>
+
+<!-- React 18 UMD + Babel standalone (跟 v4 同模式) -->
+<script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7/babel.min.js"></script>
+
+<script type="text/babel" data-presets="react">
+  const { useState, useEffect, useCallback, useRef, useMemo } = React;
+
+  /* ──────────────────────────────────────────────────────────────────
+     Minimal v5 API client (不依賴 v4 window.IX)
+     ────────────────────────────────────────────────────────────────── */
+  const api = {
+    base: "/api/v5",
+    async get(path) {
+      const r = await fetch(this.base + path);
+      if (!r.ok) throw new Error(`GET ${path} → ${r.status}`);
+      return r.json();
+    },
+    async post(path, body) {
+      const r = await fetch(this.base + path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body || {}),
+      });
+      if (!r.ok) throw new Error(`POST ${path} → ${r.status}: ${(await r.text()).slice(0, 200)}`);
+      return r.json();
+    },
+    download(path) {
+      window.location.href = this.base + path;
+    },
+  };
+
+  /* ──────────────────────────────────────────────────────────────────
+     Hash router (純 conditional render，跟 v4 同概念)
+     ────────────────────────────────────────────────────────────────── */
+  function useHashRoute() {
+    const [hash, setHash] = useState(window.location.hash || "#/");
+    useEffect(() => {
+      const on = () => setHash(window.location.hash || "#/");
+      window.addEventListener("hashchange", on);
+      return () => window.removeEventListener("hashchange", on);
+    }, []);
+    return hash;
+  }
+  const navigate = (h) => { window.location.hash = h; };
+
+  /* ──────────────────────────────────────────────────────────────────
+     Reusable atoms
+     ────────────────────────────────────────────────────────────────── */
+  function StatusPill({ status }) {
+    const cls = status === "succeeded" ? "ws-pill-success"
+              : status === "failed" ? "ws-pill-error"
+              : status === "running" ? "ws-pill-running"
+              : status === "queued" ? "ws-pill-queued"
+              : "";
+    return <span className={"ws-pill " + cls}>{status}</span>;
+  }
+
+  function Eyebrow({ children }) {
+    return <div className="ws-eyebrow">{children}</div>;
+  }
+
+  function Stars({ rating }) {
+    if (!rating || rating < 1) return null;
+    return <span className="ws-star">{"★".repeat(rating)}{"☆".repeat(Math.max(0, 5 - rating))}</span>;
+  }
+
+  function fmtDate(s) {
+    if (!s) return "—";
+    try { return new Date(s).toLocaleString("zh-TW", { dateStyle: "short", timeStyle: "short" }); }
+    catch { return s; }
+  }
+
+  /* ──────────────────────────────────────────────────────────────────
+     Sidebar
+     ────────────────────────────────────────────────────────────────── */
+  function Sidebar({ route }) {
+    const isActive = (h) => route === h || (h !== "#/" && route.startsWith(h));
+    return (
+      <aside className="ws-side">
+        <div className="ws-brand">
+          <span className="ws-brand-mark">iX</span>
+          <span className="ws-brand-txt serif">InsightX 工作區</span>
+          <span className="ws-brand-ver">v5α</span>
+        </div>
+        <nav className="ws-nav">
+          <a className={"ws-nav-item" + (isActive("#/") ? " active" : "")} href="#/">
+            <span className="mono">01</span> Dashboard
+          </a>
+          <a className={"ws-nav-item" + (route.startsWith("#/stores") ? " active" : "")} href="#/">
+            <span className="mono">02</span> Stores
+          </a>
+          <a className={"ws-nav-item" + (route === "#/reports" ? " active" : "")} href="#/reports">
+            <span className="mono">03</span> Reports
+          </a>
+          <div className="ws-nav-divider" />
+          <a className="ws-nav-item" href="/" target="_self">
+            <span className="mono">←</span> 回 v4 主站
+          </a>
+        </nav>
+        <div className="ws-side-foot">dev@insightx.local</div>
+      </aside>
+    );
+  }
+
+  /* ──────────────────────────────────────────────────────────────────
+     Dashboard — 店家列表 + 新增
+     ────────────────────────────────────────────────────────────────── */
+  function Dashboard() {
+    const [stores, setStores] = useState(null);
+    const [err, setErr] = useState(null);
+    const [showAdd, setShowAdd] = useState(false);
+
+    const load = useCallback(async () => {
+      try {
+        const data = await api.get("/stores");
+        setStores(data);
+        setErr(null);
+      } catch (e) { setErr(String(e)); }
+    }, []);
+
+    useEffect(() => { load(); }, [load]);
+
+    return (
+      <div className="fade-up">
+        <Eyebrow>§01 · 工作區概覽</Eyebrow>
+        <h1 className="ws-h1">店家儀表板</h1>
+        <p className="ws-lede">
+          每間店保留評論抓取紀錄、AI 分析歷史與週報。<br />
+          以「持續追蹤」為前提，看資料隨時間怎麼變。
+        </p>
+
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <h2 className="ws-h3" style={{ marginBottom: 0 }}>
+            我的店家 {stores ? `（${stores.length}）` : ""}
+          </h2>
+          <button className="ws-btn ws-btn-accent" onClick={() => setShowAdd(!showAdd)}>
+            {showAdd ? "取消" : "+ 新增店家"}
+          </button>
+        </div>
+
+        {showAdd && <AddStoreForm onDone={() => { setShowAdd(false); load(); }} />}
+
+        {err && <div className="ws-card" style={{ borderColor: "var(--neg)", color: "var(--neg)", marginTop: 16 }}>{err}</div>}
+
+        {stores === null ? (
+          <div className="ws-empty mono">載入中<span className="ws-loading"></span></div>
+        ) : stores.length === 0 ? (
+          <div className="ws-card ws-empty">
+            還沒有店家。點上方「+ 新增店家」開始追蹤評論。
+          </div>
+        ) : (
+          <div className="ws-grid">
+            {stores.map((s) => <StoreCard key={s.id} store={s} />)}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  function StoreCard({ store }) {
+    return (
+      <div className="ws-card ws-store-card fade-in" onClick={() => navigate(`#/stores/${store.id}`)}>
+        <div className="ws-card-row" style={{ marginBottom: 12 }}>
+          <div className="ws-store-card-name">{store.name}</div>
+          <span className="ws-pill mono">{store.platform === "youtube" ? "YouTube" : "Maps"}</span>
+        </div>
+        {store.address && <div style={{ fontSize: 13, color: "var(--ink-3)", marginBottom: 8 }}>{store.address}</div>}
+        <div className="ws-store-card-meta">#{store.id} · {fmtDate(store.created_at)}</div>
+      </div>
+    );
+  }
+
+  function AddStoreForm({ onDone }) {
+    const [name, setName] = useState("");
+    const [platform, setPlatform] = useState("google");
+    const [busy, setBusy] = useState(false);
+    const [err, setErr] = useState(null);
+
+    async function submit() {
+      if (!name.trim()) return;
+      setBusy(true); setErr(null);
+      try {
+        const wsList = await api.get("/workspaces");
+        let wsId = wsList[0]?.id;
+        if (!wsId) {
+          const ws = await api.post("/workspaces", { name: "Default Workspace" });
+          wsId = ws.id;
+        }
+        await api.post("/stores", { workspace_id: wsId, name: name.trim(), platform });
+        onDone();
+      } catch (e) { setErr(String(e)); setBusy(false); }
+    }
+
+    return (
+      <div className="ws-card fade-up" style={{ marginBottom: 16 }}>
+        <h3 className="ws-h3">新增店家</h3>
+        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 12, marginBottom: 12 }}>
+          <div>
+            <label className="ws-eyebrow">店名</label>
+            <input className="ws-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="例：Pizza Shalom" autoFocus />
+          </div>
+          <div>
+            <label className="ws-eyebrow">平台</label>
+            <select className="ws-input" value={platform} onChange={(e) => setPlatform(e.target.value)}>
+              <option value="google">Google Maps</option>
+              <option value="youtube">YouTube</option>
+            </select>
+          </div>
+        </div>
+        {err && <div style={{ color: "var(--neg)", fontSize: 13, marginBottom: 12 }}>{err}</div>}
+        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+          <button className="ws-btn" onClick={onDone}>取消</button>
+          <button className="ws-btn ws-btn-primary" onClick={submit} disabled={busy || !name.trim()}>
+            {busy ? "建立中…" : "建立"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  /* ──────────────────────────────────────────────────────────────────
+     StoreDetail — 單店：sources / scrape / analyze / runs / reviews / report
+     ────────────────────────────────────────────────────────────────── */
+  function StoreDetail({ storeId }) {
+    const [store, setStore] = useState(null);
+    const [reviews, setReviews] = useState([]);
+    const [runs, setRuns] = useState([]);
+    const [activeJob, setActiveJob] = useState(null);
+    const [activeRun, setActiveRun] = useState(null);
+    const [err, setErr] = useState(null);
+
+    const refresh = useCallback(async () => {
+      try {
+        const [s, rv, rn] = await Promise.all([
+          api.get(`/stores/${storeId}`),
+          api.get(`/stores/${storeId}/reviews?limit=50`),
+          api.get(`/stores/${storeId}/runs`),
+        ]);
+        setStore(s); setReviews(rv); setRuns(rn);
+      } catch (e) { setErr(String(e)); }
+    }, [storeId]);
+
+    useEffect(() => { refresh(); }, [refresh]);
+
+    // poll active job
+    useEffect(() => {
+      if (!activeJob || ["succeeded","failed","cancelled"].includes(activeJob.status)) return;
+      const t = setInterval(async () => {
+        try {
+          const j = await api.get(`/jobs/${activeJob.id}`);
+          setActiveJob(j);
+          if (["succeeded","failed","cancelled"].includes(j.status)) { clearInterval(t); refresh(); }
+        } catch { clearInterval(t); }
+      }, 2000);
+      return () => clearInterval(t);
+    }, [activeJob, refresh]);
+
+    // poll active run
+    useEffect(() => {
+      if (!activeRun || ["succeeded","failed","cancelled"].includes(activeRun.status)) return;
+      const t = setInterval(async () => {
+        try {
+          const r = await api.get(`/runs/${activeRun.id}`);
+          setActiveRun(r);
+          if (["succeeded","failed","cancelled"].includes(r.status)) { clearInterval(t); refresh(); }
+        } catch { clearInterval(t); }
+      }, 2000);
+      return () => clearInterval(t);
+    }, [activeRun, refresh]);
+
+    if (err) return <div className="ws-card" style={{ color: "var(--neg)" }}>{err}</div>;
+    if (!store) return <div className="ws-empty mono">載入中<span className="ws-loading"></span></div>;
+
+    return (
+      <div className="fade-up">
+        <a className="ws-link mono" href="#/" style={{ fontSize: 12 }}>← 回 Dashboard</a>
+        <div style={{ marginTop: 12 }}>
+          <Eyebrow>店家編號 #{store.id} · {store.platform}</Eyebrow>
+          <h1 className="ws-h1" style={{ marginBottom: 4 }}>{store.name}</h1>
+          {store.address && <div style={{ color: "var(--ink-3)" }}>{store.address}</div>}
+        </div>
+
+        <SourceSection storeId={storeId} platform={store.platform} onAdded={refresh} />
+
+        <div className="ws-section">
+          <div className="ws-section-head">
+            <h2 className="ws-h2" style={{ margin: 0 }}>抓取與分析</h2>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button className="ws-btn"
+                onClick={async () => {
+                  try { setActiveJob(await api.post(`/stores/${storeId}/scrape`)); }
+                  catch (e) { setErr(String(e)); }
+                }}
+                disabled={activeJob && ["queued","running"].includes(activeJob.status)}
+              >▶ Scrape</button>
+              <button className="ws-btn ws-btn-primary"
+                onClick={async () => {
+                  if (reviews.length === 0) { setErr("還沒抓過評論，先 Scrape"); return; }
+                  try { setActiveRun(await api.post(`/stores/${storeId}/analyze`, { ai_function: "analyze" })); }
+                  catch (e) { setErr(String(e)); }
+                }}
+                disabled={activeRun && ["queued","running"].includes(activeRun.status)}
+              >✦ Analyze</button>
+            </div>
+          </div>
+
+          {activeJob && <JobProgress job={activeJob} kind="scrape" />}
+          {activeRun && <RunProgress run={activeRun} />}
+        </div>
+
+        <RunsHistory runs={runs} />
+
+        <ReportSection storeId={storeId} />
+
+        <ReviewsSection reviews={reviews} />
+      </div>
+    );
+  }
+
+  function SourceSection({ storeId, platform, onAdded }) {
+    const [url, setUrl] = useState("");
+    const [busy, setBusy] = useState(false);
+    const [err, setErr] = useState(null);
+
+    async function add() {
+      if (!url.trim()) return;
+      setBusy(true); setErr(null);
+      try {
+        await api.post(`/stores/${storeId}/sources`, {
+          source_type: platform === "youtube" ? "youtube" : "google_maps",
+          external_url: url.trim(),
+        });
+        setUrl(""); setBusy(false); onAdded();
+      } catch (e) { setErr(String(e)); setBusy(false); }
+    }
+
+    return (
+      <div className="ws-section">
+        <div className="ws-section-head">
+          <h2 className="ws-h2" style={{ margin: 0 }}>評論來源</h2>
+        </div>
+        <div className="ws-card">
+          <div style={{ display: "flex", gap: 8 }}>
+            <input className="ws-input" value={url} onChange={(e) => setUrl(e.target.value)}
+              placeholder={platform === "youtube" ? "貼 YouTube 影片網址" : "貼 Google Maps 店家網址"} />
+            <button className="ws-btn ws-btn-accent" onClick={add} disabled={!url.trim() || busy}>
+              {busy ? "新增中…" : "加入 source"}
+            </button>
+          </div>
+          {err && <div style={{ color: "var(--neg)", fontSize: 13, marginTop: 8 }}>{err}</div>}
+        </div>
+      </div>
+    );
+  }
+
+  function JobProgress({ job }) {
+    return (
+      <div className="ws-card fade-in" style={{ marginTop: 12 }}>
+        <div className="ws-card-row" style={{ marginBottom: 8 }}>
+          <div>
+            <Eyebrow>Scrape Job #{job.id}</Eyebrow>
+            <div className="serif" style={{ fontSize: 18 }}>
+              已抓 <span className="mono" style={{ color: "var(--coral)" }}>{job.reviews_fetched_count}</span> 則評論
+              {job.pagination_truncated && <span style={{ color: "var(--ochre)", marginLeft: 8, fontSize: 13 }}>· 部分未抓完</span>}
+            </div>
+          </div>
+          <StatusPill status={job.status} />
+        </div>
+        {job.error_message && <div className="mono" style={{ color: "var(--neg)", fontSize: 12 }}>{job.error_message}</div>}
+      </div>
+    );
+  }
+
+  function RunProgress({ run }) {
+    return (
+      <div className="ws-card fade-in" style={{ marginTop: 12 }}>
+        <div className="ws-card-row" style={{ marginBottom: 8 }}>
+          <div>
+            <Eyebrow>Analysis Run #{run.id} · {run.ai_function}</Eyebrow>
+            <div className="mono" style={{ fontSize: 12, color: "var(--ink-3)" }}>
+              {run.model_id} · {run.prompt_version}
+            </div>
+          </div>
+          <StatusPill status={run.status} />
+        </div>
+        {run.status === "succeeded" && run.output_json && (
+          <pre className="ws-pre">{JSON.stringify(run.output_json, null, 2).slice(0, 1500)}</pre>
+        )}
+        {run.error_message && <div className="mono" style={{ color: "var(--neg)", fontSize: 12 }}>{run.error_message}</div>}
+      </div>
+    );
+  }
+
+  function RunsHistory({ runs }) {
+    if (!runs || runs.length === 0) return null;
+    return (
+      <div className="ws-section">
+        <div className="ws-section-head">
+          <h2 className="ws-h2" style={{ margin: 0 }}>分析歷史 ({runs.length})</h2>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {runs.slice(0, 10).map((r) => (
+            <div key={r.id} className="ws-card ws-run">
+              <div className="ws-run-row">
+                <div>
+                  <span className="mono" style={{ color: "var(--ink-4)", fontSize: 11 }}>#{r.id}</span>{" "}
+                  <span className="serif" style={{ fontSize: 16, fontWeight: 600 }}>{r.ai_function}</span>
+                  <div className="mono" style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 2 }}>
+                    {r.model_id} · {fmtDate(r.created_at)}
+                  </div>
+                </div>
+                <StatusPill status={r.status} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  function ReviewsSection({ reviews }) {
+    if (!reviews || reviews.length === 0) return null;
+    return (
+      <div className="ws-section">
+        <div className="ws-section-head">
+          <h2 className="ws-h2" style={{ margin: 0 }}>最近評論 ({reviews.length})</h2>
+        </div>
+        <div className="ws-card" style={{ maxHeight: 400, overflowY: "auto" }}>
+          {reviews.slice(0, 30).map((r) => (
+            <div key={r.id} className="ws-review">
+              <div className="ws-review-meta">
+                {r.author && <span>{r.author}</span>}
+                {r.rating && <Stars rating={r.rating} />}
+              </div>
+              <div className="ws-review-text">{r.text}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  function ReportSection({ storeId }) {
+    const [busy, setBusy] = useState(false);
+    const [err, setErr] = useState(null);
+    const [latest, setLatest] = useState(null);
+
+    async function generate(format) {
+      setBusy(true); setErr(null);
+      try {
+        const rpt = await api.post(`/stores/${storeId}/reports`, { format });
+        setLatest(rpt);
+        if (rpt.status === "succeeded") {
+          api.download(`/reports/${rpt.id}/download`);
+        } else {
+          setErr(rpt.error_message || "報表生成失敗");
+        }
+      } catch (e) { setErr(String(e)); }
+      setBusy(false);
+    }
+
+    return (
+      <div className="ws-section">
+        <div className="ws-section-head">
+          <h2 className="ws-h2" style={{ margin: 0 }}>週報匯出</h2>
+        </div>
+        <div className="ws-card">
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ color: "var(--ink-2)", fontSize: 14 }}>
+              整合最近一次 analyze / SWOT / weekly_plan 結果，生成可交付給店長的週報。
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button className="ws-btn" onClick={() => generate("docx")} disabled={busy}>
+                下載 DOCX
+              </button>
+              <button className="ws-btn ws-btn-primary" onClick={() => generate("pdf")} disabled={busy}>
+                {busy ? "生成中…" : "下載 PDF"}
+              </button>
+            </div>
+          </div>
+          {latest && latest.status === "succeeded" && (
+            <div style={{ marginTop: 12, fontSize: 13, color: "var(--pos)" }}>
+              ✓ 已生成 #{latest.id}（{latest.format.toUpperCase()}）
+            </div>
+          )}
+          {err && <div style={{ color: "var(--neg)", fontSize: 13, marginTop: 8 }}>{err}</div>}
+        </div>
+      </div>
+    );
+  }
+
+  /* ──────────────────────────────────────────────────────────────────
+     Reports placeholder（v5.0.0-alpha 後續加，現在純 listing）
+     ────────────────────────────────────────────────────────────────── */
+  function ReportsPage() {
+    return (
+      <div className="fade-up">
+        <Eyebrow>§03 · 報表</Eyebrow>
+        <h1 className="ws-h1">週報列表</h1>
+        <p className="ws-lede">
+          每張週報都從某個店家的最近一次 analyze 結果產生。<br />
+          v5.0.0-alpha 暫不提供跨店匯總；要看單店週報請進該店 detail 頁的「週報匯出」section。
+        </p>
+        <div className="ws-card ws-empty">
+          列表頁規劃中（v5.0.0-alpha.x 後續更新）
+        </div>
+      </div>
+    );
+  }
+
+  /* ──────────────────────────────────────────────────────────────────
+     App root
+     ────────────────────────────────────────────────────────────────── */
+  function App() {
+    const route = useHashRoute();
+
+    let view;
+    if (route.startsWith("#/stores/")) {
+      const id = parseInt(route.split("/")[2], 10);
+      view = isNaN(id) ? <Dashboard /> : <StoreDetail key={id} storeId={id} />;
+    } else if (route === "#/reports") {
+      view = <ReportsPage />;
+    } else {
+      view = <Dashboard />;
+    }
+
+    return (
+      <div className="ws-shell">
+        <Sidebar route={route} />
+        <main className="ws-main">{view}</main>
+      </div>
+    );
+  }
+
+  ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+
+</body>
+</html>
