@@ -1896,6 +1896,8 @@ const LandingPage = ({ onComplete }) => {
           <a onClick={() => document.getElementById("benefits")?.scrollIntoView({ behavior: "smooth" })} style={navLink}>特色</a>
           <a onClick={() => document.getElementById("report")?.scrollIntoView({ behavior: "smooth" })} style={navLink}>範例</a>
           <a onClick={() => document.getElementById("faq")?.scrollIntoView({ behavior: "smooth" })} style={navLink}>FAQ</a>
+          {/* v5.0.0-beta: 工作區入口（連到 sidecar /workspace/） */}
+          <a href="/workspace/" style={{ ...navLink, color: "var(--coral)", fontWeight: 600, cursor: "pointer" }}>工作區 →</a>
         </nav>
         <div className="mono tracking-wide" style={{ fontSize: 10, color: "var(--ink-3)", textTransform: "uppercase" }}>
           v{state?.meta?.appVersion || "4.0.0"} · live
@@ -3587,6 +3589,20 @@ const TopNav = ({ view, setView, onBack, showBadge, vm }) => {
               </button>
             );
           })}
+
+          {/* v5.0.0-beta: 工作區入口（連到 sidecar /workspace/） */}
+          <a href="/workspace/" style={{
+            padding: "10px 16px", fontSize: 13, fontWeight: 500,
+            background: "transparent",
+            color: "var(--coral)",
+            border: "none", cursor: "pointer", fontFamily: "var(--sans)",
+            display: "inline-flex", alignItems: "center", gap: 8,
+            textDecoration: "none",
+            borderLeft: "1px solid var(--rule)",
+            marginLeft: 8, paddingLeft: 16
+          }}>
+            工作區 →
+          </a>
         </nav>
 
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>

@@ -36,7 +36,9 @@ ROUTE_ANALYZE_LLM_FLOOR_S = 10.0  # LLM 至少要這麼多時間才有意義；�
 # 不對稱。決策：scraper 對齊 POST 30s（最大實測 ~16s 已含 8 頁分頁，60s 是 P3.10 前的舊上限），
 # LLM 走 analyze_content 明確 55s（gemma 最壞 ~50s + 5s buffer，跟 POST 一致）。
 SSE_ANALYZE_SCRAPER_BUDGET_S = 40.0  # 同步 POST 路徑：max_pages=25 需要 ~37.5s + buffer
-SSE_ANALYZE_LLM_BUDGET_S = 55.0
+SSE_ANALYZE_LLM_BUDGET_S = 90.0  # 從 55 提到 90：複雜中文 prompt（如「想窩 500 reviews」）
+                                 # 實測 gemma-4-31b 處理要 80-90s，55s 不夠。
+                                 # SSE 沒 frontend AbortController 壓力，可以放寬。
 
 def _attach_scrape_context(target: dict, scrape_result: dict, platform: str) -> None:
     if not isinstance(target, dict) or not isinstance(scrape_result, dict):
@@ -753,8 +755,17 @@ async def analyze_stream_v4(
                 except asyncio.CancelledError:
                     raise
                 except Exception as e:
+                    # v5 fix: asyncio.TimeoutError 等 str(e) 可能是空字串，
+                    # 用 type 名稱當 fallback 確保 message 永遠 non-empty。
+                    # 同時 log 完整 traceback 到 server 端方便 debug 大 prompt 失敗 case。
+                    import traceback as _tb
+                    err_type = type(e).__name__
+                    err_msg = str(e) or "(no message)"
+                    full_tb = _tb.format_exc()
+                    print(f"[v4-sse] LLM_ERROR {err_type}: {err_msg}\n{full_tb}", flush=True)
                     await queue.put(("terminal", failed_frame(
-                        "LLM_ERROR", f"LLM call failed: {str(e)[:180]}",
+                        "LLM_ERROR",
+                        f"LLM call failed ({err_type}): {err_msg[:160]}",
                         retryable=True, retry_after_secs=10,
                     )))
                     return

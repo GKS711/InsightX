@@ -266,11 +266,13 @@ class LLMService:
         if not text_content or len(text_content.strip()) < 50:
             raise ValueError("Not enough content to analyze (text too short)")
 
-        # Truncate 從 15000 提到 30000：
-        #   - gemma-4 視窗 128K tokens，30000 字元（中文約 30K tokens）綽綽有餘
-        #   - 配合 scraper max_pages=25（最多抓 ~500 則含文字評論）
-        #   - 大店家評論不再被砍半，主題分析更全面
-        truncated = text_content[:30000]
+        # Truncate 動態 cap（v5 fix for 想窩 case）：
+        #   - 大店家 (e.g. 想窩 11 餐旅館 70806 chars / 500 reviews)：30000 字元中文 ~ 15000+ tokens
+        #     會撞 LLM budget（實測 87s timeout）+ asyncio.TimeoutError 字串為空
+        #   - 統一 hard cap 15000 字元（v4.1 之前的設定），中小店覆蓋已足夠
+        #   - 真正的解：chunked summarize（v6）
+        #   - 中文字元 → token 比例約 0.5，15000 chars ≈ 7500 tokens（給 prompt template 留空間）
+        truncated = text_content[:15000]
 
         if self._is_youtube(platform):
             prompt = f"""你是一位專業的 YouTube 內容分析師，擅長分析觀眾留言的情緒與主題。請分析以下 YouTube 影片的觀眾留言。
