@@ -1,6 +1,6 @@
 [project]
 name = "insightx"
-version = "5.0.0b1"
+version = "5.0.0b2"
 description = "AI-powered customer feedback and YouTube comment insight tool"
 readme = "README.md"
 requires-python = ">=3.10"

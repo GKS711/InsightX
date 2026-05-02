@@ -35,7 +35,9 @@ ROUTE_ANALYZE_LLM_FLOOR_S = 10.0  # LLM 至少要這麼多時間才有意義；�
 # total budget；但每段仍要 explicit constant，避免 LLM 行為依賴 service 預設、scraper 跟 POST
 # 不對稱。決策：scraper 對齊 POST 30s（最大實測 ~16s 已含 8 頁分頁，60s 是 P3.10 前的舊上限），
 # LLM 走 analyze_content 明確 55s（gemma 最壞 ~50s + 5s buffer，跟 POST 一致）。
-SSE_ANALYZE_SCRAPER_BUDGET_S = 40.0  # 同步 POST 路徑：max_pages=25 需要 ~37.5s + buffer
+SSE_ANALYZE_SCRAPER_BUDGET_S = 60.0  # 從 40 提到 60：500 reviews 大店家 Serper 25 頁
+                                     # 實測有時 ~30s 有時 50s+（網路抖動），40s 是邊際 case
+                                     # SSE 沒 frontend AbortController 壓力，可放寬
 SSE_ANALYZE_LLM_BUDGET_S = 90.0  # 從 55 提到 90：複雜中文 prompt（如「想窩 500 reviews」）
                                  # 實測 gemma-4-31b 處理要 80-90s，55s 不夠。
                                  # SSE 沒 frontend AbortController 壓力，可以放寬。
