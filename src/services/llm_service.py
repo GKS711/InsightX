@@ -266,7 +266,11 @@ class LLMService:
         if not text_content or len(text_content.strip()) < 50:
             raise ValueError("Not enough content to analyze (text too short)")
 
-        truncated = text_content[:15000]
+        # Truncate 從 15000 提到 30000：
+        #   - gemma-4 視窗 128K tokens，30000 字元（中文約 30K tokens）綽綽有餘
+        #   - 配合 scraper max_pages=25（最多抓 ~500 則含文字評論）
+        #   - 大店家評論不再被砍半，主題分析更全面
+        truncated = text_content[:30000]
 
         if self._is_youtube(platform):
             prompt = f"""你是一位專業的 YouTube 內容分析師，擅長分析觀眾留言的情緒與主題。請分析以下 YouTube 影片的觀眾留言。

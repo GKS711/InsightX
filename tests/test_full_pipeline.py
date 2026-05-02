@@ -45,25 +45,23 @@ async def main():
     try:
         analysis_result = await llm.analyze_content(raw_text)
         print(f"✅ LLM Response received")
-        print(f"Response type: {type(analysis_result)}")
-        print(f"Response:\n{analysis_result}")
-        
-        # Try to parse as JSON
+        print(f"Response type: {type(analysis_result).__name__}")
+
+        # llm.analyze_content() 回傳已 parsed 的 dict（service 在內部處理了
+        # JSON parse + markdown 救援），所以這邊預期 dict。如果之後 contract
+        # 變回 string，這個 assertion 會立刻紅。
         import json
-        if isinstance(analysis_result, str):
-            # Clean markdown code blocks
-            cleaned = analysis_result.replace("```json", "").replace("```", "").strip()
-            print(f"\nCleaned response:\n{cleaned}")
-            
-            try:
-                parsed = json.loads(cleaned)
-                print(f"\n✅ Successfully parsed JSON:")
-                print(json.dumps(parsed, indent=2, ensure_ascii=False))
-            except json.JSONDecodeError as je:
-                print(f"\n❌ JSON parse error: {je}")
+        if isinstance(analysis_result, dict):
+            print(f"\n✅ Got dict from analyze_content():")
+            print(json.dumps(analysis_result, indent=2, ensure_ascii=False))
+            # 簡單 sanity check：應該有 store_name / good / bad 三個 key
+            missing = [k for k in ("store_name", "good", "bad") if k not in analysis_result]
+            if missing:
+                print(f"\n⚠️  缺少預期 key：{missing}")
         else:
-            print(f"Response is not a string: {analysis_result}")
-            
+            print(f"❌ Unexpected return type: {type(analysis_result).__name__}")
+            print(f"Value: {analysis_result!r}")
+
     except Exception as e:
         print(f"❌ LLM analysis error: {e}")
         import traceback

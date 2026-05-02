@@ -395,6 +395,7 @@ class ScraperService:
 
         # ── Step 2：/reviews 取得更多評論 ────────────────────────
         serper_reviews = []
+        pagination_truncated = False  # 觸頂 flag — 在 try 外宣告，避免早 except 造成 NameError
         try:
             reviews_payload = {"q": store_name, "gl": "tw", "hl": "zh-tw", "num": 40}
 
@@ -410,7 +411,7 @@ class ScraperService:
 
             # 分頁迴圈：嘗試用 page 參數取得所有評論
             page = 1
-            max_pages = 20  # 安全上限
+            max_pages = 25  # 安全上限（從 20 提到 25 配合 LLM truncate 30000）
             seen_serper_texts = set()
             while page <= max_pages:
                 current_payload = {**reviews_payload}
@@ -472,6 +473,12 @@ class ScraperService:
                 # 如果回傳少於 20 則，表示已經是最後一頁
                 if len(raw_reviews) < 20:
                     break
+
+                # 觸頂偵測：已跑到 max_pages 且仍有 nextPageToken → 表示被上限砍斷，
+                # 店家還有更多評論沒抓。設 flag + 印 warning 讓上層知道。
+                if page == max_pages and next_token:
+                    pagination_truncated = True
+                    print(f"[Serper] ⚠️ 觸及 max_pages={max_pages} 上限，可能仍有評論未抓取")
 
                 page += 1
         except Exception as e:
@@ -542,6 +549,8 @@ class ScraperService:
             "address": address,
             "category": category,
             "platform": "google",
+            # True = Serper 翻頁觸及 max_pages 上限被砍斷，仍有更多評論沒抓
+            "pagination_truncated": pagination_truncated,
         }
 
     # ══════════════════════════════════════════════════════════════
@@ -620,8 +629,13 @@ class ScraperService:
             else:
                 lines.append("（無評論）")
 
-            dump_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "reviews_latest.md")
-            dump_path = os.path.normpath(dump_path)
+            # 寫到 outputs/ 而非 repo 根目錄，集中所有 debug artifacts。
+            # 仍受 .gitignore 的 `reviews_latest.md` rule 保護（gitignore pattern
+            # 預設 match 任何位置，所以 outputs/reviews_latest.md 也會被忽略）。
+            dump_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "outputs")
+            dump_dir = os.path.normpath(dump_dir)
+            os.makedirs(dump_dir, exist_ok=True)
+            dump_path = os.path.join(dump_dir, "reviews_latest.md")
             with open(dump_path, "w", encoding="utf-8") as f:
                 f.write("\n".join(lines))
             print(f"[DEBUG] reviews_latest.md 已更新（{source}，{len(reviews)} 則）→ {dump_path}")
