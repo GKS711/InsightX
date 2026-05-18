@@ -16,18 +16,26 @@ v13.1 變更（v13 → v13.1）：
 import asyncio
 import json
 import os
+import ssl
 import urllib.request
 import urllib.parse
 import re
 import logging
 import html as html_module
 
+import certifi
 from dotenv import load_dotenv
 load_dotenv()
 
 from src.services.youtube_scraper import YouTubeScraper, is_youtube_url
 
 logger = logging.getLogger(__name__)
+
+# v5 fix: macOS uv-installed Python 預設 SSL 信任庫指 /Library/Frameworks/...
+# 路徑（不存在），導致 urllib.request.urlopen 對 google.serper.dev 等 HTTPS API
+# 全部 SSL: CERTIFICATE_VERIFY_FAILED。改用 certifi 自帶 cacert.pem 建 context，
+# 不污染 os.environ['SSL_CERT_FILE']，不踩部署環境設定。
+_SSL_CTX = ssl.create_default_context(cafile=certifi.where())
 
 # P3.12-R2 reverted（2026-04-23 使用者澄清）：原本想在後端 cap 50，但使用者澄清
 # 「照樣抓所有 google 評論，只是 §04 UI 那邊有問題」。後端要餵給 LLM 的是「全部
@@ -342,7 +350,7 @@ class ScraperService:
                 data=data,
                 headers={"X-API-KEY": self._serper_key, "Content-Type": "application/json"}
             )
-            with urllib.request.urlopen(req, timeout=15) as resp:
+            with urllib.request.urlopen(req, timeout=15, context=_SSL_CTX) as resp:
                 return json.loads(resp.read().decode("utf-8"))
 
         return await asyncio.to_thread(do_call)
@@ -568,7 +576,7 @@ class ScraperService:
                     headers={"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
                              "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"}
                 )
-                with urllib.request.urlopen(req, timeout=20) as resp:
+                with urllib.request.urlopen(req, timeout=20, context=_SSL_CTX) as resp:
                     return resp.read().decode("utf-8", errors="ignore")
 
             html = await asyncio.to_thread(fetch_url)

@@ -26,13 +26,21 @@ Fallback 觸發條件：
 import os
 import re
 import json
+import ssl
 import urllib.parse
 import urllib.request
+
+import certifi
 from dotenv import load_dotenv
 
 load_dotenv()
 
 YT_API_BASE = "https://www.googleapis.com/youtube/v3"
+
+# v5 fix: macOS uv-installed Python 預設 SSL 信任庫指 /Library/Frameworks/...
+# 路徑（不存在），導致 urllib.request.urlopen 對 googleapis.com 全部 SSL 失敗。
+# 改用 certifi 自帶 cacert.pem 建 context，僅本檔生效，不污染環境。
+_SSL_CTX = ssl.create_default_context(cafile=certifi.where())
 
 
 class YouTubeScraper:
@@ -216,7 +224,7 @@ class YouTubeScraper:
         url = f"{YT_API_BASE}/{endpoint}?{urllib.parse.urlencode(params)}"
         try:
             req = urllib.request.Request(url, headers={"Accept": "application/json"})
-            with urllib.request.urlopen(req, timeout=15) as resp:
+            with urllib.request.urlopen(req, timeout=15, context=_SSL_CTX) as resp:
                 return json.loads(resp.read().decode("utf-8"))
         except urllib.error.HTTPError as e:
             body = ""
@@ -357,7 +365,7 @@ class YouTubeScraper:
         }
         try:
             req = urllib.request.Request(oembed_url, headers={"Accept": "application/json"})
-            with urllib.request.urlopen(req, timeout=10) as resp:
+            with urllib.request.urlopen(req, timeout=10, context=_SSL_CTX) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
             return {
                 **empty,
