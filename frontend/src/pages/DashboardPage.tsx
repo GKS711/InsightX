@@ -50,7 +50,7 @@ export function DashboardPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="w-full bg-white/[0.02] border border-white/[0.08] rounded px-3 py-2 text-[14px] text-ink-primary placeholder:text-ink-subtle focus:outline-none focus:border-brand-accent"
-                placeholder="例如：Pizza Shalom"
+                placeholder="例如：Demo Pizza"
               />
             </div>
             <div>

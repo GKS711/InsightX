@@ -506,16 +506,16 @@ const SWOT = {
 };
 
 const REVIEWS = [
-  { name: "陳小姐", init: "陳", rating: 5, when: "3 天前",
+  { name: "顧客 A", init: "A", rating: 5, when: "3 天前",
     text: "招牌菜真的很有記憶點，火候拿捏得恰到好處。老闆超親切，還推薦我下次可以點微辣版本。",
     themes: ["餐點美味", "服務親切"], sentiment: "pos" },
-  { name: "J. Huang", init: "J", rating: 2, when: "5 天前",
+  { name: "顧客 B", init: "B", rating: 2, when: "5 天前",
     text: "東西是真的不錯，但週六帶小孩來等了快一小時出餐，戶外區蚊子又多。下次可能不會在週末來了。",
     themes: ["出餐速度慢", "環境小瑕疵"], sentiment: "neg" },
   { name: "Daniel", init: "D", rating: 4, when: "1 週前",
     text: "東西值得那個價，但第一次來完全不知道停車要停哪，繞了一圈。建議 Google 地圖加個停車攻略。",
     themes: ["停車不方便", "餐點美味"], sentiment: "mixed" },
-  { name: "林先生", init: "林", rating: 5, when: "1 週前",
+  { name: "顧客 C", init: "C", rating: 5, when: "1 週前",
     text: "第三次來了。環境依然是亮點，朋友從外地下來都說值得。推薦 4 點就到避開人潮。",
     themes: ["環境氛圍", "出餐速度慢"], sentiment: "pos" }
 ];
@@ -917,17 +917,17 @@ const useScroll = () => {
 // ============================================================================
 
 const CONSTELLATION = [
-  { id: "n1",  x: 0.22, y: 0.18, r: 8,  tone: "pos", c: 0, t: "招牌菜有靈魂", a: "陳小姐", m: "Google · 5★" },
+  { id: "n1",  x: 0.22, y: 0.18, r: 8,  tone: "pos", c: 0, t: "招牌菜有靈魂", a: "顧客 A", m: "Google · 5★" },
   { id: "n2",  x: 0.14, y: 0.34, r: 6,  tone: "pos", c: 0, t: "用料實在", a: "Wen", m: "Google · 5★" },
   { id: "n3",  x: 0.30, y: 0.48, r: 7,  tone: "pos", c: 0, t: "CP 值高", a: "匿名", m: "Google · 4★" },
-  { id: "n4",  x: 0.68, y: 0.22, r: 8,  tone: "neg", c: 1, t: "週末等 45 分鐘", a: "J. Huang", m: "Google · 2★" },
+  { id: "n4",  x: 0.68, y: 0.22, r: 8,  tone: "neg", c: 1, t: "週末等 45 分鐘", a: "顧客 B", m: "Google · 2★" },
   { id: "n5",  x: 0.82, y: 0.36, r: 6,  tone: "neg", c: 1, t: "出餐真的久", a: "街訪實測", m: "YouTube" },
   { id: "n6",  x: 0.74, y: 0.54, r: 5,  tone: "neg", c: 1, t: "上菜可以再快", a: "匿名", m: "Google · 3★" },
   { id: "n7",  x: 0.18, y: 0.68, r: 5,  tone: "pos", c: 2, t: "環境氣氛好", a: "Lin", m: "Google · 5★" },
   { id: "n8",  x: 0.32, y: 0.82, r: 6,  tone: "pos", c: 2, t: "拍照超美", a: "媽咪 Vlog", m: "YouTube" },
   { id: "n9",  x: 0.88, y: 0.74, r: 7,  tone: "neg", c: 3, t: "停車繞不到", a: "Daniel", m: "Google · 3★" },
   { id: "n10", x: 0.72, y: 0.86, r: 5,  tone: "mix", c: 3, t: "交通不便但值得", a: "Yu", m: "Google · 4★" },
-  { id: "n11", x: 0.46, y: 0.14, r: 5,  tone: "pos", c: 0, t: "老闆記得我", a: "林先生", m: "Google · 5★" },
+  { id: "n11", x: 0.46, y: 0.14, r: 5,  tone: "pos", c: 0, t: "老闆記得我", a: "顧客 C", m: "Google · 5★" },
   { id: "n12", x: 0.54, y: 0.88, r: 5,  tone: "pos", c: 2, t: "巷弄小店驚喜", a: "Yu", m: "Google · 5★" },
   { id: "n13", x: 0.06, y: 0.52, r: 4,  tone: "pos", c: 0, t: "服務員態度好", a: "匿名", m: "Google · 5★" },
   { id: "n14", x: 0.94, y: 0.20, r: 4,  tone: "neg", c: 1, t: "排隊排到懷疑人生", a: "實測", m: "YouTube" },
@@ -1624,7 +1624,7 @@ const Testimonials = () => {
   const quotes = [
     { t: "以為最大的問題是人手，結果顧問拿 400 則評論告訴我們：客人不是嫌慢，是嫌「不知道還要等多久」。一週後，我們裝了候位牌，負評少一半。", who: "W.", role: "家常料理・二代老闆", init: "W" },
     { t: "我原本只看五星評論——那是做給自己看的。InsightX 逼我讀了所有兩星留言，才發現停車問題其實不是問題，是溝通問題。", who: "J.", role: "日式小酒館・店主", init: "J" },
-    { t: "YouTube 上被拍了七次我自己都不知道。有的正面有的批評，InsightX 幫我一次看完，還生成了回覆給那些 YouTuber。", who: "陳小姐", role: "咖啡店主理人", init: "陳" }
+    { t: "YouTube 上被拍了七次我自己都不知道。有的正面有的批評，InsightX 幫我一次看完，還生成了回覆給那些 YouTuber。", who: "顧客 A", role: "咖啡店主理人", init: "A" }
   ];
   return (
     <section style={{ padding: "120px 0", background: "var(--ink)", color: "var(--paper)", margin: "0 -32px" }}>
