@@ -1,5 +1,5 @@
 """
-v5 Report generator — PDF (reportlab) + DOCX (python-docx).
+v6 Report generator — PDF (reportlab) + DOCX (python-docx). Sync.
 
 Workflow:
   1. caller posts to POST /api/v5/stores/{id}/reports → builds report job row
@@ -13,10 +13,10 @@ import json
 import logging
 import os
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any
 
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
 
 from src.models import AnalysisRun, Report, Store
 
@@ -29,8 +29,8 @@ REPORTS_DIR = os.path.join(
 )
 
 
-async def gather_report_inputs(
-    session: AsyncSession, store_id: int
+def gather_report_inputs(
+    session: Session, store_id: int
 ) -> dict[str, Any]:
     """Collect latest succeeded run per ai_function for the store."""
     out: dict[str, Any] = {}
@@ -45,7 +45,7 @@ async def gather_report_inputs(
             .order_by(AnalysisRun.created_at.desc())
             .limit(1)
         )
-        result = await session.execute(stmt)
+        result = session.execute(stmt)
         run = result.scalar_one_or_none()
         if run is not None:
             out[fn] = run.output_json
@@ -190,7 +190,6 @@ def build_pdf(store: Store, inputs: dict[str, Any], file_path: str) -> None:
 def build_docx(store: Store, inputs: dict[str, Any], file_path: str) -> None:
     """Build a DOCX report using python-docx."""
     from docx import Document
-    from docx.shared import Pt
 
     doc = Document()
     doc.add_heading(f"InsightX 週報：{store.name}", level=0)
@@ -249,14 +248,14 @@ def build_docx(store: Store, inputs: dict[str, Any], file_path: str) -> None:
     doc.save(file_path)
 
 
-async def generate_report(
-    session: AsyncSession,
+def generate_report(
+    session: Session,
     store: Store,
     report: Report,
 ) -> None:
     """Synchronously build the report file and update the Report row."""
     os.makedirs(REPORTS_DIR, exist_ok=True)
-    inputs = await gather_report_inputs(session, store.id)
+    inputs = gather_report_inputs(session, store.id)
 
     ts = datetime.now(tz=timezone.utc).strftime("%Y%m%dT%H%M%S")
     ext = report.format

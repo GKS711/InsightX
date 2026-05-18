@@ -1,5 +1,5 @@
 """
-LLM Gateway — 統一 entry point 給所有 9 個 AI function。
+LLM Gateway — 統一 entry point 給所有 9 個 AI function (v6 sync edition).
 
 Codex consensus design (2026-05-02):
   - 把 LLMService 的 9 個方法改成「prompt 模板 + Gateway 統一執行」
@@ -10,29 +10,27 @@ Codex consensus design (2026-05-02):
     * 寫回結果（status=succeeded/failed + output_json）
     * 未來換模型只動一處（model_tier='standard' vs 'premium'）
 
-Why this matters:
-  - Without versioning, debug「為什麼這次結論不同」就死了
-  - 多店並發時統一 quota / rate-limit 管控
-  - LLM provider abstraction（之後加 Claude / GPT 不用改 9 處）
+v6 sync 轉換：
+  - AsyncSession → Session（sqlalchemy 同步版）
+  - await session.flush() → session.flush()
+  - await self._llm.X(...) → self._llm.X(...)
 """
 from __future__ import annotations
 
 import logging
 import time
 from datetime import datetime, timezone
-from typing import Any, Literal, Optional
+from typing import Any, Literal
 
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
 
-from src.models import AnalysisRun, Review, ReviewSource, Store
+from src.models import AnalysisRun, Store
 from src.services.llm_service import LLMService
 
 logger = logging.getLogger(__name__)
 
-# 目前支援的 model tier
 ModelTier = Literal["standard", "premium"]
 
-# tier → model_id mapping
 _TIER_TO_MODEL = {
     "standard": "gemma-4-31b-it",
     # premium 暫時 fallback 到 standard，未來接 Claude / GPT
@@ -41,17 +39,17 @@ _TIER_TO_MODEL = {
 
 
 class LLMGateway:
-    """All v5 AI calls go through here. Records to analysis_runs table."""
+    """All v5/v6 AI calls go through here. Records to analysis_runs table."""
 
-    PROMPT_VERSION = "v5.0.0-alpha"
+    PROMPT_VERSION = "v6.0.0-alpha"
 
     def __init__(self) -> None:
         self._llm = LLMService()
 
-    async def run(
+    def run(
         self,
         *,
-        session: AsyncSession,
+        session: Session,
         store: Store,
         ai_function: str,
         inputs: dict[str, Any],
@@ -60,17 +58,15 @@ class LLMGateway:
         """Execute one AI function call + persist as AnalysisRun.
 
         Args:
-            session: live AsyncSession
+            session: live Session (sync)
             store: which store the run is associated with
             ai_function: 'analyze' | 'swot' | 'reply' | ...
             inputs: payload depending on ai_function
-                    e.g. analyze: {} (uses store reviews)
-                         swot: {'good': [...], 'bad': [...]}
-                         reply: {'topic': '出餐速度慢'}
             model_tier: 'standard' (gemma) or 'premium' (TBD)
 
         Returns:
-            AnalysisRun (already committed, with output_json or error fields populated)
+            AnalysisRun with output_json or error fields populated.
+            NOTE: caller is responsible for committing the session.
         """
         model_id = _TIER_TO_MODEL.get(model_tier, _TIER_TO_MODEL["standard"])
         platform = store.platform or "google"
@@ -86,13 +82,12 @@ class LLMGateway:
             started_at=datetime.now(tz=timezone.utc),
         )
         session.add(run)
-        await session.flush()
+        session.flush()
         run_id = run.id
 
         t0 = time.monotonic()
         try:
-            # 2) dispatch to LLMService method
-            output = await self._dispatch(ai_function, inputs, platform)
+            output = self._dispatch(ai_function, inputs, platform)
             run.output_json = output if isinstance(output, dict) else {"text": output}
             run.status = "succeeded"
             run.finished_at = datetime.now(tz=timezone.utc)
@@ -114,7 +109,7 @@ class LLMGateway:
 
         return run
 
-    async def _dispatch(
+    def _dispatch(
         self,
         ai_function: str,
         inputs: dict[str, Any],
@@ -125,46 +120,46 @@ class LLMGateway:
             text = inputs.get("text", "")
             if not text:
                 raise ValueError("analyze requires 'text' input")
-            return await self._llm.analyze_content(text, platform=platform)
+            return self._llm.analyze_content(text, platform=platform)
 
         if ai_function == "swot":
             good = inputs.get("good", [])
             bad = inputs.get("bad", [])
-            return await self._llm.generate_swot(good, bad, platform=platform)
+            return self._llm.generate_swot(good, bad, platform=platform)
 
         if ai_function == "reply":
             topic = inputs.get("topic", "")
             if not topic:
                 raise ValueError("reply requires 'topic' input")
-            return await self._llm.generate_reply(topic, platform=platform)
+            return self._llm.generate_reply(topic, platform=platform)
 
         if ai_function == "analyze_issue":
             topic = inputs.get("topic", "")
             if not topic:
                 raise ValueError("analyze_issue requires 'topic' input")
-            return await self._llm.generate_root_cause_analysis(topic, platform=platform)
+            return self._llm.generate_root_cause_analysis(topic, platform=platform)
 
         if ai_function == "marketing":
             strengths = inputs.get("strengths", "")
-            return await self._llm.generate_marketing(strengths, platform=platform)
+            return self._llm.generate_marketing(strengths, platform=platform)
 
         if ai_function == "weekly_plan":
             weaknesses = inputs.get("weaknesses", "")
-            return await self._llm.generate_weekly_plan(weaknesses, platform=platform)
+            return self._llm.generate_weekly_plan(weaknesses, platform=platform)
 
         if ai_function == "training_script":
             issue = inputs.get("issue", "")
-            return await self._llm.generate_training_script(issue, platform=platform)
+            return self._llm.generate_training_script(issue, platform=platform)
 
         if ai_function == "internal_email":
             strengths = inputs.get("strengths", "")
             weaknesses = inputs.get("weaknesses", "")
-            return await self._llm.generate_internal_email(strengths, weaknesses, platform=platform)
+            return self._llm.generate_internal_email(strengths, weaknesses, platform=platform)
 
         if ai_function == "chat":
             message = inputs.get("message", "")
             context = inputs.get("context", "")
-            return await self._llm.chat(message, context, platform=platform)
+            return self._llm.chat(message, context, platform=platform)
 
         raise ValueError(f"unknown ai_function: {ai_function}")
 

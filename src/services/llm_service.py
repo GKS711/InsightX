@@ -1,12 +1,20 @@
 """
-InsightX LLM 服務 v3.0.0（Shopee 模組已於 2026-04-21 移除）
+InsightX LLM 服務 v3.0.0 — v6 sync edition
 
 所有下游功能支援 platform 參數：
   - platform="google"  → 店家評論分析（餐飲/零售老闆視角）
   - platform="youtube" → 頻道留言分析（YouTuber 視角）
 
-使用 google-genai SDK，模型 gemma-4-31b-it。
+使用 google-genai SDK 同步 API，模型 gemma-4-31b-it。
 結構化輸出使用 response_mime_type="application/json"。
+
+v6 sync 轉換：
+  - 從 async API (`client.aio.models.generate_content`) 改用同步
+    (`client.models.generate_content`)，因為整個 stack 已 sync 化
+  - `asyncio.wait_for(coro, timeout=T)` 拿掉 — 改靠 client-level
+    http_options timeout + elapsed-budget 追蹤；per-attempt 不再硬切，
+    但跨 retry 的 total budget 仍精準執行（用 time.monotonic 計時）
+  - `await asyncio.sleep` → `time.sleep`
 """
 
 import os
@@ -14,7 +22,6 @@ import json
 import re
 import time
 import random
-import asyncio
 import logging
 import httpx
 from google import genai
@@ -32,27 +39,26 @@ MODEL = "gemma-4-31b-it"
 #   chat/reply/marketing  → 45s   |  swot/internal-email → 60-75s
 #   training-script       → 110s  |  weekly-plan         → 120s
 # 後端必須**比 frontend timeout 略小**，否則 frontend abort 後後端還在跑、燒 quota。
-# 後端用 (max_attempts, total_timeout_s) 控制，per-attempt timeout = 剩餘 budget。
+# 後端用 (max_attempts, total_timeout_s) 控制；v6 不再 per-attempt wait_for，
+# 而是讓 client http_options.timeout 控單次上限，跨 retry 用 elapsed-budget。
 #
-# Retry 判斷改用 google-genai 的 type-based exception，不再用脆弱的字串 substring：
+# Retry 判斷用 google-genai 的 type-based exception：
 #   - errors.ServerError (5xx)            → retry
 #   - errors.ClientError code=429/RATE    → retry
-#   - 其他 4xx                             → 不 retry（這是程式邏輯/契約問題）
+#   - 其他 4xx                             → 不 retry（程式邏輯/契約問題）
 #   - httpx 的 transport / connection 類  → retry
-#   - asyncio.TimeoutError（我們自己的 wait_for） → 不 retry，budget 用完
 #
-# Backoff：base 0.3s, 0.3*2^(attempt-1) + jitter 0~0.3s（短一點，對 UX 較友善）
+# Backoff：base 0.3s, 0.3*2^(attempt-1) + jitter 0~0.3s
 
 _DEFAULT_MAX_ATTEMPTS = 2
 _DEFAULT_TOTAL_BUDGET_S = 60.0  # 各方法呼叫 _generate 時都會明確覆寫，這只是保險預設
 _RETRY_BASE_DELAY_S = 0.3
 _RETRY_BUFFER_S = 5.0  # retry 前要保留至少 5s 給下一次 attempt 才重試
 
-# P3.10-3-R2 fix #7（Codex round-2 audit）：Python 3.11+ 起 `asyncio.TimeoutError` 是
-# `TimeoutError` 的 alias。我們的 wait_for budget 用完會丟它，但 SDK / httpx 內部也可能丟
-# plain `TimeoutError`（非 budget exhausted），現在會被誤判成 budget exhausted、不 retry。
-# 解法：catch 住之後比對 elapsed vs budget，差距 > epsilon 就視為 transport timeout 走 retry。
-_BUDGET_TIMEOUT_EPSILON_S = 1.0
+# Client-level single-request HTTP timeout (ms). 留比 total_budget 大的 slack
+# 是因為 budget 跨 retry，但單次 request 可能比 budget 還短就回。
+# 設 120000ms 是合理上限：weekly_plan budget=115s 最久，120s 就一定回。
+_HTTP_TIMEOUT_MS = 120_000
 
 
 def _backoff_delay(attempt: int) -> float:
@@ -80,9 +86,13 @@ class LLMService:
             print("Warning: GEMINI_API_KEY not found in environment variables.")
             self.client = None
         else:
-            self.client = genai.Client(api_key=api_key)
+            # client-level HTTP timeout 保險（防卡死）
+            self.client = genai.Client(
+                api_key=api_key,
+                http_options=types.HttpOptions(timeout=_HTTP_TIMEOUT_MS),
+            )
 
-    async def _generate(
+    def _generate(
         self,
         prompt: str,
         json_mode: bool = False,
@@ -90,22 +100,21 @@ class LLMService:
         max_attempts: int = _DEFAULT_MAX_ATTEMPTS,
         total_timeout_s: float = _DEFAULT_TOTAL_BUDGET_S,
     ) -> str:
-        """Async Gemini API call with budget-controlled retry.
+        """Sync Gemini API call with budget-controlled retry.
 
         Args:
             prompt: LLM input
             json_mode: 走 application/json response
             max_attempts: 最大嘗試次數（含第一次），預設 2
-            total_timeout_s: server-side wall-clock budget；超過後直接 raise，
-                            不會把 client 已 abort 的 request 留著燒 quota。
-                            呼叫方應傳「比對應 frontend apiFetch timeoutMs 略小」的值。
+            total_timeout_s: wall-clock budget across all retries. Codex round 2
+                fix (S1): the remaining budget is also passed to each individual
+                generate_content() call via config.http_options.timeout, so a
+                single attempt cannot exceed the budget. v5 had asyncio.wait_for
+                per attempt; v6 uses per-call httpOptions which the genai SDK
+                propagates to the underlying httpx request.
         """
         if not self.client:
             raise Exception("Gemini client not initialized - check GEMINI_API_KEY")
-
-        config = None
-        if json_mode:
-            config = types.GenerateContentConfig(response_mime_type="application/json")
 
         start = time.monotonic()
         last_exc: BaseException | None = None
@@ -117,15 +126,30 @@ class LLMService:
                     "LLM _generate budget exhausted before attempt %d (budget=%.1fs)",
                     attempt, total_timeout_s,
                 )
-                raise (last_exc or asyncio.TimeoutError(
+                raise (last_exc or TimeoutError(
                     f"_generate budget {total_timeout_s:.1f}s exhausted after {attempt - 1} attempts"
                 ))
+
+            # Per-call http timeout = min(remaining budget, client-level ceiling).
+            # genai SDK accepts httpOptions on GenerateContentConfig and forwards
+            # to httpx request timeout.
+            per_call_timeout_ms = max(
+                1_000,  # never go below 1s
+                int(min(remaining, _HTTP_TIMEOUT_MS / 1000) * 1000),
+            )
+            per_call_http_opts = types.HttpOptions(timeout=per_call_timeout_ms)
+            if json_mode:
+                config = types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    http_options=per_call_http_opts,
+                )
+            else:
+                config = types.GenerateContentConfig(http_options=per_call_http_opts)
+
             try:
-                response = await asyncio.wait_for(
-                    self.client.aio.models.generate_content(
-                        model=MODEL, contents=prompt, config=config,
-                    ),
-                    timeout=remaining,
+                # v6: sync call instead of `await self.client.aio.models...`
+                response = self.client.models.generate_content(
+                    model=MODEL, contents=prompt, config=config,
                 )
                 if attempt > 1:
                     logger.info(
@@ -133,42 +157,6 @@ class LLMService:
                         attempt, max_attempts, time.monotonic() - start,
                     )
                 return response.text
-
-            except (asyncio.TimeoutError, TimeoutError) as exc:
-                # P3.10-3-R2 fix #7（Codex round-2 audit）：Python 3.11+ `asyncio.TimeoutError`
-                # 是 `TimeoutError` 的 alias。SDK / httpx 內部可能丟 plain `TimeoutError`
-                # (e.g. socket connect timeout)，不一定是我們 wait_for budget 用完。
-                # 如果 elapsed 還沒逼近 total_timeout_s，視為 transport timeout → 走 retry；
-                # 只有真的 budget 用完才 raise。
-                elapsed = time.monotonic() - start
-                budget_exhausted = elapsed >= (total_timeout_s - _BUDGET_TIMEOUT_EPSILON_S)
-                if budget_exhausted:
-                    logger.warning(
-                        "LLM _generate budget timeout on attempt %d (used %.1fs / budget %.1fs)",
-                        attempt, elapsed, total_timeout_s,
-                    )
-                    raise
-                # SDK-side timeout，當成 transport error 處理
-                last_exc = exc
-                if attempt >= max_attempts:
-                    logger.warning(
-                        "LLM _generate transport timeout on attempt %d — max attempts reached "
-                        "(used %.1fs / budget %.1fs)", attempt, elapsed, total_timeout_s,
-                    )
-                    raise
-                delay = _backoff_delay(attempt)
-                remaining_after = total_timeout_s - elapsed - delay - _RETRY_BUFFER_S
-                if remaining_after <= 0:
-                    logger.warning(
-                        "LLM _generate transport timeout but no budget for retry: used %.1fs",
-                        elapsed,
-                    )
-                    raise
-                logger.info(
-                    "LLM _generate transport timeout attempt %d/%d (used %.1fs/%.1fs), "
-                    "retrying in %.1fs", attempt, max_attempts, elapsed, total_timeout_s, delay,
-                )
-                await asyncio.sleep(delay)
 
             except genai_errors.ServerError as exc:
                 last_exc = exc
@@ -189,7 +177,7 @@ class LLMService:
                     attempt, max_attempts, getattr(exc, "code", "?"),
                     getattr(exc, "status", "?"), delay, remaining_after,
                 )
-                await asyncio.sleep(delay)
+                time.sleep(delay)
 
             except genai_errors.ClientError as exc:
                 last_exc = exc
@@ -209,7 +197,7 @@ class LLMService:
                     "LLM _generate rate limited attempt %d/%d, retrying in %.1fs",
                     attempt, max_attempts, delay,
                 )
-                await asyncio.sleep(delay)
+                time.sleep(delay)
 
             except Exception as exc:
                 last_exc = exc
@@ -227,7 +215,7 @@ class LLMService:
                     "LLM _generate transport %s attempt %d/%d, retrying in %.1fs",
                     type(exc).__name__, attempt, max_attempts, delay,
                 )
-                await asyncio.sleep(delay)
+                time.sleep(delay)
 
         # 理論不可達（上面 raise 過了），保險起見：
         raise last_exc if last_exc else RuntimeError("LLM _generate unreachable")
@@ -244,7 +232,7 @@ class LLMService:
     #  1. 核心分析
     # ══════════════════════════════════════════════════════════════
 
-    async def analyze_content(
+    def analyze_content(
         self,
         text_content: str,
         platform: str = "google",
@@ -254,24 +242,11 @@ class LLMService:
         """
         分析爬蟲拿到的原始文字（評論或留言），回傳好壞主題比例。
         platform: "google"（店家評論）| "youtube"（影片留言）
-
-        P3.10-2-R3（Codex R2 點 2）：caller 可傳 total_timeout_s 覆寫預設 budget，
-        讓 /api/analyze route 可以根據「scraper 已用掉多少時間」動態壓縮 LLM budget，
-        確保 route total 不超出 ROUTE_TOTAL_BUDGET_S。
         """
-        # P3.10-3-R3 fix（Codex round-2 leftover）：原本短 text 回 `{"error": ...}` dict，
-        # 違反 invariant ②「service 層 raise 不回 fallback dict」。route 那邊會把 dict 當
-        # 成正常 result 寫進下游資料→ UI 顯示「Not enough content to analyze」字樣當分析結果。
-        # 改成 raise ValueError，讓 route 的 except 統一走 failed 路徑。
         if not text_content or len(text_content.strip()) < 50:
             raise ValueError("Not enough content to analyze (text too short)")
 
-        # Truncate 動態 cap（v5 fix for 想窩 case）：
-        #   - 大店家 (e.g. 想窩 11 餐旅館 70806 chars / 500 reviews)：30000 字元中文 ~ 15000+ tokens
-        #     會撞 LLM budget（實測 87s timeout）+ asyncio.TimeoutError 字串為空
-        #   - 統一 hard cap 15000 字元（v4.1 之前的設定），中小店覆蓋已足夠
-        #   - 真正的解：chunked summarize（v6）
-        #   - 中文字元 → token 比例約 0.5，15000 chars ≈ 7500 tokens（給 prompt template 留空間）
+        # Truncate 動態 cap：15000 字元，中小店覆蓋已足夠（中文字元 → token 約 0.5 比例）
         truncated = text_content[:15000]
 
         if self._is_youtube(platform):
@@ -329,12 +304,8 @@ class LLMService:
     ]
 }}"""
 
-        # P3.10-3-R2 fix #1（Codex round-2 audit）：原本 try/except 把所有錯吞掉、回 {"error": ...}
-        # dict 給 caller 自己判斷。這違反 invariant ②（service 層失敗一律 raise）也跟 generate_swot
-        # 改 raise 後的 convention 不一致。改法：JSON parse 失敗或 _generate 失敗一律 raise；route
-        # 自己 catch → _fallback:true mock → frontend ErrorVM。
-        # analyze_content：~600 tokens JSON，gemma 實測 20-40s；budget 由 caller 控（預設 55s）
-        text = await self._generate(prompt, json_mode=True, total_timeout_s=total_timeout_s)
+        # JSON parse 失敗或 _generate 失敗一律 raise；route 自己 catch → _fallback:true mock → frontend ErrorVM。
+        text = self._generate(prompt, json_mode=True, total_timeout_s=total_timeout_s)
         try:
             return json.loads(text)
         except json.JSONDecodeError:
@@ -351,7 +322,7 @@ class LLMService:
     #  2. SWOT 分析
     # ══════════════════════════════════════════════════════════════
 
-    async def generate_swot(self, good: list, bad: list, platform: str = "google") -> dict:
+    def generate_swot(self, good: list, bad: list, platform: str = "google") -> dict:
         """SWOT 分析。YouTube 版本聚焦在頻道經營，Google 版本聚焦在店家經營。"""
         good_str = "、".join([f"{i['label']}({i['value']}%)" for i in good])
         bad_str = "、".join([f"{i['label']}({i['value']}%)" for i in bad])
@@ -409,18 +380,11 @@ class LLMService:
     ]
 }}"""
 
-        # generate_swot：~400 tokens JSON，gemma 實測 15-30s；budget 55s（frontend 60s - 5s buffer）
-        # P3.10-2-R3（Codex R2 點 1）：原本這裡有 try/except 吞掉所有錯誤、回看起來合理的 fallback
-        # SWOT，但 routes.py 只在自己 catch 後才 set _fallback:true，所以 service 層的 fallback
-        # 會被 route 當成「成功」回給 frontend，造成 silent degradation。
-        # 修法：service 層失敗就 raise，讓 route 的 except → mock + _fallback:true → frontend
-        # apiFetch 偵測到 _fallback:true → ErrorVM → reducer FAILED → UI 顯示「AI 暫時無法產生」。
-        # 只 salvage 真的能 parse 的 JSON。
-        text = await self._generate(prompt, json_mode=True, total_timeout_s=55.0)
+        # 失敗一律 raise；route catch → fallback mock → frontend ErrorVM
+        text = self._generate(prompt, json_mode=True, total_timeout_s=55.0)
         try:
             return json.loads(text)
         except json.JSONDecodeError:
-            # 二次救援：response 包了 markdown / 多餘文字，正則撈 {...}
             match = re.search(r'\{.*\}', text, re.DOTALL)
             if match:
                 try:
@@ -433,7 +397,7 @@ class LLMService:
     #  3. 回覆負面意見
     # ══════════════════════════════════════════════════════════════
 
-    async def generate_reply(self, topic: str, platform: str = "google") -> str:
+    def generate_reply(self, topic: str, platform: str = "google") -> str:
         if self._is_youtube(platform):
             prompt = f"""你是一位經驗豐富的 YouTuber 社群經理，負責回覆觀眾留言。觀眾對影片提出了不滿或批評：「{topic}」。
 
@@ -455,16 +419,15 @@ class LLMService:
 4. 邀請顧客再次光臨
 
 請直接輸出回覆內容，不需要標題或格式標記。"""
-        # generate_reply：~150 字短文，gemma 實測 5-15s；budget 40s（frontend 45s - 5s buffer）
-        return await self._generate(prompt, total_timeout_s=40.0)
+        return self._generate(prompt, total_timeout_s=40.0)
 
     # ══════════════════════════════════════════════════════════════
     #  4. 行銷文案
     # ══════════════════════════════════════════════════════════════
 
-    async def generate_marketing(self, strengths: str, platform: str = "google") -> str:
+    def generate_marketing(self, strengths: str, platform: str = "google") -> str:
         if self._is_youtube(platform):
-            prompt = f"""你是一位專精 YouTube 頻道行銷的社群操盤手。根據以下這支影片/頻道被觀眾稱讚的亮點：{strengths}
+            prompt = f"""你是一位專精 YouTube 頻道行銷的社群操盤手。根據以下這支影片/頻道被觀眾稱讚的亮點:{strengths}
 
 請撰寫一則新影片宣傳貼文（IG/Threads/X 都可用，繁體中文）。
 要求：
@@ -483,16 +446,13 @@ class LLMService:
 - 加入 3-5 個相關 hashtag
 - 語氣親切自然、有感染力
 - 不超過 200 字"""
-        # generate_marketing：~200 字貼文，gemma 實測 8-20s；budget 40s（frontend 45s - 5s buffer）
-        return await self._generate(prompt, total_timeout_s=40.0)
+        return self._generate(prompt, total_timeout_s=40.0)
 
     # ══════════════════════════════════════════════════════════════
     #  5. 根源問題分析
     # ══════════════════════════════════════════════════════════════
 
-    async def generate_root_cause_analysis(self, topic: str, platform: str = "google") -> str:
-        # P3.11 fix：v4 UI 用 <pre> 純文字渲染，不可用 markdown 標記（## ** ###）。
-        # 改用全形空白縮排 + ▸◆ 符號做結構化純文字。
+    def generate_root_cause_analysis(self, topic: str, platform: str = "google") -> str:
         if self._is_youtube(platform):
             prompt = f"""你是一位資深 YouTube 頻道經營顧問。觀眾持續反映的問題是：「{topic}」。
 
@@ -558,14 +518,13 @@ class LLMService:
 ◆ 長期措施（3 個月以上）
 　▸ ...
 　▸ ..."""
-        # generate_root_cause_analysis：~500 tokens 純文字結構，gemma 實測 25-50s；budget 70s（frontend 75s - 5s buffer）
-        return await self._generate(prompt, total_timeout_s=70.0)
+        return self._generate(prompt, total_timeout_s=70.0)
 
     # ══════════════════════════════════════════════════════════════
     #  6. 週計畫
     # ══════════════════════════════════════════════════════════════
 
-    async def generate_weekly_plan(self, weaknesses: str, platform: str = "google") -> str:
+    def generate_weekly_plan(self, weaknesses: str, platform: str = "google") -> str:
         if self._is_youtube(platform):
             prompt = f"""你是一位 YouTube 頻道成長教練。根據以下需要改善的項目：{weaknesses}
 
@@ -606,15 +565,13 @@ class LLMService:
 　▸ 預期結果：...
 
 （請為週一到週日，每天列出 2-3 個具體且可執行的任務。每天都用 ◆ 開頭、條列用 　▸ 開頭，純文字，不要 markdown）"""
-        # generate_weekly_plan：7 天 × 3 任務純文字結構，~900 tokens，gemma 實測 50-75s；
-        # budget 115s（frontend 120s - 5s buffer），這是 9 個 endpoint 裡最慢的
-        return await self._generate(prompt, total_timeout_s=115.0)
+        return self._generate(prompt, total_timeout_s=115.0)
 
     # ══════════════════════════════════════════════════════════════
-    #  7. 培訓劇本（YouTube 版：剪輯師/團隊成員溝通範本）
+    #  7. 培訓劇本
     # ══════════════════════════════════════════════════════════════
 
-    async def generate_training_script(self, issue: str, platform: str = "google") -> str:
+    def generate_training_script(self, issue: str, platform: str = "google") -> str:
         if self._is_youtube(platform):
             prompt = f"""你是一位 YouTube 頻道製作人。請針對「{issue}」這個觀眾回饋問題，撰寫一份給「剪輯師/企劃/外包合作夥伴」的溝通訓練範本（繁體中文）。
 
@@ -671,15 +628,13 @@ class LLMService:
 　▸ ...
 
 要求：每段用 ◆ 開頭、條列用 　▸ 開頭，純文字，不要 markdown。"""
-        # generate_training_script：完整 SOP 純文字結構，~700 tokens，gemma 實測 45-65s；
-        # budget 105s（frontend 110s - 5s buffer），第 2 慢的 endpoint
-        return await self._generate(prompt, total_timeout_s=105.0)
+        return self._generate(prompt, total_timeout_s=105.0)
 
     # ══════════════════════════════════════════════════════════════
-    #  8. 內部信（YouTube 版：給團隊/合作夥伴的週報）
+    #  8. 內部信
     # ══════════════════════════════════════════════════════════════
 
-    async def generate_internal_email(self, strengths: str, weaknesses: str, platform: str = "google") -> str:
+    def generate_internal_email(self, strengths: str, weaknesses: str, platform: str = "google") -> str:
         if self._is_youtube(platform):
             prompt = f"""你是一位 YouTube 頻道主理人。請撰寫一封給團隊成員（剪輯師、企劃、攝影、社群小編）的週報信（繁體中文）。
 
@@ -708,14 +663,13 @@ class LLMService:
 4. 鼓勵性的結語
 
 格式要求：純文字書信格式（不要 markdown 標記，不要 ** 粗體、不要 ## 標題），語氣正式但親切，展現領導力。"""
-        # generate_internal_email：~400 字信件，gemma 實測 25-45s；budget 70s（frontend 75s - 5s buffer）
-        return await self._generate(prompt, total_timeout_s=70.0)
+        return self._generate(prompt, total_timeout_s=70.0)
 
     # ══════════════════════════════════════════════════════════════
     #  9. AI 顧問對話
     # ══════════════════════════════════════════════════════════════
 
-    async def chat(self, user_message: str, context: str = "", platform: str = "google") -> str:
+    def chat(self, user_message: str, context: str = "", platform: str = "google") -> str:
         if self._is_youtube(platform):
             system = (
                 "你是一位專業的 YouTube 頻道成長 AI 顧問，擅長觀眾留言分析、內容策略、頻道差異化定位、"
@@ -731,5 +685,4 @@ class LLMService:
             system += f"\n\n【當前分析報告】\n{context}"
 
         prompt = f"{system}\n\n用戶詢問：{user_message}\n\nAI 顧問："
-        # chat：150 字以內短回覆，gemma 實測 5-15s；budget 40s（frontend 45s - 5s buffer）
-        return await self._generate(prompt, total_timeout_s=40.0)
+        return self._generate(prompt, total_timeout_s=40.0)

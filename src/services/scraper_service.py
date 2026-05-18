@@ -1,5 +1,5 @@
 """
-InsightX Google Maps 評論爬蟲服務 v13.1
+InsightX Google Maps 評論爬蟲服務 v13.1 — v6 sync edition
 
 架構：純 Serper API，零瀏覽器。
   1. 店名解析：HTTP redirect → Serper /search（短網址用）
@@ -11,9 +11,13 @@ v13.1 變更（v13 → v13.1）：
   - 完全移除 UC headless（Chrome 147 崩潰，且 headless 被 Google 偵測無法取得評論）
   - 新增 Serper /search 解析短網址（搜尋短網址本身，Google 會回傳店家資訊）
   - 100% API-based，不依賴任何瀏覽器
+
+v6 sync 轉換：
+  - 移除 async def / await — 整檔變 sync
+  - 移除 asyncio.to_thread 包 sync HTTP（本來就是 sync 邏輯，無需 to_thread）
+  - 移除 asyncio.wait_for — 各 HTTP 呼叫已自帶 timeout
 """
 
-import asyncio
 import json
 import os
 import ssl
@@ -52,7 +56,7 @@ class ScraperService:
     #  公開介面
     # ══════════════════════════════════════════════════════════════
 
-    async def scrape_url(self, url: str) -> dict:
+    def scrape_url(self, url: str) -> dict:
         """
         主入口：根據 URL 自動選擇爬蟲策略。
         YouTube → YouTube Data API v3（單支影片留言）
@@ -61,13 +65,13 @@ class ScraperService:
         """
         # v2.0 新增：YouTube 影片留言分析
         if is_youtube_url(url):
-            return await self._youtube.scrape_video(url)
+            return self._youtube.scrape_video(url)
 
         if "google.com/maps" in url or "goo.gl" in url or "maps.app" in url or "share.google" in url:
-            return await self._scrape_google_maps_reviews(url)
-        return await self._scrape_generic_url(url)
+            return self._scrape_google_maps_reviews(url)
+        return self._scrape_generic_url(url)
 
-    async def resolve_store_name(self, url: str) -> str:
+    def resolve_store_name(self, url: str) -> str:
         """
         從 Google Maps URL 解析店家名稱。
         1. 如果是完整 URL，直接從 URL path 提取
@@ -84,14 +88,14 @@ class ScraperService:
 
         # ── 方法 1：HTTP redirect ───────────────────────────────
         print("[resolve] 嘗試 HTTP redirect...")
-        name = await self._resolve_via_http(url)
+        name = self._resolve_via_http(url)
         if name:
             return name
 
         # ── 方法 2：Serper /search ──────────────────────────────
         if self._serper_key:
             print("[resolve] 嘗試 Serper /search...")
-            name = await self._resolve_via_serper_search(url)
+            name = self._resolve_via_serper_search(url)
             if name:
                 return name
 
@@ -102,7 +106,7 @@ class ScraperService:
     #  Google Maps 爬蟲主流程
     # ══════════════════════════════════════════════════════════════
 
-    async def _scrape_google_maps_reviews(self, url: str) -> dict:
+    def _scrape_google_maps_reviews(self, url: str) -> dict:
         """Google Maps 評論爬蟲 v13.1。純 Serper API。"""
 
         if not self._serper_key:
@@ -110,7 +114,7 @@ class ScraperService:
             return {"url": url, "raw_text": "", "store_name": "", "status": "no_api_key"}
 
         # ── Step 1：解析店名 ─────────────────────────────────────
-        store_name = await self.resolve_store_name(url)
+        store_name = self.resolve_store_name(url)
         print(f"[scraper] 店名：{store_name!r}")
 
         if not store_name:
@@ -119,9 +123,9 @@ class ScraperService:
             store_name = url
 
         # ── Step 2：Serper API 爬取評論 ──────────────────────────
-        print(f"[scraper] 🚀 Serper API 開始爬取...")
+        print("[scraper] 🚀 Serper API 開始爬取...")
         try:
-            result = await self._serper_scrape(store_name, url)
+            result = self._serper_scrape(store_name, url)
             review_count = result.get("review_count", 0)
             raw_text = result.get("raw_text", "")
             print(f"[scraper] Serper 結果：{review_count} 則評論，{len(raw_text)} 字元")
@@ -148,13 +152,15 @@ class ScraperService:
     #  店名解析
     # ══════════════════════════════════════════════════════════════
 
-    async def _resolve_via_http(self, url: str) -> str:
+    def _resolve_via_http(self, url: str) -> str:
         """
         HTTP 解析短網址。多種 User-Agent 策略嘗試：
         1. requests + desktop UA（follow redirects）
         2. requests + mobile UA（Google 可能返回不同 redirect）
         3. requests + curl UA（最簡 client，可能觸發 301）
         4. 解析落地頁 HTML
+
+        Per-UA timeout 10s，3 個 UA 串行最多 30s（match v5 wait_for 30s budget）。
         """
         import requests as req_lib
 
@@ -166,60 +172,43 @@ class ScraperService:
             ("curl", "curl/8.0"),
         ]
 
-        def try_resolve(short_url: str) -> str:
-            last_html = ""
+        last_html = ""
 
-            for ua_name, ua_str in user_agents:
-                try:
-                    print(f"[resolve-http] 嘗試 {ua_name} UA...")
-                    resp = req_lib.get(
-                        short_url,
-                        headers={"User-Agent": ua_str, "Accept-Language": "zh-TW,zh;q=0.9"},
-                        timeout=10,
-                        allow_redirects=True
-                    )
-                    final = resp.url
-                    print(f"[resolve-http]   → {resp.status_code} {final[:120]}")
+        for ua_name, ua_str in user_agents:
+            try:
+                print(f"[resolve-http] 嘗試 {ua_name} UA...")
+                resp = req_lib.get(
+                    url,
+                    headers={"User-Agent": ua_str, "Accept-Language": "zh-TW,zh;q=0.9"},
+                    timeout=10,
+                    allow_redirects=True
+                )
+                final = resp.url
+                print(f"[resolve-http]   → {resp.status_code} {final[:120]}")
 
-                    if "google.com/maps/place" in final:
-                        return final
+                if "google.com/maps/place" in final:
+                    # 從 URL path 提取店名
+                    m = re.search(r'/maps/place/([^/@?&]+)', final)
+                    if m:
+                        name = urllib.parse.unquote_plus(m.group(1)).replace('+', ' ').strip()
+                        if name and len(name) > 1:
+                            print(f"[resolve-http] ✅ 從 URL 提取店名：{name}")
+                            return name
 
-                    # 記錄最後的 HTML 供解析
-                    if len(resp.text) > len(last_html):
-                        last_html = resp.text
-                except Exception as e:
-                    print(f"[resolve-http]   {ua_name} 失敗：{e}")
+                # 記錄最後的 HTML 供解析
+                if len(resp.text) > len(last_html):
+                    last_html = resp.text
+            except Exception as e:
+                print(f"[resolve-http]   {ua_name} 失敗：{e}")
 
-            # 所有 UA 都沒拿到 maps/place URL，嘗試解析 HTML
-            if last_html:
-                print(f"[resolve-http] 嘗試從 HTML（{len(last_html)} bytes）解析...")
-                name = self._extract_store_name_from_html(last_html)
-                if name:
-                    return f"NAME:{name}"
-
-            return ""
-
-        try:
-            result = await asyncio.wait_for(
-                asyncio.to_thread(try_resolve, url),
-                timeout=30.0
-            )
-            if not result:
-                return ""
-
-            if result.startswith("NAME:"):
-                name = result[5:]
+        # 所有 UA 都沒拿到 maps/place URL，嘗試解析 HTML
+        if last_html:
+            print(f"[resolve-http] 嘗試從 HTML（{len(last_html)} bytes）解析...")
+            name = self._extract_store_name_from_html(last_html)
+            if name:
                 print(f"[resolve-http] ✅ 從 HTML 提取店名：{name}")
                 return name
 
-            m = re.search(r'/maps/place/([^/@?&]+)', result)
-            if m:
-                name = urllib.parse.unquote_plus(m.group(1)).replace('+', ' ').strip()
-                if name and len(name) > 1:
-                    print(f"[resolve-http] ✅ 從 URL 提取店名：{name}")
-                    return name
-        except asyncio.TimeoutError:
-            print("[resolve-http] ⚠️ 超時")
         return ""
 
     def _extract_store_name_from_html(self, html: str) -> str:
@@ -273,7 +262,7 @@ class ScraperService:
                    "maps", "goo.gl", "maps.app", "sign in", "登入"}
         return name.lower().strip() not in invalid
 
-    async def _resolve_via_serper_search(self, url: str) -> str:
+    def _resolve_via_serper_search(self, url: str) -> str:
         """用 Serper /search 搜尋短網址，Google 會回傳對應的店家資訊"""
 
         # 嘗試多種搜尋方式
@@ -285,7 +274,7 @@ class ScraperService:
         for query in queries:
             try:
                 print(f"[resolve-serper] 搜尋：{query[:80]}")
-                data = await self._call_serper("search", {"q": query, "gl": "tw", "hl": "zh-tw"})
+                data = self._call_serper("search", {"q": query, "gl": "tw", "hl": "zh-tw"})
 
                 # DEBUG：印出回傳的頂層 key
                 print(f"[resolve-serper] 回傳 keys：{list(data.keys())}")
@@ -306,7 +295,6 @@ class ScraperService:
                 for item in organic:
                     title = item.get("title", "")
                     link = item.get("link", "")
-                    snippet = item.get("snippet", "")
                     print(f"[resolve-serper]   organic: title={title[:50]!r} link={link[:80]}")
 
                     # 找 Google Maps place 結果（必須是 /maps/place/ 不是首頁）
@@ -341,21 +329,18 @@ class ScraperService:
     #  Serper API 核心
     # ══════════════════════════════════════════════════════════════
 
-    async def _call_serper(self, endpoint: str, payload: dict) -> dict:
-        """呼叫 Serper API"""
-        def do_call() -> dict:
-            data = json.dumps(payload).encode("utf-8")
-            req = urllib.request.Request(
-                f"https://google.serper.dev/{endpoint}",
-                data=data,
-                headers={"X-API-KEY": self._serper_key, "Content-Type": "application/json"}
-            )
-            with urllib.request.urlopen(req, timeout=15, context=_SSL_CTX) as resp:
-                return json.loads(resp.read().decode("utf-8"))
+    def _call_serper(self, endpoint: str, payload: dict) -> dict:
+        """呼叫 Serper API。15s timeout 防卡死。"""
+        data = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(
+            f"https://google.serper.dev/{endpoint}",
+            data=data,
+            headers={"X-API-KEY": self._serper_key, "Content-Type": "application/json"}
+        )
+        with urllib.request.urlopen(req, timeout=15, context=_SSL_CTX) as resp:
+            return json.loads(resp.read().decode("utf-8"))
 
-        return await asyncio.to_thread(do_call)
-
-    async def _serper_scrape(self, store_name: str, url: str = "") -> dict:
+    def _serper_scrape(self, store_name: str, url: str = "") -> dict:
         """
         Serper API 取得評論資料。
         1. /maps 搜尋店家 → 基本資訊 + 少量評論
@@ -369,7 +354,7 @@ class ScraperService:
 
         print(f"[Serper] /maps 搜尋：{store_name}")
         try:
-            maps_data = await self._call_serper(
+            maps_data = self._call_serper(
                 "maps", {"q": store_name, "gl": "tw", "hl": "zh-tw"}
             )
             places = maps_data.get("places", [])
@@ -427,7 +412,7 @@ class ScraperService:
                     current_payload["page"] = page
 
                 print(f"[Serper] /reviews 搜尋（page {page}）...")
-                reviews_data = await self._call_serper("reviews", current_payload)
+                reviews_data = self._call_serper("reviews", current_payload)
 
                 # DEBUG：第一頁印出所有 key 看有沒有分頁 token
                 if page == 1:
@@ -475,7 +460,7 @@ class ScraperService:
                               or reviews_data.get("next_page_token")
                               or reviews_data.get("serpapi_pagination", {}).get("next_page_token", ""))
                 if next_token:
-                    print(f"[Serper] 找到 nextPageToken，繼續...")
+                    print("[Serper] 找到 nextPageToken，繼續...")
                     reviews_payload["nextPageToken"] = next_token
 
                 # 如果回傳少於 20 則，表示已經是最後一頁
@@ -565,21 +550,18 @@ class ScraperService:
     #  一般 URL 爬取
     # ══════════════════════════════════════════════════════════════
 
-    async def _scrape_generic_url(self, url: str) -> dict:
+    def _scrape_generic_url(self, url: str) -> dict:
         """非 Google Maps URL"""
         from bs4 import BeautifulSoup
 
         try:
-            def fetch_url():
-                req = urllib.request.Request(
-                    url,
-                    headers={"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-                             "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"}
-                )
-                with urllib.request.urlopen(req, timeout=20, context=_SSL_CTX) as resp:
-                    return resp.read().decode("utf-8", errors="ignore")
-
-            html = await asyncio.to_thread(fetch_url)
+            req = urllib.request.Request(
+                url,
+                headers={"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                         "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"}
+            )
+            with urllib.request.urlopen(req, timeout=20, context=_SSL_CTX) as resp:
+                html = resp.read().decode("utf-8", errors="ignore")
             soup = BeautifulSoup(html, 'html.parser')
             for script in soup(["script", "style"]):
                 script.decompose()
@@ -608,8 +590,8 @@ class ScraperService:
             lines = [
                 f"# {store_name}",
                 "",
-                f"| 評分 | Google 評論總數 | 地址 | 類型 |",
-                f"|------|----------------|------|------|",
+                "| 評分 | Google 評論總數 | 地址 | 類型 |",
+                "|------|----------------|------|------|",
                 f"| {rating} ⭐ | {rating_cnt} 則 | {address} | {category} |",
                 "",
                 f"> 來源 URL：{url}",
@@ -620,8 +602,8 @@ class ScraperService:
             ]
 
             if reviews:
-                lines.append(f"| # | 作者 | 時間 | 評論內容 | 評分 |")
-                lines.append(f"|---|------|------|---------|------|")
+                lines.append("| # | 作者 | 時間 | 評論內容 | 評分 |")
+                lines.append("|---|------|------|---------|------|")
                 for i, r in enumerate(reviews, 1):
                     if isinstance(r, dict):
                         text = str(r.get("text", "")).replace("|", "｜").replace("\n", " ")

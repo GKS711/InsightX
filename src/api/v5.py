@@ -1,8 +1,14 @@
 """
-v5 API router — persistent multi-store insight workspace.
+v6 API router — persistent multi-store insight workspace, sync edition.
 
-Mounted at /api/v5/* in src/main.py. Uses async SQLAlchemy session via
+Mounted at /api/v5/* in src/main.py. Uses sync SQLAlchemy session via
 Depends(get_session_dep). All endpoints write to / read from the v5 tables.
+
+v6 sync 轉換（從 v5 async）：
+  - `AsyncSession` → `Session`（sqlalchemy.orm）
+  - 所有 `async def` endpoint → `def`（FastAPI sync route 跑在 thread pool）
+  - 所有 `await session.X` → `session.X`
+  - URL prefix 仍是 `/api/v5/*`（schema 沒變，前端不用改）
 """
 from __future__ import annotations
 
@@ -13,7 +19,7 @@ import os
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
 
 from src.db import get_session_dep
 from src.jobs import fire_analysis_run, fire_scrape_job, progress_stream
@@ -57,14 +63,14 @@ _SSE_HEADERS = {
 # ────────────────────────────────────────────────────────────────────
 # Helper: dev-mode default user
 # ────────────────────────────────────────────────────────────────────
-async def _get_or_create_default_user(session: AsyncSession) -> User:
+def _get_or_create_default_user(session: Session) -> User:
     """v5.0.0-alpha 還沒做 auth — dev 模式下用 default user。"""
-    result = await session.execute(select(User).where(User.email == "dev@insightx.local"))
+    result = session.execute(select(User).where(User.email == "dev@insightx.local"))
     user = result.scalar_one_or_none()
     if user is None:
         user = User(email="dev@insightx.local", plan="free")
         session.add(user)
-        await session.flush()
+        session.flush()
     return user
 
 
@@ -72,24 +78,24 @@ async def _get_or_create_default_user(session: AsyncSession) -> User:
 # Workspaces
 # ────────────────────────────────────────────────────────────────────
 @router.post("/workspaces", response_model=WorkspaceOut, status_code=status.HTTP_201_CREATED)
-async def create_workspace(
+def create_workspace(
     body: WorkspaceCreate,
-    session: AsyncSession = Depends(get_session_dep),
+    session: Session = Depends(get_session_dep),
 ) -> WorkspaceOut:
-    user = await _get_or_create_default_user(session)
+    user = _get_or_create_default_user(session)
     ws = Workspace(owner_user_id=user.id, name=body.name)
     session.add(ws)
-    await session.commit()
-    await session.refresh(ws)
+    session.commit()
+    session.refresh(ws)
     return WorkspaceOut.model_validate(ws)
 
 
 @router.get("/workspaces", response_model=list[WorkspaceOut])
-async def list_workspaces(
-    session: AsyncSession = Depends(get_session_dep),
+def list_workspaces(
+    session: Session = Depends(get_session_dep),
 ) -> list[WorkspaceOut]:
-    user = await _get_or_create_default_user(session)
-    result = await session.execute(
+    user = _get_or_create_default_user(session)
+    result = session.execute(
         select(Workspace).where(Workspace.owner_user_id == user.id).order_by(Workspace.created_at.desc())
     )
     return [WorkspaceOut.model_validate(w) for w in result.scalars().all()]
@@ -99,13 +105,13 @@ async def list_workspaces(
 # Stores
 # ────────────────────────────────────────────────────────────────────
 @router.post("/stores", response_model=StoreOut, status_code=status.HTTP_201_CREATED)
-async def create_store(
+def create_store(
     body: StoreCreate,
-    session: AsyncSession = Depends(get_session_dep),
+    session: Session = Depends(get_session_dep),
 ) -> StoreOut:
     # 確認 workspace 存在 + 屬於當前 user
-    user = await _get_or_create_default_user(session)
-    ws = await session.get(Workspace, body.workspace_id)
+    user = _get_or_create_default_user(session)
+    ws = session.get(Workspace, body.workspace_id)
     if ws is None or ws.owner_user_id != user.id:
         raise HTTPException(404, detail="workspace not found")
 
@@ -117,17 +123,17 @@ async def create_store(
         platform=body.platform,
     )
     session.add(store)
-    await session.commit()
-    await session.refresh(store)
+    session.commit()
+    session.refresh(store)
     return StoreOut.model_validate(store)
 
 
 @router.get("/stores", response_model=list[StoreOut])
-async def list_stores(
+def list_stores(
     workspace_id: Optional[int] = None,
-    session: AsyncSession = Depends(get_session_dep),
+    session: Session = Depends(get_session_dep),
 ) -> list[StoreOut]:
-    user = await _get_or_create_default_user(session)
+    user = _get_or_create_default_user(session)
     stmt = (
         select(Store)
         .join(Workspace, Workspace.id == Store.workspace_id)
@@ -136,40 +142,40 @@ async def list_stores(
     )
     if workspace_id is not None:
         stmt = stmt.where(Store.workspace_id == workspace_id)
-    result = await session.execute(stmt)
+    result = session.execute(stmt)
     return [StoreOut.model_validate(s) for s in result.scalars().all()]
 
 
 @router.get("/stores/{store_id}", response_model=StoreOut)
-async def get_store(
+def get_store(
     store_id: int,
-    session: AsyncSession = Depends(get_session_dep),
+    session: Session = Depends(get_session_dep),
 ) -> StoreOut:
-    store = await session.get(Store, store_id)
+    store = session.get(Store, store_id)
     if store is None:
         raise HTTPException(404, detail="store not found")
     return StoreOut.model_validate(store)
 
 
 @router.delete("/stores/{store_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_store(
+def delete_store(
     store_id: int,
-    session: AsyncSession = Depends(get_session_dep),
+    session: Session = Depends(get_session_dep),
 ) -> None:
     """刪除店家 + cascade 砍掉 sources / jobs / reviews / runs / reports。
 
     - Ownership scoped: JOIN Workspace.owner_user_id == current user
       （配合 list_stores 的 pattern；v5α 還沒 auth、目前用 default user，
       但 endpoint 不能比 list 還寬鬆。）
-    - 409 if active scrape/analysis exists: 避免 background worker await
-      完外部 IO 後 commit 到 cascade-deleted row（jobs.py 也加了 _safe_commit
+    - 409 if active scrape/analysis exists: 避免 background worker 完成
+      外部 IO 後 commit 到 cascade-deleted row（jobs.py 也加了 _safe_commit
       容錯，但 API 層先擋是主防線）。
-    - SQLite 需 PRAGMA foreign_keys=ON（src/db.py 已處理）；Postgres 直接走
-      ondelete='CASCADE'。
+    - SQLite/libsql 需 PRAGMA foreign_keys=ON（src/db.py 已處理）；Postgres
+      直接走 ondelete='CASCADE'。
     - 不刪 outputs/reports/ 下的實體 PDF/DOCX 檔（audit trail，之後再加清理 job）。
     """
-    user = await _get_or_create_default_user(session)
-    result = await session.execute(
+    user = _get_or_create_default_user(session)
+    result = session.execute(
         select(Store)
         .join(Workspace, Workspace.id == Store.workspace_id)
         .where(Store.id == store_id, Workspace.owner_user_id == user.id)
@@ -178,7 +184,7 @@ async def delete_store(
     if store is None:
         raise HTTPException(404, detail="store not found")
 
-    active_scrape = await session.scalar(
+    active_scrape = session.scalar(
         select(ScrapeJob.id)
         .join(ReviewSource, ReviewSource.id == ScrapeJob.source_id)
         .where(
@@ -187,7 +193,7 @@ async def delete_store(
         )
         .limit(1)
     )
-    active_run = await session.scalar(
+    active_run = session.scalar(
         select(AnalysisRun.id)
         .where(
             AnalysisRun.store_id == store_id,
@@ -201,20 +207,20 @@ async def delete_store(
             detail="store has active scrape or analysis jobs",
         )
 
-    await session.delete(store)
-    await session.commit()
+    session.delete(store)
+    session.commit()
 
 
 # ────────────────────────────────────────────────────────────────────
 # Review sources
 # ────────────────────────────────────────────────────────────────────
 @router.post("/stores/{store_id}/sources", response_model=ReviewSourceOut, status_code=status.HTTP_201_CREATED)
-async def add_source(
+def add_source(
     store_id: int,
     body: ReviewSourceCreate,
-    session: AsyncSession = Depends(get_session_dep),
+    session: Session = Depends(get_session_dep),
 ) -> ReviewSourceOut:
-    store = await session.get(Store, store_id)
+    store = session.get(Store, store_id)
     if store is None:
         raise HTTPException(404, detail="store not found")
 
@@ -224,26 +230,26 @@ async def add_source(
         external_url=body.external_url,
     )
     session.add(src)
-    await session.commit()
-    await session.refresh(src)
+    session.commit()
+    session.refresh(src)
     return ReviewSourceOut.model_validate(src)
 
 
 # ────────────────────────────────────────────────────────────────────
-# Scrape jobs (Phase 3 同步版；Phase 4 改 background)
+# Scrape jobs (Phase 3 同步觸發；實際 scrape 在 daemon thread 跑)
 # ────────────────────────────────────────────────────────────────────
 @router.post("/stores/{store_id}/scrape", response_model=ScrapeJobOut, status_code=status.HTTP_202_ACCEPTED)
-async def trigger_scrape(
+def trigger_scrape(
     store_id: int,
-    session: AsyncSession = Depends(get_session_dep),
+    session: Session = Depends(get_session_dep),
 ) -> ScrapeJobOut:
     """觸發 background scrape job。立刻回 job (status=queued)，client 用 GET /jobs/{id} 或 SSE 看進度。"""
-    store = await session.get(Store, store_id)
+    store = session.get(Store, store_id)
     if store is None:
         raise HTTPException(404, detail="store not found")
 
     # 取第一個 source（v5.0.0-alpha 簡化：每個 store 一個 source）
-    result = await session.execute(
+    result = session.execute(
         select(ReviewSource).where(ReviewSource.store_id == store_id).limit(1)
     )
     src = result.scalar_one_or_none()
@@ -253,28 +259,28 @@ async def trigger_scrape(
     # 建 job row (status='queued')
     job = ScrapeJob(source_id=src.id, status="queued")
     session.add(job)
-    await session.commit()
-    await session.refresh(job)
+    session.commit()
+    session.refresh(job)
 
-    # fire-and-forget background task
+    # fire-and-forget background task (daemon thread)
     fire_scrape_job(job.id, src.id, src.external_url)
 
     return ScrapeJobOut.model_validate(job)
 
 
 @router.get("/jobs/{job_id}", response_model=ScrapeJobOut)
-async def get_job(
+def get_job(
     job_id: int,
-    session: AsyncSession = Depends(get_session_dep),
+    session: Session = Depends(get_session_dep),
 ) -> ScrapeJobOut:
-    job = await session.get(ScrapeJob, job_id)
+    job = session.get(ScrapeJob, job_id)
     if job is None:
         raise HTTPException(404, detail="job not found")
     return ScrapeJobOut.model_validate(job)
 
 
 @router.get("/jobs/{job_id}/stream")
-async def stream_job(job_id: int) -> StreamingResponse:
+def stream_job(job_id: int) -> StreamingResponse:
     """SSE: 推 scrape job 進度 events 直到 succeeded/failed/timeout。"""
     return StreamingResponse(
         progress_stream("scrape", job_id, idle_timeout_s=180.0),
@@ -284,7 +290,7 @@ async def stream_job(job_id: int) -> StreamingResponse:
 
 
 @router.get("/runs/{run_id}/stream")
-async def stream_run(run_id: int) -> StreamingResponse:
+def stream_run(run_id: int) -> StreamingResponse:
     """SSE: 推 analysis run 進度 events 直到 succeeded/failed/timeout。"""
     return StreamingResponse(
         progress_stream("analysis", run_id, idle_timeout_s=180.0),
@@ -297,10 +303,10 @@ async def stream_run(run_id: int) -> StreamingResponse:
 # Reviews
 # ────────────────────────────────────────────────────────────────────
 @router.get("/stores/{store_id}/reviews", response_model=list[ReviewOut])
-async def list_reviews(
+def list_reviews(
     store_id: int,
     limit: int = 100,
-    session: AsyncSession = Depends(get_session_dep),
+    session: Session = Depends(get_session_dep),
 ) -> list[ReviewOut]:
     """列指定 store 的最近 reviews（across all sources）。"""
     stmt = (
@@ -310,7 +316,7 @@ async def list_reviews(
         .order_by(Review.id.desc())
         .limit(min(limit, 500))
     )
-    result = await session.execute(stmt)
+    result = session.execute(stmt)
     return [ReviewOut.model_validate(r) for r in result.scalars().all()]
 
 
@@ -318,13 +324,13 @@ async def list_reviews(
 # Analysis runs
 # ────────────────────────────────────────────────────────────────────
 @router.post("/stores/{store_id}/analyze", response_model=AnalysisRunOut, status_code=status.HTTP_202_ACCEPTED)
-async def trigger_analysis(
+def trigger_analysis(
     store_id: int,
     body: AnalysisRunCreate,
-    session: AsyncSession = Depends(get_session_dep),
+    session: Session = Depends(get_session_dep),
 ) -> AnalysisRunOut:
     """觸發 background analysis run。立刻回 run (status=queued)，client 用 GET /runs/{id} 或 SSE 看進度。"""
-    store = await session.get(Store, store_id)
+    store = session.get(Store, store_id)
     if store is None:
         raise HTTPException(404, detail="store not found")
 
@@ -332,7 +338,7 @@ async def trigger_analysis(
 
     # 若 ai_function == 'analyze' 且沒帶 text，從 store 的 reviews table 組
     if body.ai_function == "analyze" and not inputs.get("text"):
-        result = await session.execute(
+        result = session.execute(
             select(Review)
             .join(ReviewSource, ReviewSource.id == Review.source_id)
             .where(ReviewSource.store_id == store_id)
@@ -365,8 +371,8 @@ async def trigger_analysis(
         status="queued",
     )
     session.add(run)
-    await session.commit()
-    await session.refresh(run)
+    session.commit()
+    session.refresh(run)
 
     fire_analysis_run(run.id, store_id, body.ai_function, inputs, body.model_tier)
 
@@ -374,10 +380,10 @@ async def trigger_analysis(
 
 
 @router.get("/stores/{store_id}/runs", response_model=list[AnalysisRunOut])
-async def list_runs(
+def list_runs(
     store_id: int,
     limit: int = 50,
-    session: AsyncSession = Depends(get_session_dep),
+    session: Session = Depends(get_session_dep),
 ) -> list[AnalysisRunOut]:
     stmt = (
         select(AnalysisRun)
@@ -385,16 +391,16 @@ async def list_runs(
         .order_by(AnalysisRun.created_at.desc())
         .limit(min(limit, 200))
     )
-    result = await session.execute(stmt)
+    result = session.execute(stmt)
     return [AnalysisRunOut.model_validate(r) for r in result.scalars().all()]
 
 
 @router.get("/runs/{run_id}", response_model=AnalysisRunOut)
-async def get_run(
+def get_run(
     run_id: int,
-    session: AsyncSession = Depends(get_session_dep),
+    session: Session = Depends(get_session_dep),
 ) -> AnalysisRunOut:
-    run = await session.get(AnalysisRun, run_id)
+    run = session.get(AnalysisRun, run_id)
     if run is None:
         raise HTTPException(404, detail="run not found")
     return AnalysisRunOut.model_validate(run)
@@ -404,17 +410,17 @@ async def get_run(
 # Compare (multi-store)
 # ────────────────────────────────────────────────────────────────────
 @router.get("/stores/{store_id}/compare", response_model=StoreCompareOut)
-async def compare_stores(
+def compare_stores(
     store_id: int,
     other: int,
-    session: AsyncSession = Depends(get_session_dep),
+    session: Session = Depends(get_session_dep),
 ) -> StoreCompareOut:
-    a = await session.get(Store, store_id)
-    b = await session.get(Store, other)
+    a = session.get(Store, store_id)
+    b = session.get(Store, other)
     if a is None or b is None:
         raise HTTPException(404, detail="one or both stores not found")
 
-    async def latest_analyze(sid: int) -> Optional[AnalysisRun]:
+    def latest_analyze(sid: int) -> Optional[AnalysisRun]:
         stmt = (
             select(AnalysisRun)
             .where(
@@ -425,11 +431,11 @@ async def compare_stores(
             .order_by(AnalysisRun.created_at.desc())
             .limit(1)
         )
-        result = await session.execute(stmt)
+        result = session.execute(stmt)
         return result.scalar_one_or_none()
 
-    run_a = await latest_analyze(store_id)
-    run_b = await latest_analyze(other)
+    run_a = latest_analyze(store_id)
+    run_b = latest_analyze(other)
 
     return StoreCompareOut(
         store_a=StoreOut.model_validate(a),
@@ -444,13 +450,13 @@ async def compare_stores(
 # Reports (PDF / DOCX export)
 # ────────────────────────────────────────────────────────────────────
 @router.post("/stores/{store_id}/reports", response_model=ReportOut, status_code=status.HTTP_201_CREATED)
-async def create_report(
+def create_report(
     store_id: int,
     body: ReportCreate,
-    session: AsyncSession = Depends(get_session_dep),
+    session: Session = Depends(get_session_dep),
 ) -> ReportOut:
     """同步生成報表（PDF or DOCX），寫到 outputs/reports/。"""
-    store = await session.get(Store, store_id)
+    store = session.get(Store, store_id)
     if store is None:
         raise HTTPException(404, detail="store not found")
 
@@ -462,31 +468,31 @@ async def create_report(
         status="running",
     )
     session.add(report)
-    await session.flush()  # get id
+    session.flush()  # get id
 
-    await generate_report(session, store, report)
-    await session.commit()
-    await session.refresh(report)
+    generate_report(session, store, report)
+    session.commit()
+    session.refresh(report)
     return ReportOut.model_validate(report)
 
 
 @router.get("/reports/{report_id}", response_model=ReportOut)
-async def get_report(
+def get_report(
     report_id: int,
-    session: AsyncSession = Depends(get_session_dep),
+    session: Session = Depends(get_session_dep),
 ) -> ReportOut:
-    rpt = await session.get(Report, report_id)
+    rpt = session.get(Report, report_id)
     if rpt is None:
         raise HTTPException(404, detail="report not found")
     return ReportOut.model_validate(rpt)
 
 
 @router.get("/reports/{report_id}/download")
-async def download_report(
+def download_report(
     report_id: int,
-    session: AsyncSession = Depends(get_session_dep),
+    session: Session = Depends(get_session_dep),
 ) -> FileResponse:
-    rpt = await session.get(Report, report_id)
+    rpt = session.get(Report, report_id)
     if rpt is None or rpt.file_path is None:
         raise HTTPException(404, detail="report file not ready")
     if not os.path.isfile(rpt.file_path):
