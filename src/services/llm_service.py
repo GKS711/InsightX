@@ -249,7 +249,7 @@ class LLMService:
         text_content: str,
         platform: str = "google",
         *,
-        total_timeout_s: float = 55.0,
+        total_timeout_s: float = 90.0,
     ) -> dict:
         """
         分析爬蟲拿到的原始文字（評論或留言），回傳好壞主題比例。
