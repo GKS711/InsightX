@@ -34,6 +34,20 @@ if not DATABASE_URL.startswith("sqlite"):
 
 engine = create_async_engine(DATABASE_URL, **_engine_kwargs)
 
+# SQLite 預設不執行 FK ON DELETE CASCADE，要手動 PRAGMA。
+# 影響：DELETE /stores/{id} 要 cascade 砍 review_sources / reviews /
+# scrape_jobs / analysis_runs / generated_assets / reports；沒這段
+# orphan rows 會留下。Postgres / 其他 dialect 不需要這段。
+if DATABASE_URL.startswith("sqlite"):
+    from sqlalchemy import event
+
+    @event.listens_for(engine.sync_engine, "connect")
+    def _sqlite_fk_pragma(dbapi_conn, _conn_record):
+        cur = dbapi_conn.cursor()
+        cur.execute("PRAGMA foreign_keys=ON")
+        cur.close()
+
+
 SessionLocal = async_sessionmaker(
     bind=engine,
     expire_on_commit=False,

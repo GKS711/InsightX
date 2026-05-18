@@ -151,6 +151,60 @@ async def get_store(
     return StoreOut.model_validate(store)
 
 
+@router.delete("/stores/{store_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_store(
+    store_id: int,
+    session: AsyncSession = Depends(get_session_dep),
+) -> None:
+    """刪除店家 + cascade 砍掉 sources / jobs / reviews / runs / reports。
+
+    - Ownership scoped: JOIN Workspace.owner_user_id == current user
+      （配合 list_stores 的 pattern；v5α 還沒 auth、目前用 default user，
+      但 endpoint 不能比 list 還寬鬆。）
+    - 409 if active scrape/analysis exists: 避免 background worker await
+      完外部 IO 後 commit 到 cascade-deleted row（jobs.py 也加了 _safe_commit
+      容錯，但 API 層先擋是主防線）。
+    - SQLite 需 PRAGMA foreign_keys=ON（src/db.py 已處理）；Postgres 直接走
+      ondelete='CASCADE'。
+    - 不刪 outputs/reports/ 下的實體 PDF/DOCX 檔（audit trail，之後再加清理 job）。
+    """
+    user = await _get_or_create_default_user(session)
+    result = await session.execute(
+        select(Store)
+        .join(Workspace, Workspace.id == Store.workspace_id)
+        .where(Store.id == store_id, Workspace.owner_user_id == user.id)
+    )
+    store = result.scalar_one_or_none()
+    if store is None:
+        raise HTTPException(404, detail="store not found")
+
+    active_scrape = await session.scalar(
+        select(ScrapeJob.id)
+        .join(ReviewSource, ReviewSource.id == ScrapeJob.source_id)
+        .where(
+            ReviewSource.store_id == store_id,
+            ScrapeJob.status.in_(("queued", "running")),
+        )
+        .limit(1)
+    )
+    active_run = await session.scalar(
+        select(AnalysisRun.id)
+        .where(
+            AnalysisRun.store_id == store_id,
+            AnalysisRun.status.in_(("queued", "running")),
+        )
+        .limit(1)
+    )
+    if active_scrape is not None or active_run is not None:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            detail="store has active scrape or analysis jobs",
+        )
+
+    await session.delete(store)
+    await session.commit()
+
+
 # ────────────────────────────────────────────────────────────────────
 # Review sources
 # ────────────────────────────────────────────────────────────────────

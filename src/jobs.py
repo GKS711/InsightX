@@ -44,6 +44,29 @@ _LLM_SEMA = asyncio.Semaphore(3)
 _SCRAPER_SEMA = asyncio.Semaphore(5)
 
 
+async def _safe_commit_or_log(session, kind: str, job_id: int) -> bool:
+    """Commit session; rollback + log on failure. Caller should return early
+    on False — pushing further state to a deleted row is pointless.
+
+    Why this exists: DELETE /api/v5/stores/{id} cascades to scrape_jobs /
+    analysis_runs / their children. v5.py 已 409-block DELETE 當有 active
+    job 時，但仍有 narrow race window：DELETE 檢查通過 → 使用者立刻 POST
+    /scrape → 背景任務開跑 → DELETE commit → cascade 砍剛建的 job → 背景
+    任務 60s 後想 commit success/failure → StaleDataError 或 IntegrityError。
+    這個 helper 讓 background worker 不會在這條 race 上炸出 unhandled exception。
+    """
+    try:
+        await session.commit()
+        return True
+    except Exception as exc:
+        await session.rollback()
+        logger.warning(
+            "[jobs] %s commit failed for job_id=%d (likely cascade-deleted by DELETE /stores): %s",
+            kind, job_id, str(exc)[:200],
+        )
+        return False
+
+
 def _qkey(kind: str, job_id: int) -> str:
     return f"{kind}:{job_id}"
 
@@ -136,7 +159,8 @@ async def run_scrape_job_bg(job_id: int, source_id: int, external_url: str) -> N
                 job.reviews_fetched_count = len(structured)
                 job.pagination_truncated = bool(scrape_result.get("pagination_truncated", False))
                 src.last_scraped_at = datetime.now(tz=timezone.utc)
-                await session.commit()
+                if not await _safe_commit_or_log(session, "scrape", job_id):
+                    return
 
                 await _push("scrape", job_id, "succeeded", {
                     "phase": "done",
@@ -151,7 +175,8 @@ async def run_scrape_job_bg(job_id: int, source_id: int, external_url: str) -> N
                 job.finished_at = datetime.now(tz=timezone.utc)
                 job.error_class = "TimeoutError"
                 job.error_message = "scrape timeout (>120s)"
-                await session.commit()
+                if not await _safe_commit_or_log(session, "scrape", job_id):
+                    return
                 await _push("scrape", job_id, "failed", {"error_class": "TimeoutError", "message": "scrape timeout"})
 
             except Exception as exc:
@@ -159,7 +184,8 @@ async def run_scrape_job_bg(job_id: int, source_id: int, external_url: str) -> N
                 job.finished_at = datetime.now(tz=timezone.utc)
                 job.error_class = type(exc).__name__
                 job.error_message = str(exc)[:1000]
-                await session.commit()
+                if not await _safe_commit_or_log(session, "scrape", job_id):
+                    return
                 await _push("scrape", job_id, "failed", {
                     "error_class": type(exc).__name__,
                     "message": str(exc)[:200],
@@ -233,7 +259,8 @@ async def run_analysis_bg(
                 run.output_json = output if isinstance(output, dict) else {"text": output}
                 run.status = "succeeded"
                 run.finished_at = datetime.now(tz=timezone.utc)
-                await session.commit()
+                if not await _safe_commit_or_log(session, "analysis", run_id):
+                    return
 
                 await _push("analysis", run_id, "succeeded", {
                     "phase": "done",
@@ -247,7 +274,8 @@ async def run_analysis_bg(
                 run.error_class = type(exc).__name__
                 run.error_message = str(exc)[:1000]
                 run.finished_at = datetime.now(tz=timezone.utc)
-                await session.commit()
+                if not await _safe_commit_or_log(session, "analysis", run_id):
+                    return
                 await _push("analysis", run_id, "failed", {
                     "error_class": type(exc).__name__,
                     "message": str(exc)[:200],
