@@ -67,7 +67,7 @@ class User(Base):
     )
 
     workspaces: Mapped[list["Workspace"]] = relationship(
-        back_populates="owner", cascade="all, delete-orphan"
+        back_populates="owner", cascade="all, delete-orphan", passive_deletes=True
     )
 
     __table_args__ = (
@@ -92,7 +92,7 @@ class Workspace(Base):
 
     owner: Mapped[User] = relationship(back_populates="workspaces")
     stores: Mapped[list["Store"]] = relationship(
-        back_populates="workspace", cascade="all, delete-orphan"
+        back_populates="workspace", cascade="all, delete-orphan", passive_deletes=True
     )
 
 
@@ -119,13 +119,13 @@ class Store(Base):
 
     workspace: Mapped[Workspace] = relationship(back_populates="stores")
     sources: Mapped[list["ReviewSource"]] = relationship(
-        back_populates="store", cascade="all, delete-orphan"
+        back_populates="store", cascade="all, delete-orphan", passive_deletes=True
     )
     analysis_runs: Mapped[list["AnalysisRun"]] = relationship(
-        back_populates="store", cascade="all, delete-orphan"
+        back_populates="store", cascade="all, delete-orphan", passive_deletes=True
     )
     reports: Mapped[list["Report"]] = relationship(
-        back_populates="store", cascade="all, delete-orphan"
+        back_populates="store", cascade="all, delete-orphan", passive_deletes=True
     )
 
     __table_args__ = (
@@ -152,10 +152,10 @@ class ReviewSource(Base):
 
     store: Mapped[Store] = relationship(back_populates="sources")
     scrape_jobs: Mapped[list["ScrapeJob"]] = relationship(
-        back_populates="source", cascade="all, delete-orphan"
+        back_populates="source", cascade="all, delete-orphan", passive_deletes=True
     )
     reviews: Mapped[list["Review"]] = relationship(
-        back_populates="source", cascade="all, delete-orphan"
+        back_populates="source", cascade="all, delete-orphan", passive_deletes=True
     )
 
     __table_args__ = (
@@ -271,7 +271,7 @@ class AnalysisRun(Base):
 
     store: Mapped[Store] = relationship(back_populates="analysis_runs")
     generated_assets: Mapped[list["GeneratedAsset"]] = relationship(
-        back_populates="analysis_run", cascade="all, delete-orphan"
+        back_populates="analysis_run", cascade="all, delete-orphan", passive_deletes=True
     )
 
     __table_args__ = (

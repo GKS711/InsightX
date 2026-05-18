@@ -19,6 +19,8 @@ from datetime import datetime, timezone
 from typing import Any, Optional
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm.exc import StaleDataError
 
 from src.db import SessionLocal
 from src.models import (
@@ -53,18 +55,29 @@ async def _safe_commit_or_log(session, kind: str, job_id: int) -> bool:
     job 時，但仍有 narrow race window：DELETE 檢查通過 → 使用者立刻 POST
     /scrape → 背景任務開跑 → DELETE commit → cascade 砍剛建的 job → 背景
     任務 60s 後想 commit success/failure → StaleDataError 或 IntegrityError。
-    這個 helper 讓 background worker 不會在這條 race 上炸出 unhandled exception。
+
+    Only race-related exceptions are swallowed (StaleDataError + IntegrityError).
+    Anything else (constraint violation in normal flow, DB outage, programmer
+    bug) re-raises with logger.exception so the worker fails loudly and the
+    caller's outer try/except handles it.
     """
     try:
         await session.commit()
         return True
-    except Exception as exc:
+    except (StaleDataError, IntegrityError) as exc:
         await session.rollback()
         logger.warning(
             "[jobs] %s commit failed for job_id=%d (likely cascade-deleted by DELETE /stores): %s",
             kind, job_id, str(exc)[:200],
         )
         return False
+    except Exception:
+        await session.rollback()
+        logger.exception(
+            "[jobs] %s commit UNEXPECTED failure for job_id=%d (NOT a cascade race)",
+            kind, job_id,
+        )
+        raise
 
 
 def _qkey(kind: str, job_id: int) -> str:
@@ -132,7 +145,8 @@ async def run_scrape_job_bg(job_id: int, source_id: int, external_url: str) -> N
 
             job.status = "running"
             job.started_at = datetime.now(tz=timezone.utc)
-            await session.commit()
+            if not await _safe_commit_or_log(session, "scrape", job_id):
+                return
             await _push("scrape", job_id, "progress", {"phase": "scraping", "step": 1, "total": 3, "label": "fetching reviews"})
 
             try:
@@ -218,7 +232,8 @@ async def run_analysis_bg(
 
             run.status = "running"
             run.started_at = datetime.now(tz=timezone.utc)
-            await session.commit()
+            if not await _safe_commit_or_log(session, "analysis", run_id):
+                return
             await _push("analysis", run_id, "progress", {"phase": "analyzing", "step": 1, "total": 2, "label": f"calling LLM for {ai_function}"})
 
             # 把 input 帶到 gateway，再寫一次 run（gateway 內也會更新 run row，但 run row 已是新 session 內 attached）
