@@ -519,6 +519,8 @@
         <ReportSection storeId={storeId} />
 
         <ReviewsSection reviews={reviews} />
+
+        <DangerZone storeId={storeId} storeName={store.name} />
       </div>
     );
   }
@@ -689,6 +691,54 @@
               ✓ 已生成 #{latest.id}（{latest.format.toUpperCase()}）
             </div>
           )}
+          {err && <div style={{ color: "var(--neg)", fontSize: 13, marginTop: 8 }}>{err}</div>}
+        </div>
+      </div>
+    );
+  }
+
+  /* ──────────────────────────────────────────────────────────────────
+     DangerZone — 刪除店家（cascade 砍 sources/jobs/reviews/runs/reports）
+     ────────────────────────────────────────────────────────────────── */
+  function DangerZone({ storeId, storeName }) {
+    const [busy, setBusy] = useState(false);
+    const [err, setErr] = useState(null);
+
+    async function del() {
+      const ok = window.confirm(
+        `確定刪除「${storeName}」嗎？\n\n` +
+        `會一併刪除所有評論、抓取紀錄、AI 分析、報表，無法復原。`
+      );
+      if (!ok) return;
+      setBusy(true);
+      setErr(null);
+      try {
+        const r = await fetch(`/api/v5/stores/${storeId}`, { method: "DELETE" });
+        if (!r.ok && r.status !== 204) {
+          throw new Error(`DELETE → ${r.status}: ${(await r.text()).slice(0, 200)}`);
+        }
+        navigate("#/");
+      } catch (e) {
+        setErr(String(e));
+        setBusy(false);
+      }
+    }
+
+    return (
+      <div className="ws-section">
+        <div className="ws-section-head" style={{ borderBottomColor: "var(--neg)" }}>
+          <h2 className="ws-h2" style={{ margin: 0, color: "var(--neg)" }}>危險操作</h2>
+        </div>
+        <div className="ws-card" style={{ borderColor: "var(--neg)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16 }}>
+            <div style={{ color: "var(--ink-2)", fontSize: 14 }}>
+              刪除這家店會一併移除所有評論、抓取紀錄、AI 分析、報表，無法復原。
+            </div>
+            <button className="ws-btn" style={{ color: "var(--neg)", borderColor: "var(--neg)" }}
+              onClick={del} disabled={busy}>
+              {busy ? "刪除中…" : "刪除店家"}
+            </button>
+          </div>
           {err && <div style={{ color: "var(--neg)", fontSize: 13, marginTop: 8 }}>{err}</div>}
         </div>
       </div>
