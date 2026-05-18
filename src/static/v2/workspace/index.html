@@ -292,18 +292,15 @@
           <span className="ws-brand-ver">v5α</span>
         </div>
         <nav className="ws-nav">
-          <a className={"ws-nav-item" + (isActive("#/") ? " active" : "")} href="#/">
-            <span className="mono">01</span> Dashboard
-          </a>
-          <a className={"ws-nav-item" + (route.startsWith("#/stores") ? " active" : "")} href="#/">
-            <span className="mono">02</span> Stores
+          <a className={"ws-nav-item" + (isActive("#/") || route.startsWith("#/stores") ? " active" : "")} href="#/">
+            <span className="mono">01</span> 店家
           </a>
           <a className={"ws-nav-item" + (route === "#/reports" ? " active" : "")} href="#/reports">
-            <span className="mono">03</span> Reports
+            <span className="mono">02</span> 報表
           </a>
           <div className="ws-nav-divider" />
           <a className="ws-nav-item" href="/" target="_self">
-            <span className="mono">←</span> 回 v4 主站
+            <span className="mono">←</span> 回主頁面
           </a>
         </nav>
         <div className="ws-side-foot">dev@insightx.local</div>
