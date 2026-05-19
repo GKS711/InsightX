@@ -1106,7 +1106,19 @@ const HeroVisual = () => {
       border: "1px solid var(--ink)",
       overflow: "hidden", minHeight: 460,
     }}>
-      <Constellation/>
+      {/* v6: editorial Codex img2 illustration of "listening to customer voices"
+          replaces the v4/v5 animated Constellation. Image carries the magazine soul;
+          HUD overlay (corner brackets + rotating source counter + topics bar) keeps
+          the "live dashboard" reading. */}
+      <img
+        src="./assets/hero-listening.png"
+        alt="InsightX: an editorial illustration of an analog listening device with customer review fragments being drawn in"
+        style={{
+          position: "absolute", inset: 0, width: "100%", height: "100%",
+          objectFit: "cover", objectPosition: "center",
+          zIndex: 1, mixBlendMode: "multiply",
+        }}
+      />
       <HUDFrame/>
       <div style={{
         position: "absolute", top: 14, left: 14, zIndex: 5,
@@ -1119,7 +1131,7 @@ const HeroVisual = () => {
           animation: "pulseDot 1.2s ease-in-out infinite"
         }}/>
         <span className="mono tracking-wide" style={{ fontSize: 10, color: "var(--ink)", textTransform: "uppercase", letterSpacing: "0.16em" }}>
-          insightx · NEURAL MAP
+          insightx · LISTENING POST
         </span>
       </div>
       <div style={{
@@ -1900,7 +1912,7 @@ const LandingPage = ({ onComplete }) => {
           <a href="/workspace/" style={{ ...navLink, color: "var(--coral)", fontWeight: 600, cursor: "pointer" }}>工作區 →</a>
         </nav>
         <div className="mono tracking-wide" style={{ fontSize: 10, color: "var(--ink-3)", textTransform: "uppercase" }}>
-          v{state?.meta?.appVersion || "4.0.0"} · live
+          v{state?.meta?.appVersion || "6.0.0-alpha"} · live
         </div>
       </header>
 
@@ -2004,7 +2016,7 @@ const LandingPage = ({ onComplete }) => {
       }}>
         <Logo size={22}/>
         <span className="mono tracking-wide" style={{ fontSize: 10, color: "var(--ink-3)", textTransform: "uppercase" }}>
-          Powered by Gemini × Serper × YouTube · v{state?.meta?.appVersion || "4.0.0"}
+          Powered by Gemini × Serper × YouTube · v{state?.meta?.appVersion || "6.0.0-alpha"}
         </span>
       </footer>
     </div>
