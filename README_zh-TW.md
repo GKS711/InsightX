@@ -32,19 +32,15 @@ InsightX 接受 **Google Maps 店家網址**或 **YouTube 影片網址**，透�
 
 **零瀏覽器、零 headless Chrome** — 全程 HTTP API。沒有 Playwright，沒有 Selenium。
 
-> 🚀 **試試線上 demo**：<https://Jordan711-insightx-demo.hf.space> — 跑在 **Hugging Face Spaces Free** + **Turso (libsql)** 上，月費 $0。
+<div align="center">
 
----
+### 🚀 線上 demo
 
-## v6.0.0-alpha 新東西（2026-05-19）
+# [Jordan711-insightx-demo.hf.space →](https://Jordan711-insightx-demo.hf.space)
 
-- **全 async → sync 重寫** — FastAPI + SQLAlchemy + jobs stack 改 sync 讓 Turso/libsql（sync-only driver）可以當資料庫。完整原因見 [`CHANGELOG.md`](CHANGELOG.md)。
-- **Codex img2 雜誌封面 Hero 插圖**取代原本 procedural 神經圖（cream 紙 + risograph 紋理 + Saul Bass × New Yorker 編輯風；multi-source convergence 概念涵蓋 Maps + YouTube + 未來 platform）。
-- **多 model LLM fallback chain**：`gemma-4-26b-a4b-it` → `gemma-4-31b-it` → `gemini-2.5-flash` → `gemini-2.5-flash-lite`。遇到 5xx / quota error 自動切換，不影響使用者看到的回應。
-- **HF Spaces 部署** — 單階段 `python:3.10-slim` Dockerfile、port 7860、HEALTHCHECK、開機跑 alembic、非 root user。完整 Turso + HF setup 步驟見 [`docs/DEPLOY_HF.md`](docs/DEPLOY_HF.md)。
-- **v4 → v5 工作區 bridge** — landing 頁分析結果可自動 persist 到 `/workspace/`，由 `IX_ENABLE_V4_WORKSPACE_PERSIST=1` 開啟（self-hosted 才用；公開 demo 為了 multi-tenant 安全預設關閉）。
+*Hugging Face Spaces · Turso (libsql) · Gemini · Serper*
 
-3 個 phase 共 8 輪 Codex peer review（sync refactor、deploy、pre-freeze）全部達成 APPROVE 共識才打 tag。完整 review 紀錄見 [`HANDOFF.md`](HANDOFF.md)。
+</div>
 
 ---
 
@@ -135,7 +131,7 @@ uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
 4. `git push` 到 Space repo
 5. 第一次 build ~3 分鐘，之後 rebuild ~30 秒
 
-總成本：**月費 $0**（在 Gemini 1500 req/day 免費 + Serper 免費 credits 範圍內）。
+跑在 Gemini 1500 req/day 免費 + Serper 免費 credits 範圍內；HF Spaces Free + Turso Starter Free 提供 hosting + DB。
 
 ---
 

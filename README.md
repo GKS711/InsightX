@@ -32,19 +32,15 @@ InsightX takes a **Google Maps store URL** or a **YouTube video URL**, scrapes t
 
 **Zero browser, zero headless Chrome** — everything runs through HTTP APIs. No Playwright, no Selenium.
 
-> 🚀 **Try the live demo**: <https://Jordan711-insightx-demo.hf.space> — runs on **Hugging Face Spaces Free** + **Turso (libsql)** at $0/month.
+<div align="center">
 
----
+### 🚀 Live demo
 
-## What's new in v6.0.0-alpha (2026-05-19)
+# [Jordan711-insightx-demo.hf.space →](https://Jordan711-insightx-demo.hf.space)
 
-- **Full async → sync rewrite** of the FastAPI + SQLAlchemy + jobs stack so Turso/libsql (sync-only) can back the DB. See [`CHANGELOG.md`](CHANGELOG.md) for the migration rationale.
-- **Codex img2 magazine-cover hero illustration** replacing the procedural neural-map (cream paper + risograph + Saul Bass × New Yorker references; multi-source convergence concept covers Maps + YouTube + future platforms).
-- **Multi-model LLM fallback chain**: `gemma-4-26b-a4b-it` → `gemma-4-31b-it` → `gemini-2.5-flash` → `gemini-2.5-flash-lite`. Falls through on 5xx / quota errors without breaking the user-facing response.
-- **HF Spaces deploy** — single-stage `python:3.10-slim` Dockerfile, port 7860, HEALTHCHECK, alembic-on-boot, non-root user. See [`docs/DEPLOY_HF.md`](docs/DEPLOY_HF.md) for the full Turso + HF setup.
-- **v4 → v5 workspace bridge** — landing-page analyses can auto-persist into the `/workspace/` view when `IX_ENABLE_V4_WORKSPACE_PERSIST=1` (self-hosted only; off by default for multi-tenant safety).
+*Hugging Face Spaces · Turso (libsql) · Gemini · Serper*
 
-8 rounds of Codex peer review across 3 phases (sync refactor, deploy, pre-freeze) reached APPROVE consensus before tagging. See [`HANDOFF.md`](HANDOFF.md) for the review history.
+</div>
 
 ---
 
@@ -135,7 +131,7 @@ Step-by-step guide: **[`docs/DEPLOY_HF.md`](docs/DEPLOY_HF.md)**. Highlights:
 4. `git clone https://huggingface.co/spaces/<user>/<space>`, `cp` over the source, `git push`
 5. First build ~3min; subsequent rebuilds ~30s
 
-Total cost: **$0/month** while you stay inside Gemini's free tier (1500 req/day) and Serper's free credits.
+Runs inside Gemini's free tier (1500 req/day) and Serper's free credits; HF Spaces Free + Turso Starter Free for hosting + DB.
 
 ---
 
