@@ -40,10 +40,17 @@ test_reviews_result.md
 
 # Internal dev notes (kept locally, not on GitHub)
 CLAUDE.md
+*.backup.*
 自動化規則.md
 ISSUES_RESOLVED.md
 RESEARCH_google_maps_scraping.md
 InsightX_簡報.pptx
+
+# Local-only helpers (not for repo)
+start_insightx.command
+
+# Video generation pipeline (160MB+ of frames/MP4s, local only)
+video/
 
 # Original game images (replaced by compressed .jpg)
 public/pictures/*.png
