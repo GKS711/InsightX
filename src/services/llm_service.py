@@ -33,17 +33,19 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 # Multi-model fallback chain — try primary, fall through to alternatives on
-# 5xx / RESOURCE_EXHAUSTED. Empirically necessary: Google AI free-tier has
-# occasional model-specific outages (we hit one during HF Spaces deploy where
-# gemma-4-31b-it + gemini-2.5-flash were both returning 500/503 but
-# gemini-2.5-flash-lite was up). Each model gets its own retry budget;
-# total worst-case calls = max_attempts × len(MODEL_CHAIN).
+# 5xx / RESOURCE_EXHAUSTED. Each model gets its own retry budget; total
+# worst-case calls = max_attempts × len(MODEL_CHAIN).
 #
-# Order:
-#   1. gemma-4-31b-it      — primary, free quality/cost sweet spot
-#   2. gemini-2.5-flash    — Google GA fallback (higher quota, sometimes spikes)
-#   3. gemini-2.5-flash-lite — last-resort lighter model
+# Order (aligned with v5 LINE bot's GEMINI_PRIMARY/FALLBACK pattern):
+#   1. gemma-4-26b-a4b-it   — primary, MoE Active 4B params (thinking fast,
+#                              best latency on free tier)
+#   2. gemma-4-31b-it       — dense 31B fallback (slower because default
+#                              thinking is on; higher quality on complex inputs)
+#   3. gemini-2.5-flash     — Google GA fallback (higher quota, sometimes
+#                              spikes 503 high-demand)
+#   4. gemini-2.5-flash-lite — last-resort lighter model
 MODEL_CHAIN = [
+    "gemma-4-26b-a4b-it",
     "gemma-4-31b-it",
     "gemini-2.5-flash",
     "gemini-2.5-flash-lite",
