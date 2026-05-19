@@ -69,16 +69,23 @@ _engine_kwargs: dict = {"echo": _echo}
 if _connect_args:
     _engine_kwargs["connect_args"] = _connect_args
 
-# Connection pool only useful for networked backends (Turso remote).
-# Local file SQLite / libsql don't need pooling.
+# Connection pool config.
+#
+# sqlalchemy-libsql uses SingletonThreadPool (one connection per thread),
+# which doesn't accept QueuePool-only kwargs like pool_size / max_overflow.
+# Passing them raises:
+#   TypeError: Invalid argument(s) 'max_overflow' sent to create_engine(),
+#   using configuration SQLiteDialect_libsql/SingletonThreadPool/Engine.
+#
+# So we ONLY apply pool_pre_ping for remote libsql (catches stale connections
+# after HF Spaces' 48h auto-sleep wake), and never override poolclass — let
+# the dialect pick its own.
 _is_remote = (
     DATABASE_URL.startswith("sqlite+libsql://")
     and not DATABASE_URL.startswith("sqlite+libsql:///")
 )
 if _is_remote:
     _engine_kwargs["pool_pre_ping"] = True
-    _engine_kwargs["pool_size"] = 10
-    _engine_kwargs["max_overflow"] = 20
 
 engine = create_engine(DATABASE_URL, **_engine_kwargs)
 
