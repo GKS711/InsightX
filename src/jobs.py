@@ -343,6 +343,12 @@ def run_analysis_bg(
                     raise ValueError(f"unknown ai_function: {ai_function}")
 
                 run.output_json = output if isinstance(output, dict) else {"text": output}
+                # v6.1 #5: persist the actually-used model after MODEL_CHAIN
+                # fallback. LLMService writes a thread-local on each successful
+                # generate; same thread = same value here.
+                actual_model = LLMService.get_last_used_model()
+                if actual_model:
+                    run.model_id = actual_model
                 run.status = "succeeded"
                 run.finished_at = datetime.now(tz=timezone.utc)
                 if not _safe_commit_or_log(session, "analysis", run_id):

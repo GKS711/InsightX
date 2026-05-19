@@ -132,6 +132,15 @@ class Store(Base):
         CheckConstraint(
             "platform IN ('google', 'youtube')", name="ck_stores_platform"
         ),
+        # v6.1 #3 (Codex pre-freeze review): prevents concurrent
+        # POST /stores or bridge-side same-URL inserts from creating
+        # duplicate Store rows. NULL primary_url is allowed and not
+        # constrained (multiple Stores can be NULL — SQLite + Postgres
+        # both treat NULLs as distinct in UNIQUE).
+        UniqueConstraint(
+            "workspace_id", "primary_url",
+            name="uq_stores_workspace_primary_url",
+        ),
     )
 
 

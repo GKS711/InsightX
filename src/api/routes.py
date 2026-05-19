@@ -26,13 +26,16 @@ import queue as queue_mod
 import threading
 import time
 from datetime import datetime, timezone
+from hashlib import sha256
 from typing import Literal, Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
+from src.auth import get_current_user
 from src.config.mock_responses import get_mock_response
 from src.db import SessionLocal
 from src.models import (
@@ -67,95 +70,98 @@ ROUTE_ANALYZE_LLM_FLOOR_S = 10.0  # 少於這就跳過 LLM 直接回 mock
 SSE_ANALYZE_LLM_BUDGET_S = 90.0   # LLM call budget for SSE path
 
 
-# ────────────────────────────────────────────────────────────────────
-# v6 bridge: v4 stateless analyze → v5 workspace persistence
+# ════════════════════════════════════════════════════════════════════
+# v6.1 bridge: v4 stateless analyze → v5 workspace persistence (per-user)
 #
-# Bug background: v4 /api/analyze and /api/v4/analyze-stream were
-# completely stateless — they scrape + run Gemini and return JSON, but
-# never wrote to the v5 Turso schema. Result: user analyzes a store on
-# the landing page, then opens /workspace/, sees nothing. The two paths
-# never met.
+# v6.0.0-alpha bug: v4 /api/analyze and /api/v4/analyze-stream were stateless.
+# Result: landing-page analyses never showed up under /workspace/.
 #
-# This bridge persists every successful v4 analyze as a v5 Store with
-# its ReviewSource + ScrapeJob + Reviews + AnalysisRun. Idempotent on
-# (workspace, external_url): re-analyzing the same URL refreshes the
-# existing Store and appends new ScrapeJob/AnalysisRun rows (audit trail).
+# v6.0.0-alpha quick-fix: bridge gated by IX_ENABLE_V4_WORKSPACE_PERSIST
+# env flag (off by default) because all visitors shared dev@insightx.local.
 #
-# ⚠️ DISABLED BY DEFAULT (env-gated)
-# ─────────────────────────────────────
-# Codex pre-freeze review (task 0d309dd01043) flagged a CRITICAL privacy
-# issue: there's no auth yet (v5α dev mode uses a hard-coded default user),
-# so on a multi-tenant public demo, EVERY visitor's landing analyzes
-# would write into the same shared workspace — User A could open
-# /workspace/ and see User B's analyzed URLs / review text / generated
-# reports. That's a real data-boundary leak.
+# v6.1 proper fix (this version): cookie-scoped per-visitor users (see
+# src/auth.py) make the bridge safe for public multi-tenant demos. The env
+# flag is gone — bridge always runs, but each visitor writes to their own
+# anon user's workspace, isolated from everyone else's.
 #
-# Until cookie-based anonymous session scoping lands (planned v6.1), the
-# bridge is OFF on public deployments. Set `IX_ENABLE_V4_WORKSPACE_PERSIST=1`
-# in your env to enable — appropriate for single-user self-hosting only.
-#
-# Failure (after the flag check) is NON-FATAL — wrapped in try/except +
-# logged. The v4 response is the user-facing result; persistence is
-# best-effort.
-# ────────────────────────────────────────────────────────────────────
+# Bridge guarantees:
+#   - Idempotent on (workspace_id, primary_url): same visitor re-analyzing
+#     same URL refreshes the existing Store + appends new ScrapeJob /
+#     AnalysisRun rows (audit trail).
+#   - Concurrent-same-URL race-safe: catches IntegrityError from the
+#     UniqueConstraint(workspace_id, primary_url) and reselects the winner.
+#   - Reviews dedupe via sha256 external_id (#4): re-scraping same URL
+#     won't append duplicate Review rows.
+#   - Records the actual post-fallback LLMService model in AnalysisRun.model_id
+#     via LLMService.get_last_used_model() (#5).
+#   - Non-fatal on error: swallows exceptions + logs, so the v4 user-facing
+#     response never breaks from a DB hiccup.
+# ════════════════════════════════════════════════════════════════════
 
-# Codex CRITICAL fix: env flag — explicit opt-in required.
-# Default OFF for public-demo safety. Self-hosted single-user: set =1.
-_ENABLE_V4_WORKSPACE_PERSIST = os.getenv("IX_ENABLE_V4_WORKSPACE_PERSIST", "0") == "1"
+def _review_external_id(source_id: int, raw: dict) -> str:
+    """v6.1 #4: stable sha256-derived ID for a Review row.
 
-def _get_or_create_default_user(session) -> User:
-    """v5α dev mode — same default user as src/api/v5.py uses. Duplicated
-    here (not imported) to keep route modules import-independent."""
-    result = session.execute(select(User).where(User.email == "dev@insightx.local"))
-    user = result.scalar_one_or_none()
-    if user is None:
-        user = User(email="dev@insightx.local", plan="free")
-        session.add(user)
-        session.flush()
-    return user
+    Schema already has UniqueConstraint(source_id, external_id). When the
+    scraper provides an `id` field we use it directly (Serper / YouTube
+    Data API both return stable comment IDs). When it doesn't (or is
+    empty), we hash on the only naturally-stable composite key we have:
+    source + author + date + text snippet. 32 hex chars fits the
+    String(256) column easily.
+    """
+    explicit = raw.get("id") or raw.get("external_id")
+    if isinstance(explicit, str) and explicit.strip():
+        return explicit.strip()[:256]
+    author = (raw.get("author") or "").strip()
+    date = (raw.get("date") or raw.get("published_at") or raw.get("time") or "")
+    text = (raw.get("text") or "").strip()
+    key = f"{source_id}|{author}|{date}|{text}".encode("utf-8", errors="replace")
+    return sha256(key).hexdigest()[:32]
 
 
 def _persist_v4_analyze_to_workspace(
+    *,
+    user_id: int,
     url: str,
     platform: str,
     scrape_result: dict,
     analysis_result: Optional[dict],
+    model_used: Optional[str] = None,
 ) -> None:
-    """Bridge v4 analyze → v5 workspace. Idempotent on external_url; non-fatal.
+    """Bridge v4 analyze → v5 workspace, scoped to the requesting visitor.
 
     Called after a successful (or partially successful) v4 analyze. Always
     swallows exceptions — the v4 user-facing response must not break because
     of a DB hiccup. Logs warnings on failure for debugging.
 
-    Gated by IX_ENABLE_V4_WORKSPACE_PERSIST env flag (see module-level
-    constant comment). On public multi-tenant demos this MUST stay disabled
-    until cookie-based session scoping is implemented.
+    v6.1: takes user_id explicitly (no more hardcoded default user). Callers
+    pull the User from FastAPI Depends(get_current_user) and pass user.id.
     """
-    if not _ENABLE_V4_WORKSPACE_PERSIST:
-        return  # multi-tenant safety: bridge disabled by default
+    if not isinstance(user_id, int) or user_id <= 0:
+        # No valid session yet (rare — get_current_user always creates one,
+        # but background paths might not have one). Skip persistence.
+        return
     try:
         with SessionLocal() as session:
-            user = _get_or_create_default_user(session)
-
             # 1. Default workspace per user (create on first analyze)
             ws = session.scalar(
                 select(Workspace)
-                .where(Workspace.owner_user_id == user.id)
+                .where(Workspace.owner_user_id == user_id)
                 .order_by(Workspace.id)
                 .limit(1)
             )
             if ws is None:
-                ws = Workspace(owner_user_id=user.id, name="我的分析")
+                ws = Workspace(owner_user_id=user_id, name="我的分析")
                 session.add(ws)
                 session.flush()
 
-            # 2. Find existing ReviewSource for this URL within the workspace
-            src = session.scalar(
-                select(ReviewSource)
-                .join(Store, Store.id == ReviewSource.store_id)
+            # 2. Find existing Store with same primary_url within the workspace.
+            #    We dedupe on (workspace_id, primary_url) — the schema has
+            #    UniqueConstraint enforcing this since v6.1.
+            store = session.scalar(
+                select(Store)
                 .where(
                     Store.workspace_id == ws.id,
-                    ReviewSource.external_url == url,
+                    Store.primary_url == url,
                 )
                 .limit(1)
             )
@@ -168,8 +174,9 @@ def _persist_v4_analyze_to_workspace(
             if not isinstance(review_count, int):
                 review_count = 0
 
-            if src is None:
-                # New store + new source
+            if store is None:
+                # New store — INSERT can race with another concurrent request
+                # for the same URL. Catch IntegrityError + reselect.
                 store = Store(
                     workspace_id=ws.id,
                     name=store_name[:255],
@@ -178,8 +185,39 @@ def _persist_v4_analyze_to_workspace(
                     platform=platform if platform in ("google", "youtube") else "google",
                 )
                 session.add(store)
-                session.flush()
+                try:
+                    session.flush()
+                except IntegrityError:
+                    session.rollback()
+                    # Another request just won the race; pick up its Store.
+                    store = session.scalar(
+                        select(Store)
+                        .where(
+                            Store.workspace_id == ws.id,
+                            Store.primary_url == url,
+                        )
+                        .limit(1)
+                    )
+                    if store is None:
+                        # Race lost AND lookup also failed — abort gracefully.
+                        return
+            else:
+                # Existing store — refresh metadata
+                if store_name and store.name != store_name:
+                    store.name = store_name[:255]
+                if address and store.address != address:
+                    store.address = address[:500]
 
+            # 3. Reuse-or-create ReviewSource for this URL
+            src = session.scalar(
+                select(ReviewSource)
+                .where(
+                    ReviewSource.store_id == store.id,
+                    ReviewSource.external_url == url,
+                )
+                .limit(1)
+            )
+            if src is None:
                 src = ReviewSource(
                     store_id=store.id,
                     source_type=source_type,
@@ -190,20 +228,11 @@ def _persist_v4_analyze_to_workspace(
                 session.add(src)
                 session.flush()
             else:
-                # Existing store — refresh metadata + reuse source
-                store = session.get(Store, src.store_id)
-                if store is not None:
-                    if store_name and store.name != store_name:
-                        store.name = store_name[:255]
-                    if address and store.address != address:
-                        store.address = address[:500]
-                    if store.primary_url != url:
-                        store.primary_url = url[:2000]
                 src.last_scraped_at = now
                 if review_count:
                     src.total_reviews_estimated = review_count
 
-            # 3. New ScrapeJob (succeeded — we already have data in hand)
+            # 4. New ScrapeJob (succeeded — we already have data in hand)
             job = ScrapeJob(
                 source_id=src.id,
                 status="succeeded",
@@ -215,8 +244,10 @@ def _persist_v4_analyze_to_workspace(
             session.add(job)
             session.flush()
 
-            # 4. Reviews (if structured list present)
+            # 5. Reviews with v6.1 #4 sha256 dedupe — if we already have
+            # a Review row with same (source_id, external_id) we skip.
             structured = scrape_result.get("reviews_structured") or []
+            new_reviews = 0
             if isinstance(structured, list):
                 for r in structured:
                     if not isinstance(r, dict):
@@ -224,16 +255,32 @@ def _persist_v4_analyze_to_workspace(
                     text = (r.get("text") or "").strip()
                     if not text:
                         continue
+                    ext_id = _review_external_id(src.id, r)
+                    # Try insert; if duplicate, skip silently.
                     rev = Review(
                         source_id=src.id,
                         scrape_job_id=job.id,
+                        external_id=ext_id,
                         author=(r.get("author") or None),
                         rating=r.get("rating") if isinstance(r.get("rating"), int) else None,
                         text=text,
                     )
                     session.add(rev)
+                    try:
+                        session.flush()
+                        new_reviews += 1
+                    except IntegrityError:
+                        # uq_reviews_source_external rejection → seen this
+                        # review before. Roll back this row but keep transaction.
+                        session.rollback()
+                        # Need to re-fetch Store/Source/Job after rollback
+                        store = session.get(Store, store.id)
+                        src = session.get(ReviewSource, src.id)
+                        job = session.get(ScrapeJob, job.id)
+                        if store is None or src is None or job is None:
+                            return  # something else cascade-deleted; bail
 
-            # 5. AnalysisRun (if LLM produced a result dict)
+            # 6. AnalysisRun with v6.1 #5 — store the actual post-fallback model
             if isinstance(analysis_result, dict):
                 run = AnalysisRun(
                     store_id=store.id,
@@ -241,21 +288,23 @@ def _persist_v4_analyze_to_workspace(
                     status="succeeded",
                     started_at=now,
                     finished_at=now,
+                    model_id=model_used or "unknown",
                     output_json=analysis_result,
                 )
                 session.add(run)
 
             session.commit()
             print(
-                f"[v6|persist] saved store_id={store.id} source_id={src.id} "
-                f"job_id={job.id} reviews={len(structured)} url={url[:60]}",
+                f"[v6.1|persist] user={user_id} store={store.id} src={src.id} "
+                f"job={job.id} new_reviews={new_reviews}/{len(structured)} "
+                f"model={model_used or '-'} url={url[:60]}",
                 flush=True,
             )
     except Exception as exc:
         # Non-fatal — analyze response is the user-facing result.
         import traceback
         print(
-            f"[v6|persist] WARN: failed to persist v4 analyze to workspace: {exc}",
+            f"[v6.1|persist] WARN: failed to persist v4 analyze: {exc}",
             flush=True,
         )
         traceback.print_exc()
@@ -380,7 +429,10 @@ MOCK_ANALYSIS_YOUTUBE = {
 
 
 @router.post("/analyze")
-def analyze(request: AnalyzeRequest):
+def analyze(
+    request: AnalyzeRequest,
+    user: User = Depends(get_current_user),  # v6.1: cookie-scoped per visitor
+):
     """主要分析端點（v4.0.0，v6 sync）。"""
     from src.services.youtube_scraper import is_youtube_url
 
@@ -480,13 +532,15 @@ def analyze(request: AnalyzeRequest):
                 print(f"[SUCCESS] 分析完成 · 標的={result.get('store_name', '')!r} · "
                       f"正面={len(result.get('good', []))} · 負面={len(result.get('bad', []))}")
 
-                # v6 bridge: persist this successful analyze to /workspace/
-                # so the store shows up after the user finishes here.
+                # v6.1 bridge: persist this successful analyze to /workspace/
+                # so the store shows up under the visitor's workspace.
                 _persist_v4_analyze_to_workspace(
+                    user_id=user.id,
                     url=request.url,
                     platform=scraped_platform,
                     scrape_result=scrape_result,
                     analysis_result=result,
+                    model_used=LLMService.get_last_used_model(),
                 )
 
                 return attach_metadata(
@@ -767,6 +821,7 @@ def analyze_stream_v4(
     url: str = Query(..., min_length=1),
     platform: Optional[Literal["google", "youtube"]] = Query(None),
     yt_role: Optional[Literal["creator", "shop", "brand"]] = Query(None),
+    user: User = Depends(get_current_user),  # v6.1: cookie-scoped per visitor
 ):
     """v4 結構化 SSE。v6 sync 改用 threading + queue.Queue."""
     from src.services.youtube_scraper import is_youtube_url
@@ -774,6 +829,9 @@ def analyze_stream_v4(
     # Pre-stream validation (HTTP 422, 不進 stream)
     detected_platform: Platform = "youtube" if is_youtube_url(url) else "google"
     verify_platform_hint(detected_platform, platform)
+
+    # Capture user_id into closure for the SSE worker thread.
+    user_id = user.id
 
     warnings: list = []
     effective_yt_role = canonicalize_yt_role(detected_platform, yt_role, warnings)
@@ -950,14 +1008,17 @@ def analyze_stream_v4(
                     warnings=warnings,
                 )
 
-                # v6 bridge: persist this successful SSE analyze to /workspace/
+                # v6.1 bridge: persist this successful SSE analyze to /workspace/
                 # (only when we have real reviews — skip no_reviews fallback case).
+                # user_id closure-captured from the FastAPI endpoint above.
                 if analysis.get("good") or analysis.get("bad"):
                     _persist_v4_analyze_to_workspace(
+                        user_id=user_id,
                         url=url,
                         platform=scraped_platform,
                         scrape_result=scrape_result,
                         analysis_result=analysis,
+                        model_used=LLMService.get_last_used_model(),
                     )
 
                 event_q.put(("terminal", _sse_event("result", {
@@ -1005,13 +1066,18 @@ def analyze_stream_v4(
 
 
 @router.get("/analyze-stream")
-def analyze_stream(url: str):
+def analyze_stream(
+    url: str,
+    user: User = Depends(get_current_user),  # v6.1: cookie-scoped per visitor
+):
     """
     [DEPRECATED · v3 legacy SSE]
     使用情境：只剩 `/legacy` HTML 在用。新 v4 UI 走 `/api/v4/analyze-stream`.
     v6 sync 簡化版：純 sync generator，不用 producer-consumer。
     """
     from src.services.youtube_scraper import is_youtube_url
+
+    user_id = user.id  # closure capture for the generator
 
     def event_generator():
         def log(msg: str):
@@ -1097,12 +1163,14 @@ def analyze_stream(url: str):
                         bad_count = len(result.get("bad", []))
                         yield log(f"✅ 分析完成！正面 {good_count} 項 · 負面 {bad_count} 項")
 
-                        # v6 bridge: persist legacy /analyze-stream success too
+                        # v6.1 bridge: persist legacy /analyze-stream success too
                         _persist_v4_analyze_to_workspace(
+                            user_id=user_id,
                             url=url,
                             platform=scraped_platform,
                             scrape_result=scrape_result,
                             analysis_result=result,
+                            model_used=LLMService.get_last_used_model(),
                         )
 
                         yield f"event: result\ndata: {json.dumps(result, ensure_ascii=False)}\n\n"

@@ -1,26 +1,40 @@
 """
-v6 API router — persistent multi-store insight workspace, sync edition.
+v6.1 API router — persistent multi-store insight workspace, sync edition.
 
 Mounted at /api/v5/* in src/main.py. Uses sync SQLAlchemy session via
 Depends(get_session_dep). All endpoints write to / read from the v5 tables.
 
-v6 sync 轉換（從 v5 async）：
-  - `AsyncSession` → `Session`（sqlalchemy.orm）
-  - 所有 `async def` endpoint → `def`（FastAPI sync route 跑在 thread pool）
-  - 所有 `await session.X` → `session.X`
-  - URL prefix 仍是 `/api/v5/*`（schema 沒變，前端不用改）
+v6.1 changes (vs v6.0.0-alpha)
+──────────────────────────────
+Codex pre-freeze review (task 0d309dd01043) flagged two real boundary
+issues in the v5α dev-mode handling:
+
+  #1  Every request was scoped to one hard-coded `dev@insightx.local`
+      user, so visitor A could see visitor B's data via /workspace/.
+      v6.1 fix: src/auth.py — cookie-based anonymous session scoping.
+
+  #2  Most by-id endpoints called `session.get(X, id)` without joining
+      back to Workspace.owner_user_id, so ID-guessing could cross-tenant
+      leak even after cookie scoping.
+      v6.1 fix: this file — _get_owned_* helpers used everywhere.
+
+v6 → v6.1 ABI delta: zero (frontend doesn't change). The cookie is
+set transparently on first response; everything else is implementation
+detail.
 """
 from __future__ import annotations
 
-from typing import Optional
-
 import os
+from hashlib import sha256
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from src.auth import get_current_user
 from src.db import get_session_dep
 from src.jobs import fire_analysis_run, fire_scrape_job, progress_stream
 from src.models import (
@@ -60,29 +74,86 @@ _SSE_HEADERS = {
 }
 
 
-# ────────────────────────────────────────────────────────────────────
-# Helper: dev-mode default user
-# ────────────────────────────────────────────────────────────────────
-def _get_or_create_default_user(session: Session) -> User:
-    """v5.0.0-alpha 還沒做 auth — dev 模式下用 default user。"""
-    result = session.execute(select(User).where(User.email == "dev@insightx.local"))
-    user = result.scalar_one_or_none()
-    if user is None:
-        user = User(email="dev@insightx.local", plan="free")
-        session.add(user)
-        session.flush()
-    return user
+# ════════════════════════════════════════════════════════════════════
+#  v6.1 Ownership-scoping helpers
+# ════════════════════════════════════════════════════════════════════
+# Every by-id endpoint goes through one of these. The query always
+# joins back through Workspace.owner_user_id == user.id so visitors
+# cannot read or mutate another visitor's data by guessing IDs.
+#
+# 404 (not 403) is intentional: don't leak existence of resources
+# belonging to other users.
 
 
-# ────────────────────────────────────────────────────────────────────
-# Workspaces
-# ────────────────────────────────────────────────────────────────────
+def _get_owned_workspace(session: Session, workspace_id: int, user: User) -> Workspace:
+    ws = session.scalar(
+        select(Workspace).where(
+            Workspace.id == workspace_id,
+            Workspace.owner_user_id == user.id,
+        )
+    )
+    if ws is None:
+        raise HTTPException(404, detail="workspace not found")
+    return ws
+
+
+def _get_owned_store(session: Session, store_id: int, user: User) -> Store:
+    store = session.scalar(
+        select(Store)
+        .join(Workspace, Workspace.id == Store.workspace_id)
+        .where(Store.id == store_id, Workspace.owner_user_id == user.id)
+    )
+    if store is None:
+        raise HTTPException(404, detail="store not found")
+    return store
+
+
+def _get_owned_job(session: Session, job_id: int, user: User) -> ScrapeJob:
+    job = session.scalar(
+        select(ScrapeJob)
+        .join(ReviewSource, ReviewSource.id == ScrapeJob.source_id)
+        .join(Store, Store.id == ReviewSource.store_id)
+        .join(Workspace, Workspace.id == Store.workspace_id)
+        .where(ScrapeJob.id == job_id, Workspace.owner_user_id == user.id)
+    )
+    if job is None:
+        raise HTTPException(404, detail="job not found")
+    return job
+
+
+def _get_owned_run(session: Session, run_id: int, user: User) -> AnalysisRun:
+    run = session.scalar(
+        select(AnalysisRun)
+        .join(Store, Store.id == AnalysisRun.store_id)
+        .join(Workspace, Workspace.id == Store.workspace_id)
+        .where(AnalysisRun.id == run_id, Workspace.owner_user_id == user.id)
+    )
+    if run is None:
+        raise HTTPException(404, detail="run not found")
+    return run
+
+
+def _get_owned_report(session: Session, report_id: int, user: User) -> Report:
+    rpt = session.scalar(
+        select(Report)
+        .join(Store, Store.id == Report.store_id)
+        .join(Workspace, Workspace.id == Store.workspace_id)
+        .where(Report.id == report_id, Workspace.owner_user_id == user.id)
+    )
+    if rpt is None:
+        raise HTTPException(404, detail="report not found")
+    return rpt
+
+
+# ════════════════════════════════════════════════════════════════════
+#  Workspaces
+# ════════════════════════════════════════════════════════════════════
 @router.post("/workspaces", response_model=WorkspaceOut, status_code=status.HTTP_201_CREATED)
 def create_workspace(
     body: WorkspaceCreate,
+    user: User = Depends(get_current_user),
     session: Session = Depends(get_session_dep),
 ) -> WorkspaceOut:
-    user = _get_or_create_default_user(session)
     ws = Workspace(owner_user_id=user.id, name=body.name)
     session.add(ws)
     session.commit()
@@ -92,28 +163,27 @@ def create_workspace(
 
 @router.get("/workspaces", response_model=list[WorkspaceOut])
 def list_workspaces(
+    user: User = Depends(get_current_user),
     session: Session = Depends(get_session_dep),
 ) -> list[WorkspaceOut]:
-    user = _get_or_create_default_user(session)
     result = session.execute(
-        select(Workspace).where(Workspace.owner_user_id == user.id).order_by(Workspace.created_at.desc())
+        select(Workspace)
+        .where(Workspace.owner_user_id == user.id)
+        .order_by(Workspace.created_at.desc())
     )
     return [WorkspaceOut.model_validate(w) for w in result.scalars().all()]
 
 
-# ────────────────────────────────────────────────────────────────────
-# Stores
-# ────────────────────────────────────────────────────────────────────
+# ════════════════════════════════════════════════════════════════════
+#  Stores
+# ════════════════════════════════════════════════════════════════════
 @router.post("/stores", response_model=StoreOut, status_code=status.HTTP_201_CREATED)
 def create_store(
     body: StoreCreate,
+    user: User = Depends(get_current_user),
     session: Session = Depends(get_session_dep),
 ) -> StoreOut:
-    # 確認 workspace 存在 + 屬於當前 user
-    user = _get_or_create_default_user(session)
-    ws = session.get(Workspace, body.workspace_id)
-    if ws is None or ws.owner_user_id != user.id:
-        raise HTTPException(404, detail="workspace not found")
+    _get_owned_workspace(session, body.workspace_id, user)  # 404 if not owned
 
     store = Store(
         workspace_id=body.workspace_id,
@@ -123,7 +193,14 @@ def create_store(
         platform=body.platform,
     )
     session.add(store)
-    session.commit()
+    try:
+        session.commit()
+    except IntegrityError:
+        # v6.1 #3: Store has UniqueConstraint(workspace_id, primary_url) —
+        # concurrent same-URL POST races to one winner; we surface 409 so
+        # the caller can re-GET the existing store instead of seeing a 500.
+        session.rollback()
+        raise HTTPException(409, detail="store with same primary_url already exists in this workspace")
     session.refresh(store)
     return StoreOut.model_validate(store)
 
@@ -131,9 +208,9 @@ def create_store(
 @router.get("/stores", response_model=list[StoreOut])
 def list_stores(
     workspace_id: Optional[int] = None,
+    user: User = Depends(get_current_user),
     session: Session = Depends(get_session_dep),
 ) -> list[StoreOut]:
-    user = _get_or_create_default_user(session)
     stmt = (
         select(Store)
         .join(Workspace, Workspace.id == Store.workspace_id)
@@ -149,40 +226,28 @@ def list_stores(
 @router.get("/stores/{store_id}", response_model=StoreOut)
 def get_store(
     store_id: int,
+    user: User = Depends(get_current_user),
     session: Session = Depends(get_session_dep),
 ) -> StoreOut:
-    store = session.get(Store, store_id)
-    if store is None:
-        raise HTTPException(404, detail="store not found")
-    return StoreOut.model_validate(store)
+    return StoreOut.model_validate(_get_owned_store(session, store_id, user))
 
 
 @router.delete("/stores/{store_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_store(
     store_id: int,
+    user: User = Depends(get_current_user),
     session: Session = Depends(get_session_dep),
 ) -> None:
     """刪除店家 + cascade 砍掉 sources / jobs / reviews / runs / reports。
 
-    - Ownership scoped: JOIN Workspace.owner_user_id == current user
-      （配合 list_stores 的 pattern；v5α 還沒 auth、目前用 default user，
-      但 endpoint 不能比 list 還寬鬆。）
-    - 409 if active scrape/analysis exists: 避免 background worker 完成
-      外部 IO 後 commit 到 cascade-deleted row（jobs.py 也加了 _safe_commit
-      容錯，但 API 層先擋是主防線）。
-    - SQLite/libsql 需 PRAGMA foreign_keys=ON（src/db.py 已處理）；Postgres
-      直接走 ondelete='CASCADE'。
-    - 不刪 outputs/reports/ 下的實體 PDF/DOCX 檔（audit trail，之後再加清理 job）。
+    Layered race protection (v5 Round 3, still in force):
+      - API layer 409 if there's an active scrape/analysis (best-effort).
+      - Worker layer `_safe_commit_or_log` in jobs.py catches the post-
+        cascade IntegrityError if the race fires anyway.
+      - Plus `passive_deletes=True` on every cascade relationship in
+        src/models.py so the DB does the cascade in one statement.
     """
-    user = _get_or_create_default_user(session)
-    result = session.execute(
-        select(Store)
-        .join(Workspace, Workspace.id == Store.workspace_id)
-        .where(Store.id == store_id, Workspace.owner_user_id == user.id)
-    )
-    store = result.scalar_one_or_none()
-    if store is None:
-        raise HTTPException(404, detail="store not found")
+    store = _get_owned_store(session, store_id, user)  # 404 if not owned
 
     active_scrape = session.scalar(
         select(ScrapeJob.id)
@@ -211,18 +276,17 @@ def delete_store(
     session.commit()
 
 
-# ────────────────────────────────────────────────────────────────────
-# Review sources
-# ────────────────────────────────────────────────────────────────────
+# ════════════════════════════════════════════════════════════════════
+#  Review sources
+# ════════════════════════════════════════════════════════════════════
 @router.post("/stores/{store_id}/sources", response_model=ReviewSourceOut, status_code=status.HTTP_201_CREATED)
 def add_source(
     store_id: int,
     body: ReviewSourceCreate,
+    user: User = Depends(get_current_user),
     session: Session = Depends(get_session_dep),
 ) -> ReviewSourceOut:
-    store = session.get(Store, store_id)
-    if store is None:
-        raise HTTPException(404, detail="store not found")
+    _get_owned_store(session, store_id, user)  # 404 if not owned
 
     src = ReviewSource(
         store_id=store_id,
@@ -235,20 +299,19 @@ def add_source(
     return ReviewSourceOut.model_validate(src)
 
 
-# ────────────────────────────────────────────────────────────────────
-# Scrape jobs (Phase 3 同步觸發；實際 scrape 在 daemon thread 跑)
-# ────────────────────────────────────────────────────────────────────
+# ════════════════════════════════════════════════════════════════════
+#  Scrape jobs (sync trigger; actual scrape runs in daemon thread)
+# ════════════════════════════════════════════════════════════════════
 @router.post("/stores/{store_id}/scrape", response_model=ScrapeJobOut, status_code=status.HTTP_202_ACCEPTED)
 def trigger_scrape(
     store_id: int,
+    user: User = Depends(get_current_user),
     session: Session = Depends(get_session_dep),
 ) -> ScrapeJobOut:
     """觸發 background scrape job。立刻回 job (status=queued)，client 用 GET /jobs/{id} 或 SSE 看進度。"""
-    store = session.get(Store, store_id)
-    if store is None:
-        raise HTTPException(404, detail="store not found")
+    _get_owned_store(session, store_id, user)  # 404 if not owned
 
-    # 取第一個 source（v5.0.0-alpha 簡化：每個 store 一個 source）
+    # 取第一個 source（v5α 簡化：每個 store 一個 source）
     result = session.execute(
         select(ReviewSource).where(ReviewSource.store_id == store_id).limit(1)
     )
@@ -256,13 +319,11 @@ def trigger_scrape(
     if src is None:
         raise HTTPException(400, detail="store has no review_source — POST /sources first")
 
-    # 建 job row (status='queued')
     job = ScrapeJob(source_id=src.id, status="queued")
     session.add(job)
     session.commit()
     session.refresh(job)
 
-    # fire-and-forget background task (daemon thread)
     fire_scrape_job(job.id, src.id, src.external_url)
 
     return ScrapeJobOut.model_validate(job)
@@ -271,17 +332,23 @@ def trigger_scrape(
 @router.get("/jobs/{job_id}", response_model=ScrapeJobOut)
 def get_job(
     job_id: int,
+    user: User = Depends(get_current_user),
     session: Session = Depends(get_session_dep),
 ) -> ScrapeJobOut:
-    job = session.get(ScrapeJob, job_id)
-    if job is None:
-        raise HTTPException(404, detail="job not found")
-    return ScrapeJobOut.model_validate(job)
+    return ScrapeJobOut.model_validate(_get_owned_job(session, job_id, user))
 
 
 @router.get("/jobs/{job_id}/stream")
-def stream_job(job_id: int) -> StreamingResponse:
-    """SSE: 推 scrape job 進度 events 直到 succeeded/failed/timeout。"""
+def stream_job(
+    job_id: int,
+    user: User = Depends(get_current_user),
+    session: Session = Depends(get_session_dep),
+) -> StreamingResponse:
+    """SSE: 推 scrape job 進度 events 直到 succeeded/failed/timeout。
+
+    v6.1: ownership-scoped — 404 if job belongs to another user.
+    """
+    _get_owned_job(session, job_id, user)  # 404 if not owned
     return StreamingResponse(
         progress_stream("scrape", job_id, idle_timeout_s=180.0),
         media_type="text/event-stream",
@@ -290,8 +357,16 @@ def stream_job(job_id: int) -> StreamingResponse:
 
 
 @router.get("/runs/{run_id}/stream")
-def stream_run(run_id: int) -> StreamingResponse:
-    """SSE: 推 analysis run 進度 events 直到 succeeded/failed/timeout。"""
+def stream_run(
+    run_id: int,
+    user: User = Depends(get_current_user),
+    session: Session = Depends(get_session_dep),
+) -> StreamingResponse:
+    """SSE: 推 analysis run 進度 events 直到 succeeded/failed/timeout。
+
+    v6.1: ownership-scoped — 404 if run belongs to another user.
+    """
+    _get_owned_run(session, run_id, user)  # 404 if not owned
     return StreamingResponse(
         progress_stream("analysis", run_id, idle_timeout_s=180.0),
         media_type="text/event-stream",
@@ -299,16 +374,19 @@ def stream_run(run_id: int) -> StreamingResponse:
     )
 
 
-# ────────────────────────────────────────────────────────────────────
-# Reviews
-# ────────────────────────────────────────────────────────────────────
+# ════════════════════════════════════════════════════════════════════
+#  Reviews
+# ════════════════════════════════════════════════════════════════════
 @router.get("/stores/{store_id}/reviews", response_model=list[ReviewOut])
 def list_reviews(
     store_id: int,
     limit: int = 100,
+    user: User = Depends(get_current_user),
     session: Session = Depends(get_session_dep),
 ) -> list[ReviewOut]:
     """列指定 store 的最近 reviews（across all sources）。"""
+    _get_owned_store(session, store_id, user)  # 404 if not owned
+
     stmt = (
         select(Review)
         .join(ReviewSource, ReviewSource.id == Review.source_id)
@@ -320,23 +398,22 @@ def list_reviews(
     return [ReviewOut.model_validate(r) for r in result.scalars().all()]
 
 
-# ────────────────────────────────────────────────────────────────────
-# Analysis runs
-# ────────────────────────────────────────────────────────────────────
+# ════════════════════════════════════════════════════════════════════
+#  Analysis runs
+# ════════════════════════════════════════════════════════════════════
 @router.post("/stores/{store_id}/analyze", response_model=AnalysisRunOut, status_code=status.HTTP_202_ACCEPTED)
 def trigger_analysis(
     store_id: int,
     body: AnalysisRunCreate,
+    user: User = Depends(get_current_user),
     session: Session = Depends(get_session_dep),
 ) -> AnalysisRunOut:
     """觸發 background analysis run。立刻回 run (status=queued)，client 用 GET /runs/{id} 或 SSE 看進度。"""
-    store = session.get(Store, store_id)
-    if store is None:
-        raise HTTPException(404, detail="store not found")
+    store = _get_owned_store(session, store_id, user)  # 404 if not owned
 
     inputs = dict(body.inputs)
 
-    # 若 ai_function == 'analyze' 且沒帶 text，從 store 的 reviews table 組
+    # 若 ai_function == 'analyze' 且沒帶 text，從 store 的 reviews 組
     if body.ai_function == "analyze" and not inputs.get("text"):
         result = session.execute(
             select(Review)
@@ -349,7 +426,6 @@ def trigger_analysis(
         if not reviews:
             raise HTTPException(400, detail="store has no reviews — trigger /scrape first")
 
-        # 組 raw_text 給 LLM (mimics scraper output)
         lines = [f"【店家：{store.name}】顧客評論："]
         review_ids = []
         for r in reviews:
@@ -359,14 +435,18 @@ def trigger_analysis(
         inputs["text"] = "\n\n".join(lines)
         inputs["input_review_ids"] = review_ids
 
-    # 建 run row (status='queued')，fire background
     from src.services.llm_gateway import LLMGateway
+    from src.services.llm_service import MODEL_CHAIN
 
     run = AnalysisRun(
         store_id=store_id,
         ai_function=body.ai_function,
         prompt_version=LLMGateway.PROMPT_VERSION,
-        model_id="gemma-4-31b-it",
+        # v6.1 #5: model_id default tracks MODEL_CHAIN[0] (gemma-4-26b-a4b-it).
+        # The worker (src/jobs.py run_analysis_bg) overwrites this with the
+        # actual model that returned the successful response, captured from
+        # LLMService._generate() returning (text, model_used). See models.py.
+        model_id=MODEL_CHAIN[0],
         input_review_ids=inputs.get("input_review_ids"),
         status="queued",
     )
@@ -383,8 +463,11 @@ def trigger_analysis(
 def list_runs(
     store_id: int,
     limit: int = 50,
+    user: User = Depends(get_current_user),
     session: Session = Depends(get_session_dep),
 ) -> list[AnalysisRunOut]:
+    _get_owned_store(session, store_id, user)  # 404 if not owned
+
     stmt = (
         select(AnalysisRun)
         .where(AnalysisRun.store_id == store_id)
@@ -398,27 +481,24 @@ def list_runs(
 @router.get("/runs/{run_id}", response_model=AnalysisRunOut)
 def get_run(
     run_id: int,
+    user: User = Depends(get_current_user),
     session: Session = Depends(get_session_dep),
 ) -> AnalysisRunOut:
-    run = session.get(AnalysisRun, run_id)
-    if run is None:
-        raise HTTPException(404, detail="run not found")
-    return AnalysisRunOut.model_validate(run)
+    return AnalysisRunOut.model_validate(_get_owned_run(session, run_id, user))
 
 
-# ────────────────────────────────────────────────────────────────────
-# Compare (multi-store)
-# ────────────────────────────────────────────────────────────────────
+# ════════════════════════════════════════════════════════════════════
+#  Compare (multi-store)
+# ════════════════════════════════════════════════════════════════════
 @router.get("/stores/{store_id}/compare", response_model=StoreCompareOut)
 def compare_stores(
     store_id: int,
     other: int,
+    user: User = Depends(get_current_user),
     session: Session = Depends(get_session_dep),
 ) -> StoreCompareOut:
-    a = session.get(Store, store_id)
-    b = session.get(Store, other)
-    if a is None or b is None:
-        raise HTTPException(404, detail="one or both stores not found")
+    a = _get_owned_store(session, store_id, user)
+    b = _get_owned_store(session, other, user)
 
     def latest_analyze(sid: int) -> Optional[AnalysisRun]:
         stmt = (
@@ -431,34 +511,29 @@ def compare_stores(
             .order_by(AnalysisRun.created_at.desc())
             .limit(1)
         )
-        result = session.execute(stmt)
-        return result.scalar_one_or_none()
-
-    run_a = latest_analyze(store_id)
-    run_b = latest_analyze(other)
+        return session.execute(stmt).scalar_one_or_none()
 
     return StoreCompareOut(
         store_a=StoreOut.model_validate(a),
         store_b=StoreOut.model_validate(b),
-        latest_analyze_a=AnalysisRunOut.model_validate(run_a) if run_a else None,
-        latest_analyze_b=AnalysisRunOut.model_validate(run_b) if run_b else None,
-        summary=None,  # Phase 6 stretch: LLM 生成 prose comparison
+        latest_analyze_a=AnalysisRunOut.model_validate(latest_analyze(store_id)) if latest_analyze(store_id) else None,
+        latest_analyze_b=AnalysisRunOut.model_validate(latest_analyze(other)) if latest_analyze(other) else None,
+        summary=None,
     )
 
 
-# ────────────────────────────────────────────────────────────────────
-# Reports (PDF / DOCX export)
-# ────────────────────────────────────────────────────────────────────
+# ════════════════════════════════════════════════════════════════════
+#  Reports (PDF / DOCX export)
+# ════════════════════════════════════════════════════════════════════
 @router.post("/stores/{store_id}/reports", response_model=ReportOut, status_code=status.HTTP_201_CREATED)
 def create_report(
     store_id: int,
     body: ReportCreate,
+    user: User = Depends(get_current_user),
     session: Session = Depends(get_session_dep),
 ) -> ReportOut:
     """同步生成報表（PDF or DOCX），寫到 outputs/reports/。"""
-    store = session.get(Store, store_id)
-    if store is None:
-        raise HTTPException(404, detail="store not found")
+    store = _get_owned_store(session, store_id, user)  # 404 if not owned
 
     report = Report(
         store_id=store_id,
@@ -479,39 +554,34 @@ def create_report(
 @router.get("/reports/{report_id}", response_model=ReportOut)
 def get_report(
     report_id: int,
+    user: User = Depends(get_current_user),
     session: Session = Depends(get_session_dep),
 ) -> ReportOut:
-    rpt = session.get(Report, report_id)
-    if rpt is None:
-        raise HTTPException(404, detail="report not found")
-    return ReportOut.model_validate(rpt)
+    return ReportOut.model_validate(_get_owned_report(session, report_id, user))
 
 
 @router.get("/reports/{report_id}/download")
 def download_report(
     report_id: int,
+    user: User = Depends(get_current_user),
     session: Session = Depends(get_session_dep),
 ) -> FileResponse:
     """Download generated report (PDF or DOCX).
 
-    Codex deploy-review fix (CRITICAL): on HF Spaces free tier the container
+    v6.0 deploy-review fix (CRITICAL): on HF Spaces free tier the container
     is ephemeral — after the 48h auto-sleep + restart cycle, the Report row
     still exists in Turso but `outputs/reports/store{id}_*.{ext}` is gone.
-    Instead of returning 410, regenerate the file lazily on download. The
-    cost is one extra LLM run per stale report (slow first download), but
-    the alternative would be a 410 with no recovery path.
+    Instead of returning 410, regenerate the file lazily on download.
 
-    Long-term proper fix: store report bytes in Turso (BLOB column) or use
-    persistent object storage. Tracked as a v6 GA followup.
+    v6.1: ownership-scoped — _get_owned_report 404s on cross-tenant access.
     """
-    rpt = session.get(Report, report_id)
-    if rpt is None:
-        raise HTTPException(404, detail="report not found")
+    rpt = _get_owned_report(session, report_id, user)
     if rpt.file_path is None:
         raise HTTPException(404, detail="report file not ready")
 
     if not os.path.isfile(rpt.file_path):
         # Cold-restart fallback: file vanished with the ephemeral container.
+        # We already know the store is owned via the join in _get_owned_report.
         store = session.get(Store, rpt.store_id)
         if store is None:
             raise HTTPException(

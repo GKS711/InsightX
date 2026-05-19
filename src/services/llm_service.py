@@ -23,12 +23,21 @@ import re
 import time
 import random
 import logging
+import threading
 import httpx
 from google import genai
 from google.genai import types, errors as genai_errors
 from dotenv import load_dotenv
 
 load_dotenv()
+
+# v6.1 #5: thread-local last-used model tracker. After any successful
+# _generate_one_model() call we set this; callers that want to audit
+# the post-fallback model (AnalysisRun.model_id) read it via
+# `LLMService.get_last_used_model()`. Thread-local is safe under
+# FastAPI sync-route threadpool + the threading.Thread daemon workers
+# in src/jobs.py — each thread has its own value, no cross-thread leak.
+_llm_tls = threading.local()
 
 logger = logging.getLogger(__name__)
 
@@ -109,6 +118,18 @@ class LLMService:
                 api_key=api_key,
                 http_options=types.HttpOptions(timeout=_HTTP_TIMEOUT_MS),
             )
+
+    @staticmethod
+    def get_last_used_model() -> str | None:
+        """Return the model that produced the LAST successful response on the
+        CURRENT thread. None if no successful call yet (or this thread never
+        called the service).
+
+        v6.1 #5 (Codex pre-freeze): used by src/jobs.py run_analysis_bg and
+        the routes.py v4→workspace bridge to persist AnalysisRun.model_id with
+        the actual post-fallback model name, not the MODEL_CHAIN[0] default.
+        """
+        return getattr(_llm_tls, "last_used_model", None)
 
     def _generate(
         self,
@@ -227,6 +248,9 @@ class LLMService:
                         "LLM _generate succeeded on attempt %d/%d (elapsed %.1fs)",
                         attempt, max_attempts, time.monotonic() - start,
                     )
+                # v6.1 #5: record actual model on thread-local for callers
+                # who want accurate AnalysisRun.model_id audit data
+                _llm_tls.last_used_model = model
                 return response.text
 
             except genai_errors.ServerError as exc:
