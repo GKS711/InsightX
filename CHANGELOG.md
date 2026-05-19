@@ -4,6 +4,54 @@ All notable changes to InsightX. Format follows [Keep a Changelog](https://keepa
 
 ---
 
+## [6.0.0-alpha] — 2026-05-19
+
+### Stack rewrite (sync everywhere)
+
+Full async→sync conversion of the FastAPI + SQLAlchemy + jobs stack so Turso/libsql can back the DB. `sqlalchemy-libsql` 0.2 is sync-only as of 2026-05; trying `create_async_engine("sqlite+libsql://...")` raises `InvalidRequestError`. Going fully sync was the cheapest path that kept the ORM models, alembic migrations, and v5 schema unchanged.
+
+- **`src/db.py`** — `create_engine` instead of `create_async_engine`; normalizes `libsql://...` to `sqlite+libsql://` + `?secure=true`; lifts `TURSO_AUTH_TOKEN` env into `connect_args`; FK PRAGMA listener for SQLite/libsql.
+- **`src/jobs.py`** — threading.Thread daemons + `queue.Queue` (was asyncio.create_task + asyncio.Queue). `_LLM_SEMA` / `_SCRAPER_SEMA` are `threading.Semaphore`. Round-3 cascade-race protection (`_safe_commit_or_log` with narrowed `except (StaleDataError, IntegrityError)`) preserved verbatim. `progress_stream()` rewritten with finally-pop cleanup + heartbeat-based disconnect detection + time-since-last-event idle timeout (Codex round-2 fix).
+- **`src/api/v5.py`** — 19 endpoints all sync. DELETE /stores preserves the layer-1 best-effort 409 + layer-2 `_safe_commit_or_log` race design. Report download lazily regenerates if the ephemeral container lost the file (HF Spaces cold-restart fix).
+- **`src/api/routes.py`** — v4 routes all sync. `/v4/analyze-stream` uses threading.Thread producer + heartbeat thread + queue.Queue (was asyncio task + queue). Worker checks `done_event.is_set()` between phases so disconnects don't queue wasted scraper/LLM work.
+- **`src/services/llm_service.py`** — `client.models.generate_content()` sync; per-call `http_options.timeout` from remaining budget (Codex S1 fix). **Multi-model fallback chain**: `gemma-4-26b-a4b-it` → `gemma-4-31b-it` → `gemini-2.5-flash` → `gemini-2.5-flash-lite`. Falls through on 5xx / RESOURCE_EXHAUSTED / transport errors. ClientError 4xx (not 429) raises immediately.
+- **`alembic/env.py`** — `engine_from_config` instead of `async_engine_from_config`; `connect_args` propagated from `src.db._engine_kwargs` so migrations can reach Turso.
+- **`requirements.txt`** — added `sqlalchemy-libsql==0.2.0`, `libsql-experimental==0.0.55`, `certifi>=2024.0`. Removed `aiosqlite`, `asyncpg`. libsql pair pinned to exact versions (0.x stability).
+
+### v6 redesign + deployment
+
+- **UI**: Codex img2-generated editorial hero illustration replacing the procedural Constellation neural map. Magazine aesthetic: cream paper + ink + coral + forest green; risograph print texture; Saul Bass × Charley Harper × New Yorker references. Multi-source listening concept (Google Maps star pin + YouTube play + chat bubble + heart + scroll + envelope + microphone all converging on a central sonar receiver). PNG tracked via git-lfs (HF Spaces xet/lfs requirement).
+- **Dockerfile**: single-stage `python:3.10-slim`, port 7860, non-root uid=1000 user with `chown -R /home/user` before USER switch (SQLite open-file fix), `--only-binary=:all:` for fail-fast wheel install, `HEALTHCHECK` probe on `/api/meta`, JSON-form CMD with `exec` for proper PID-1 signal handling.
+- **`.dockerignore`** expanded (was missing `video/`, `outputs/`, `*.db`, `*.backup.*`, `.pytest_cache/`, etc).
+- **`docs/DEPLOY_HF.md`** — full HF Spaces + Turso walkthrough with troubleshooting + cost monitoring.
+- **`deploy/hf-space-README.md`** — HF Space repo README template with YAML frontmatter.
+
+### Bug fixes during deploy
+
+- **`src/db.py`** Codex hot-fix: dropped `pool_size` / `max_overflow` from engine kwargs — `sqlalchemy-libsql` uses `SingletonThreadPool` which only accepts `pool_pre_ping`. Build broke until this was removed.
+- **`src/api/routes.py`** v4→workspace bridge — landing-page analyze now persists to v5 schema (Store + ReviewSource + ScrapeJob + Reviews + AnalysisRun) so the store shows up under `/workspace/`. Idempotent on ReviewSource.external_url. Gated behind `IX_ENABLE_V4_WORKSPACE_PERSIST=1` env flag (default OFF) — see Known Limitations.
+- **`src/models.py`** AnalysisRun.model_id default updated from `gemma-4-31b-it` to `gemma-4-26b-a4b-it` to match the new MODEL_CHAIN[0].
+- **Frontend** version-label fallback `4.0.0` → `6.0.0-alpha` in header + footer of `src/static/v2/index.html`.
+
+### Codex peer review
+
+Three review cycles reached APPROVE consensus:
+- Sync refactor (tasks `bf037e60ed0d` → `372812acadcf` → `5c4363726196`) — found per-call LLM timeout regression, queue cleanup gaps, SSE worker cancellation; all fixed.
+- Deploy artifacts (tasks `f1fd2145e07e` → `6dbd19a04ca3` → `f2221cacf342`) — found ephemeral report file vanish-on-restart (regenerate fallback), build-essential bloat (removed), missing HEALTHCHECK (added); all fixed.
+- Final pre-freeze pass (tasks `0d309dd01043` → `263e6a5d30c3`) — found multi-tenant privacy issue with bridge auto-persist (env-gated); approved.
+
+### Known limitations (tracked for v6.1)
+
+1. **No auth / no session scoping** — v5α uses a single hard-coded default user (`dev@insightx.local`). Bridge auto-persist is therefore DISABLED on the public demo via `IX_ENABLE_V4_WORKSPACE_PERSIST=0`. Self-hosted single-user setups can set it to `1`.
+2. **v5 by-id endpoints not ownership-scoped** — `session.get(Store, store_id)`, `session.get(AnalysisRun, run_id)`, etc, don't filter by workspace owner. Combined with #1, this is currently latent (no auth → no users to cross-leak), but must be fixed alongside cookie session auth.
+3. **No `UniqueConstraint(workspace_id, primary_url)` on Store** — concurrent same-URL analyzes (rare in single-user demo) can race to create duplicate Store rows. Will be added via alembic migration in v6.1.
+4. **Review dedupe via `external_id`** — schema has `UniqueConstraint(source_id, external_id)` but bridge inserts Review rows with NULL `external_id`. Re-scrape of the same URL appends the same reviews again, which can bias subsequent analysis. Fix: compute stable `external_id = sha256(source_id|author|date|text)` and let the unique constraint dedupe.
+5. **`AnalysisRun.model_id` records the default**, not the actually-used model after fallback chain rotation. Tracked: return `(text, model_used)` from `LLMService._generate()` and persist accurately.
+
+These were flagged by Codex's final pre-freeze review (task `0d309dd01043`) and explicitly deferred — they're real but low-probability on a single-user alpha demo where the bridge is OFF. The proper fix is bundled with cookie-based anonymous session scoping in v6.1.
+
+---
+
 ## [5.0.0] — 2026-05-19
 
 V5 makes InsightX a **persistent, multi-store workspace** rather than a stateless single-shot demo. Major back-end rewrite (async SQLAlchemy 2.0 ORM, 9-table schema, environment-aware DB driver), new parallel frontend (Vite + React + TypeScript), and a full store-deletion workflow with cascade integrity.
