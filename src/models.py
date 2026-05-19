@@ -254,7 +254,12 @@ class AnalysisRun(Base):
     )
     ai_function: Mapped[str] = mapped_column(String(64), nullable=False)
     prompt_version: Mapped[str] = mapped_column(String(32), nullable=False, default="v1")
-    model_id: Mapped[str] = mapped_column(String(128), nullable=False, default="gemma-4-31b-it")
+    # Codex MINOR fix: align with MODEL_CHAIN[0] in src/services/llm_service.py.
+    # gemma-4-26b-a4b-it is the new primary (MoE Active 4B, fast). Old default
+    # 'gemma-4-31b-it' was stale audit data after the chain reorder.
+    # Note: real audit accuracy requires _generate() to return the actually-used
+    # model name (post-fallback). Tracked as v6.1 followup.
+    model_id: Mapped[str] = mapped_column(String(128), nullable=False, default="gemma-4-26b-a4b-it")
     # SQLite 沒 ARRAY；用 JSON list of ints。Postgres 也 work via JSON.
     input_review_ids: Mapped[Optional[list[int]]] = mapped_column(JSON)
     output_json: Mapped[Optional[dict[str, Any]]] = mapped_column(JSON)

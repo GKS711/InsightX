@@ -21,6 +21,7 @@ Endpoints (mounted at /api/* by main.py):
 """
 
 import json
+import os
 import queue as queue_mod
 import threading
 import time
@@ -80,9 +81,27 @@ SSE_ANALYZE_LLM_BUDGET_S = 90.0   # LLM call budget for SSE path
 # (workspace, external_url): re-analyzing the same URL refreshes the
 # existing Store and appends new ScrapeJob/AnalysisRun rows (audit trail).
 #
-# Failure here is NON-FATAL — wrapped in try/except + logged. The v4
-# response is the user-facing result; persistence is best-effort.
+# ⚠️ DISABLED BY DEFAULT (env-gated)
+# ─────────────────────────────────────
+# Codex pre-freeze review (task 0d309dd01043) flagged a CRITICAL privacy
+# issue: there's no auth yet (v5α dev mode uses a hard-coded default user),
+# so on a multi-tenant public demo, EVERY visitor's landing analyzes
+# would write into the same shared workspace — User A could open
+# /workspace/ and see User B's analyzed URLs / review text / generated
+# reports. That's a real data-boundary leak.
+#
+# Until cookie-based anonymous session scoping lands (planned v6.1), the
+# bridge is OFF on public deployments. Set `IX_ENABLE_V4_WORKSPACE_PERSIST=1`
+# in your env to enable — appropriate for single-user self-hosting only.
+#
+# Failure (after the flag check) is NON-FATAL — wrapped in try/except +
+# logged. The v4 response is the user-facing result; persistence is
+# best-effort.
 # ────────────────────────────────────────────────────────────────────
+
+# Codex CRITICAL fix: env flag — explicit opt-in required.
+# Default OFF for public-demo safety. Self-hosted single-user: set =1.
+_ENABLE_V4_WORKSPACE_PERSIST = os.getenv("IX_ENABLE_V4_WORKSPACE_PERSIST", "0") == "1"
 
 def _get_or_create_default_user(session) -> User:
     """v5α dev mode — same default user as src/api/v5.py uses. Duplicated
@@ -107,7 +126,13 @@ def _persist_v4_analyze_to_workspace(
     Called after a successful (or partially successful) v4 analyze. Always
     swallows exceptions — the v4 user-facing response must not break because
     of a DB hiccup. Logs warnings on failure for debugging.
+
+    Gated by IX_ENABLE_V4_WORKSPACE_PERSIST env flag (see module-level
+    constant comment). On public multi-tenant demos this MUST stay disabled
+    until cookie-based session scoping is implemented.
     """
+    if not _ENABLE_V4_WORKSPACE_PERSIST:
+        return  # multi-tenant safety: bridge disabled by default
     try:
         with SessionLocal() as session:
             user = _get_or_create_default_user(session)

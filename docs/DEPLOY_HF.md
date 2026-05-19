@@ -55,7 +55,7 @@ Copy both values somewhere safe — you'll paste them into HF Space secrets in S
 1. Go to <https://huggingface.co/new-space>
 2. Owner: your account
 3. Space name: e.g. `insightx-demo`
-4. License: MIT
+4. License: **mit** (lowercase — HF 接受的是 SPDX identifier；大寫 "MIT" 會被擋下，error: "The license you specified does not exist")
 5. SDK: **Docker** (NOT Streamlit/Gradio/Static)
 6. Hardware: **CPU basic (free)** — 16GB RAM, 2 vCPU is enough for the alpha
 7. Visibility: Public
@@ -76,8 +76,11 @@ In the Space settings → **Variables and secrets**:
 | `GEMINI_API_KEY` | from <https://aistudio.google.com/apikey> |
 | `SERPER_API_KEY` | from <https://serper.dev/api-key> |
 | `YOUTUBE_API_KEY` | (optional) Google Cloud Console |
+| `IX_ENABLE_V4_WORKSPACE_PERSIST` | **leave UNSET** on public demo (see warning below) |
 
 Mark each provided key as **Secret** (not Variable) so they're masked in logs. `YOUTUBE_API_KEY` is optional — omit it entirely if you don't have one (the YouTube path will fall back to `youtube-comment-downloader` which needs no API key).
+
+> ⚠️ **`IX_ENABLE_V4_WORKSPACE_PERSIST` privacy gate** — When set to `1`, every landing-page analyze gets written to the v5 Turso schema and shows up under `/workspace/`. **Until cookie-based anonymous session scoping ships in v6.1, all visitors share the same `dev@insightx.local` user, so visitor A can see visitor B's analyzed URLs / reviews / reports.** Keep this var unset (or `0`) on any public demo. Self-hosted single-user setups can set it to `1`.
 
 ---
 
