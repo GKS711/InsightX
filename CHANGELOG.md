@@ -4,6 +4,45 @@ All notable changes to InsightX. Format follows [Keep a Changelog](https://keepa
 
 ---
 
+## [6.1.0-alpha] — 2026-05-20
+
+Multi-tenant safety release. The 5 v6.0-alpha deferred items are all resolved with cookie-based anonymous session scoping plus per-endpoint ownership enforcement. The v4→workspace bridge is no longer env-gated — every visitor gets their own private workspace automatically. `IX_ENABLE_V4_WORKSPACE_PERSIST` removed; landing-page analyzes always persist into the visitor's own workspace.
+
+### Multi-tenant scoping — the 5 deferred items
+
+- **#1 Cookie sessions** (`src/auth.py` + `src/main.py`) — New `SessionCookieMiddleware` mints / reads `ix_session` (UUID4 hex, HttpOnly + Secure + SameSite=Lax, 1-year max-age). Stashes sid on `request.state.ix_session_id`; sets Set-Cookie on whatever Response the route returns, including `StreamingResponse` (SSE) where `Depends(Response)` mutation does NOT propagate. Each visitor gets their own `anon-{sid}@insightx.local` User row via `get_current_user(request, session)` Depends. No password / login / OAuth — the cookie IS the identity (clearing cookies = losing workspace). `IX_COOKIE_SECURE=false` env override for local plain-HTTP / TestClient.
+- **#2 Ownership scoping** (`src/api/v5.py`) — All 14 by-id endpoints (`GET/PUT/DELETE /stores/{id}`, `/jobs/{id}`, `/runs/{id}`, `/reports/{id}`, etc.) go through `_get_owned_store(session, user, store_id)` + siblings instead of `session.get(Store, id)`. Cross-tenant ID-guessing returns 404 (not 403) to avoid existence leak. `POST /stores` catches `IntegrityError` on duplicate `(workspace_id, primary_url)` → 409.
+- **#3 Store UniqueConstraint** (`src/models.py` + `alembic/versions/ed45898ffc55_v6_1_store_unique_primary_url.py`) — New `UniqueConstraint("workspace_id", "primary_url", name="uq_stores_workspace_primary_url")`. Migration uses `batch_alter_table` for SQLite/libsql compat. v4 bridge in `routes._persist_v4_analyze_to_workspace` catches `IntegrityError` on concurrent same-URL race → reselects the winner's Store row.
+- **#4 Review external_id dedupe** (`src/api/routes.py` `_review_external_id`) — Stable `sha256(source_id|author|date|text).hexdigest()[:32]` (uses explicit id field if present). Each Review insert wrapped in `session.begin_nested()` SAVEPOINT so an IntegrityError on a single duplicate review rolls back only that one INSERT, not the whole bridge transaction.
+- **#5 AnalysisRun.model_id audit** (`src/services/llm_service.py` + `src/jobs.py`) — `threading.local()` `_llm_tls.last_used_model` tracks the actually-used model after MODEL_CHAIN fallback rotation. `LLMService.get_last_used_model()` reads it. `run_analysis_bg` writes `run.model_id = actual_model` after each AI call, so the audit row reflects what really happened, not the default.
+
+### Codex peer review
+
+Three rounds, APPROVE consensus reached.
+
+- **Round 1** (task `7e98b9ab6b41`) — NEEDS FIXES: 2 SERIOUS + 1 MINOR (all fixed in commit `b49c296`):
+  - **SERIOUS**: SSE first-visit cookie. `Depends(Response)` mutation didn't propagate to `StreamingResponse`. Fix: `SessionCookieMiddleware` owns cookie lifecycle.
+  - **SERIOUS**: Bridge review dedupe wiped whole transaction. `session.rollback()` on duplicate Review wiped Store/Source/Job rows too. Fix: `session.begin_nested()` SAVEPOINT per Review insert.
+  - **MINOR**: User creation race. Two parallel requests with same brand-new sid both INSERT → IntegrityError. Fix: catch + reselect.
+- **Round 2** (task `6c1f6a95a2da`) — NEEDS FIXES: 1 new NEEDS-FIX + 2 minor (all fixed in commit `ce17e73`):
+  - **NEEDS FIX**: Fresh User row `flush()`ed but not `commit()`ed. v4 bridge opens its own `SessionLocal()` → can't see uncommitted user → FK violation on first-visit `/api/v4/analyze-stream`. After route returns, `get_session_dep()` doesn't auto-commit either, so user row was silently rolled back. Fix: `session.commit()` after `flush()` in `_get_or_create_user_for_session`. Verified with red-green-revert against file-backed SQLite + FK enforcement.
+  - **LOW**: `APP_VERSION` mismatch — `routes.py:63` said "6.0.0-alpha" while `main.py:16` said "6.1.0-alpha". Bumped routes.py to match.
+  - **HARDENING**: Race retry could return `None` if conflicting tx also rolled back. Now retries the INSERT once before letting the exception propagate.
+- **Round 3** (task `b7976b616e07`) — APPROVE. No new findings.
+
+### Verified
+- Direct codepath red-green-revert (file-backed SQLite + FK):
+  - Without `session.commit()` in user upsert → bridge's separate session can't see user → FK fail
+  - With `session.commit()` → bridge sees user → Workspace+Store write succeeds
+- TestClient: `/api/meta` returns `appVersion=6.1.0-alpha`, cookie minted on first request, v5 endpoints work, 2 fresh visitors see isolated workspaces
+- Live HF Space (`https://Jordan711-insightx-demo.hf.space`): 2 fresh urllib visitors each get own `ix_session` cookie + isolated workspace; cross-tenant ID-guessing returns 404; duplicate primary_url returns 409
+- SSE first-visit: `/api/v4/analyze-stream` mints + applies cookie via middleware (works on `StreamingResponse`)
+
+### Removed
+- `IX_ENABLE_V4_WORKSPACE_PERSIST` env flag — no longer needed with proper cookie scoping. v4 bridge always runs, scoped to the visitor's session.
+
+---
+
 ## [6.0.0-alpha] — 2026-05-19
 
 ### Stack rewrite (sync everywhere)

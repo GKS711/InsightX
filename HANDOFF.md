@@ -1,8 +1,8 @@
 # InsightX — HANDOFF
 
-> **Status**: v6.0.0-alpha · frozen 2026-05-19 · live on HF Spaces
+> **Status**: v6.1.0-alpha · 2026-05-20 · live on HF Spaces
 > **For**: the next agent / engineer picking this up
-> **Read order**: this file → `CHANGELOG.md` v6 section → `docs/DEPLOY_HF.md` → `CLAUDE.md` (if your env loads project-level rules)
+> **Read order**: this file → `CHANGELOG.md` v6.1 + v6 sections → `docs/DEPLOY_HF.md` → `CLAUDE.md` (if your env loads project-level rules)
 
 ---
 
@@ -12,8 +12,10 @@ InsightX takes a **Google Maps URL** or a **YouTube video URL**, pulls reviews/c
 
 **Live demo**: <https://Jordan711-insightx-demo.hf.space>
 **GitHub**: <https://github.com/GKS711/InsightX>
-**Tag**: `v6.0.0-alpha`
+**Tag**: `v6.1.0-alpha` (also: `v6.0.0-alpha`)
 **Branch**: `claude/v6-sync-refactor` (NOT merged into `main` — see [§ Branch policy](#branch-policy))
+
+**v6.1 in one sentence**: the 5 known limitations from v6.0-alpha are all resolved — cookie sessions, ownership scoping, schema constraints, review dedupe, model audit. The v4→workspace bridge is no longer env-gated; every visitor gets their own private workspace automatically.
 
 ---
 
@@ -170,18 +172,20 @@ Full step-by-step in **[`docs/DEPLOY_HF.md`](docs/DEPLOY_HF.md)** (Turso DB → 
 
 ---
 
-## Bridge env flag
+## Cookie session scoping (v6.1)
 
-The landing page (`/`) runs **stateless** v4 analyses by default. To make a landing analyze auto-save into the v5 `/workspace/` view:
+Every HTTP request goes through `SessionCookieMiddleware` (registered in `src/main.py` before any router). The middleware:
 
-```bash
-# Self-hosted single-user only
-export IX_ENABLE_V4_WORKSPACE_PERSIST=1
-```
+1. Reads `ix_session` cookie if present and well-formed (32-char lowercase hex).
+2. Otherwise mints a fresh UUID4 hex sid and marks the request as new.
+3. Stashes the sid on `request.state.ix_session_id`.
+4. After the route returns, sets `Set-Cookie: ix_session=...; HttpOnly; Secure; SameSite=lax; Max-Age=31536000` on the outgoing response — works uniformly for JSON, `StreamingResponse` (SSE), `FileResponse`, static files.
 
-**Why this is off by default**: v5α uses one hard-coded default user (`dev@insightx.local`). With the bridge on, every visitor's analyses write into that shared workspace — anyone opening `/workspace/` would see everyone else's analyzed URLs/reviews. This is documented as the #1 known limitation; cookie-based anonymous session scoping is the v6.1 fix.
+The cookie IS the identity — no password / login / OAuth. Clearing cookies = losing your workspace (acceptable for an alpha demo; v6.2+ can add real auth if needed).
 
-On public HF demos, keep `IX_ENABLE_V4_WORKSPACE_PERSIST` UNSET or `0`. The user-facing v4 analyze still works (returns JSON to the page) — only the auto-write is paused.
+The v4→workspace bridge (`src/api/routes.py` `_persist_v4_analyze_to_workspace`) now always runs — every visitor gets their landing-page analyses persisted into THEIR OWN private workspace, scoped on the user row keyed off the cookie sid. The old `IX_ENABLE_V4_WORKSPACE_PERSIST` env flag is removed (it was the v6.0-alpha mitigation for the cross-tenant leak; cookie scoping is the proper fix).
+
+For local development / TestClient over plain HTTP, set `IX_COOKIE_SECURE=false` so browsers/httpx don't filter the `Secure` cookie.
 
 ---
 
@@ -199,15 +203,17 @@ What you CAN do:
 
 ---
 
-## Known limitations (= the v6.1 punch list)
+## v6.1 punch list — all resolved
 
-All flagged by Codex in the final pre-freeze review (task `0d309dd01043`). Acceptable for alpha while the bridge is off; **must fix before any real multi-user release**.
+The 5 limitations flagged by Codex pre-v6.0-freeze (task `0d309dd01043`) are all fixed in v6.1.0-alpha. Locations + key invariants:
 
-1. **No auth / session scoping** — hard-coded `dev@insightx.local`. Bridge env-gated as immediate mitigation. Proper fix: HttpOnly cookie carries anon session UUID; `_get_or_create_user_for_session(sid)` per-visitor.
-2. **v5 by-id endpoints not ownership-scoped** — `session.get(Store, store_id)` and friends don't filter by workspace owner. Even with cookie sessions, ID-guessing could cross-tenant leak. Fix: add `_get_owned_store(session, store_id)` helper and use everywhere.
-3. **No `UniqueConstraint(workspace_id, primary_url)` on Store** — concurrent same-URL analyzes (rare in single-user) can race to create duplicate stores. Add alembic migration + `IntegrityError` retry/reselect.
-4. **Review dedupe missing** — schema has `UniqueConstraint(source_id, external_id)` but bridge inserts `Review` with `external_id=NULL`. Re-scrape appends duplicate review rows. Fix: `external_id = sha256(source_id|author|date|text)[:32]`.
-5. **`AnalysisRun.model_id` records the default, not the actually-used post-fallback model**. Fix: return `(text, model_used)` from `_generate()` and persist accurately.
+1. ✅ **Cookie session scoping** — `src/auth.py` `SessionCookieMiddleware` + `get_current_user` Depends. Anonymous UUID4 sid per browser. Each visitor maps to `anon-{sid}@insightx.local` User row, committed immediately on first request so the v4 bridge's separate `SessionLocal()` can see it (Codex round 2 fix).
+2. ✅ **v5 by-id ownership scoping** — `src/api/v5.py` `_get_owned_workspace` / `_get_owned_store` / `_get_owned_job` / `_get_owned_run` / `_get_owned_report` helpers, used in all 14 by-id endpoints. Cross-tenant ID-guessing → 404 (not 403, to avoid existence leak).
+3. ✅ **Store UniqueConstraint** — `src/models.py` `UniqueConstraint("workspace_id", "primary_url", name="uq_stores_workspace_primary_url")`. Migration `alembic/versions/ed45898ffc55_v6_1_store_unique_primary_url.py` uses `batch_alter_table` for SQLite compat. Bridge catches `IntegrityError` → reselects on same-URL race.
+4. ✅ **Review external_id dedupe** — `src/api/routes.py` `_review_external_id(source_id, raw)` = `sha256(source_id|author|date|text).hexdigest()[:32]`. Each Review insert wrapped in `session.begin_nested()` SAVEPOINT so a single duplicate-review IntegrityError doesn't wipe the whole bridge transaction (Codex round 1 fix).
+5. ✅ **AnalysisRun.model_id audit** — `src/services/llm_service.py` `threading.local()` `_llm_tls.last_used_model` tracks the actually-used model after MODEL_CHAIN fallback. `src/jobs.py` `run_analysis_bg` writes `run.model_id = LLMService.get_last_used_model()` post-call. The audit row reflects what really happened, not the default.
+
+If you're picking this up for v6.2 work, the next-tier ideas are: real auth (passwordless email magic link?), multi-device sync (link multiple cookies to one logical account), account recovery (currently clearing cookies = losing workspace).
 
 ---
 
@@ -275,7 +281,7 @@ Existing 9 functions are in `src/services/llm_service.py` (analyze_content, gene
 
 ## Codex peer-review history this release
 
-Eight review rounds across three phases, all reaching APPROVE consensus:
+Eleven review rounds across four phases, all reaching APPROVE consensus:
 
 | Round | Task ID | Focus |
 |---|---|---|
@@ -287,6 +293,9 @@ Eight review rounds across three phases, all reaching APPROVE consensus:
 | Deploy R3 | `f2221cacf342` | APPROVE — clean |
 | Full project R1 | `0d309dd01043` | BLOCK — multi-tenant privacy leak via bridge |
 | Full project R2 | `263e6a5d30c3` | APPROVE-WITH-NOTES — deferred items now in CHANGELOG |
+| v6.1 R1 | `7e98b9ab6b41` | NEEDS FIXES — 2 SERIOUS (SSE cookie, savepoint dedupe) + 1 MINOR (user race) |
+| v6.1 R2 | `6c1f6a95a2da` | NEEDS FIXES — user row commit, APP_VERSION mismatch, race-retry None |
+| v6.1 R3 | `b7976b616e07` | APPROVE — consensus on v6.1.0-alpha |
 
 The full prompts + responses are documented inline in each commit message that addresses a Codex finding.
 
@@ -309,21 +318,27 @@ These were established through 6 rounds of dual-AI consensus before v6 even star
 ## Smoke test recipe
 
 ```bash
-# Local
+# Local — sets IX_COOKIE_SECURE=false so plain-HTTP TestClient cookies aren't filtered
 DATABASE_URL='sqlite:///./test.db' alembic upgrade head
-DATABASE_URL='sqlite:///./test.db' python -c "
+IX_COOKIE_SECURE=false DATABASE_URL='sqlite:///./test.db' python -c "
 from fastapi.testclient import TestClient
 from src.main import app
-c = TestClient(app)
-assert c.get('/api/meta').json()['appVersion'] == '6.0.0-alpha'
-assert c.get('/api/v5/workspaces').status_code == 200
+c = TestClient(app, base_url='http://testserver')
+assert c.get('/api/meta').json()['appVersion'] == '6.1.0-alpha'
+# First request mints a fresh anonymous session cookie
+r = c.get('/api/v5/workspaces')
+assert r.status_code == 200
+assert 'ix_session' in c.cookies
+# A fresh client gets its own isolated workspace
+c2 = TestClient(app, base_url='http://testserver')
+assert c2.get('/api/v5/workspaces').json() == []  # B sees 0
 print('OK')
 "
 
 # Live HF Space
 SPACE=https://Jordan711-insightx-demo.hf.space
-curl -s $SPACE/api/meta | jq .appVersion       # → "6.0.0-alpha"
-curl -s $SPACE/api/v5/workspaces | jq length    # → integer
+curl -s $SPACE/api/meta | jq .appVersion       # → "6.1.0-alpha"
+curl -s -I $SPACE/api/meta | grep -i set-cookie  # → ix_session=...; HttpOnly; Secure
 ```
 
 For end-to-end with real LLM, paste a Google Maps URL into the live UI's "Google 評論" card and hit 開始分析.
@@ -337,7 +352,7 @@ For end-to-end with real LLM, paste a Google Maps URL into the live UI's "Google
 | `outputs/test_reducer.mjs` | 48-case regression for v4 reducer + adapter + SSE lifecycle. **Run before any reducer/adapter change**. |
 | `validate_jsx.cjs` | `@babel/parser` validates the entire `src/static/v2/index.html` Babel block. **Run after any UI edit**. |
 
-Both should still pass on v6.0.0-alpha HEAD. If they don't, something regressed.
+Both should still pass on v6.1.0-alpha HEAD. If they don't, something regressed.
 
 ---
 
@@ -345,13 +360,17 @@ Both should still pass on v6.0.0-alpha HEAD. If they don't, something regressed.
 
 Start here:
 
-1. Read `CHANGELOG.md` v6 entry to see what landed
+1. Read `CHANGELOG.md` v6.1 + v6 entries to see what landed
 2. Skim this file (you're reading it)
-3. Check the 5 v6.1 limitations above — those are the next work
+3. The v6.1 punch list is complete (cookie sessions + ownership + dedupe + audit). Next work is v6.2 territory — only pursue if there's a real user need:
+   - Real auth (passwordless email magic link?) so users don't lose data when clearing cookies
+   - Multi-device sync (link multiple cookies to one logical account)
+   - Account recovery flow
+   - Convert the alembic `*.bak-*` editor backups under `src/static/v2/` to a non-tracked dir (HF Space mirror still has them)
 4. Hit the live demo URL to see current behavior
 5. Run `git log --oneline -20` to see recent commits
 6. If the Space is in error state, check `https://huggingface.co/spaces/Jordan711/insightx_demo/logs` for runtime traceback
 
-The hardest things are already done (async→sync, Turso wire-up, multi-model fallback, HF Spaces deploy, Codex review consensus). What's left is mostly cookie auth + a few schema constraints — focused work, not architectural rethink.
+The hardest things are already done (async→sync, Turso wire-up, multi-model fallback, HF Spaces deploy, multi-tenant safety, three rounds of Codex review consensus on v6.1). v6.1.0-alpha is the first version of InsightX that's actually safe to put in front of multiple visitors at once.
 
 Good luck.
