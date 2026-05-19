@@ -24,13 +24,25 @@ import json
 import queue as queue_mod
 import threading
 import time
+from datetime import datetime, timezone
 from typing import Literal, Optional
 
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+from sqlalchemy import select
 
 from src.config.mock_responses import get_mock_response
+from src.db import SessionLocal
+from src.models import (
+    AnalysisRun,
+    Review,
+    ReviewSource,
+    ScrapeJob,
+    Store,
+    User,
+    Workspace,
+)
 from src.services.canonicalizer import (
     Platform,
     attach_metadata,
@@ -52,6 +64,176 @@ APP_VERSION = "6.0.0-alpha"
 # past budget, the per-request HTTP timeouts inside scraper/llm catch it.)
 ROUTE_ANALYZE_LLM_FLOOR_S = 10.0  # 少於這就跳過 LLM 直接回 mock
 SSE_ANALYZE_LLM_BUDGET_S = 90.0   # LLM call budget for SSE path
+
+
+# ────────────────────────────────────────────────────────────────────
+# v6 bridge: v4 stateless analyze → v5 workspace persistence
+#
+# Bug background: v4 /api/analyze and /api/v4/analyze-stream were
+# completely stateless — they scrape + run Gemini and return JSON, but
+# never wrote to the v5 Turso schema. Result: user analyzes a store on
+# the landing page, then opens /workspace/, sees nothing. The two paths
+# never met.
+#
+# This bridge persists every successful v4 analyze as a v5 Store with
+# its ReviewSource + ScrapeJob + Reviews + AnalysisRun. Idempotent on
+# (workspace, external_url): re-analyzing the same URL refreshes the
+# existing Store and appends new ScrapeJob/AnalysisRun rows (audit trail).
+#
+# Failure here is NON-FATAL — wrapped in try/except + logged. The v4
+# response is the user-facing result; persistence is best-effort.
+# ────────────────────────────────────────────────────────────────────
+
+def _get_or_create_default_user(session) -> User:
+    """v5α dev mode — same default user as src/api/v5.py uses. Duplicated
+    here (not imported) to keep route modules import-independent."""
+    result = session.execute(select(User).where(User.email == "dev@insightx.local"))
+    user = result.scalar_one_or_none()
+    if user is None:
+        user = User(email="dev@insightx.local", plan="free")
+        session.add(user)
+        session.flush()
+    return user
+
+
+def _persist_v4_analyze_to_workspace(
+    url: str,
+    platform: str,
+    scrape_result: dict,
+    analysis_result: Optional[dict],
+) -> None:
+    """Bridge v4 analyze → v5 workspace. Idempotent on external_url; non-fatal.
+
+    Called after a successful (or partially successful) v4 analyze. Always
+    swallows exceptions — the v4 user-facing response must not break because
+    of a DB hiccup. Logs warnings on failure for debugging.
+    """
+    try:
+        with SessionLocal() as session:
+            user = _get_or_create_default_user(session)
+
+            # 1. Default workspace per user (create on first analyze)
+            ws = session.scalar(
+                select(Workspace)
+                .where(Workspace.owner_user_id == user.id)
+                .order_by(Workspace.id)
+                .limit(1)
+            )
+            if ws is None:
+                ws = Workspace(owner_user_id=user.id, name="我的分析")
+                session.add(ws)
+                session.flush()
+
+            # 2. Find existing ReviewSource for this URL within the workspace
+            src = session.scalar(
+                select(ReviewSource)
+                .join(Store, Store.id == ReviewSource.store_id)
+                .where(
+                    Store.workspace_id == ws.id,
+                    ReviewSource.external_url == url,
+                )
+                .limit(1)
+            )
+
+            now = datetime.now(tz=timezone.utc)
+            source_type = "youtube" if platform == "youtube" else "google_maps"
+            store_name = (scrape_result.get("store_name") or "").strip() or "Untitled"
+            address = scrape_result.get("address") or None
+            review_count = scrape_result.get("review_count") or 0
+            if not isinstance(review_count, int):
+                review_count = 0
+
+            if src is None:
+                # New store + new source
+                store = Store(
+                    workspace_id=ws.id,
+                    name=store_name[:255],
+                    address=(address or "")[:500] or None,
+                    primary_url=url[:2000],
+                    platform=platform if platform in ("google", "youtube") else "google",
+                )
+                session.add(store)
+                session.flush()
+
+                src = ReviewSource(
+                    store_id=store.id,
+                    source_type=source_type,
+                    external_url=url[:2000],
+                    last_scraped_at=now,
+                    total_reviews_estimated=review_count,
+                )
+                session.add(src)
+                session.flush()
+            else:
+                # Existing store — refresh metadata + reuse source
+                store = session.get(Store, src.store_id)
+                if store is not None:
+                    if store_name and store.name != store_name:
+                        store.name = store_name[:255]
+                    if address and store.address != address:
+                        store.address = address[:500]
+                    if store.primary_url != url:
+                        store.primary_url = url[:2000]
+                src.last_scraped_at = now
+                if review_count:
+                    src.total_reviews_estimated = review_count
+
+            # 3. New ScrapeJob (succeeded — we already have data in hand)
+            job = ScrapeJob(
+                source_id=src.id,
+                status="succeeded",
+                started_at=now,
+                finished_at=now,
+                reviews_fetched_count=review_count,
+                pagination_truncated=bool(scrape_result.get("pagination_truncated", False)),
+            )
+            session.add(job)
+            session.flush()
+
+            # 4. Reviews (if structured list present)
+            structured = scrape_result.get("reviews_structured") or []
+            if isinstance(structured, list):
+                for r in structured:
+                    if not isinstance(r, dict):
+                        continue
+                    text = (r.get("text") or "").strip()
+                    if not text:
+                        continue
+                    rev = Review(
+                        source_id=src.id,
+                        scrape_job_id=job.id,
+                        author=(r.get("author") or None),
+                        rating=r.get("rating") if isinstance(r.get("rating"), int) else None,
+                        text=text,
+                    )
+                    session.add(rev)
+
+            # 5. AnalysisRun (if LLM produced a result dict)
+            if isinstance(analysis_result, dict):
+                run = AnalysisRun(
+                    store_id=store.id,
+                    ai_function="analyze",
+                    status="succeeded",
+                    started_at=now,
+                    finished_at=now,
+                    output_json=analysis_result,
+                )
+                session.add(run)
+
+            session.commit()
+            print(
+                f"[v6|persist] saved store_id={store.id} source_id={src.id} "
+                f"job_id={job.id} reviews={len(structured)} url={url[:60]}",
+                flush=True,
+            )
+    except Exception as exc:
+        # Non-fatal — analyze response is the user-facing result.
+        import traceback
+        print(
+            f"[v6|persist] WARN: failed to persist v4 analyze to workspace: {exc}",
+            flush=True,
+        )
+        traceback.print_exc()
 
 
 def _attach_scrape_context(target: dict, scrape_result: dict, platform: str) -> None:
@@ -272,6 +454,16 @@ def analyze(request: AnalyzeRequest):
 
                 print(f"[SUCCESS] 分析完成 · 標的={result.get('store_name', '')!r} · "
                       f"正面={len(result.get('good', []))} · 負面={len(result.get('bad', []))}")
+
+                # v6 bridge: persist this successful analyze to /workspace/
+                # so the store shows up after the user finishes here.
+                _persist_v4_analyze_to_workspace(
+                    url=request.url,
+                    platform=scraped_platform,
+                    scrape_result=scrape_result,
+                    analysis_result=result,
+                )
+
                 return attach_metadata(
                     result,
                     effective_yt_role=effective_yt_role,
@@ -732,6 +924,17 @@ def analyze_stream_v4(
                     fallback=False,
                     warnings=warnings,
                 )
+
+                # v6 bridge: persist this successful SSE analyze to /workspace/
+                # (only when we have real reviews — skip no_reviews fallback case).
+                if analysis.get("good") or analysis.get("bad"):
+                    _persist_v4_analyze_to_workspace(
+                        url=url,
+                        platform=scraped_platform,
+                        scrape_result=scrape_result,
+                        analysis_result=analysis,
+                    )
+
                 event_q.put(("terminal", _sse_event("result", {
                     "platform": detected_platform,
                     "effective_yt_role": effective_yt_role,
@@ -868,6 +1071,15 @@ def analyze_stream(url: str):
                         good_count = len(result.get("good", []))
                         bad_count = len(result.get("bad", []))
                         yield log(f"✅ 分析完成！正面 {good_count} 項 · 負面 {bad_count} 項")
+
+                        # v6 bridge: persist legacy /analyze-stream success too
+                        _persist_v4_analyze_to_workspace(
+                            url=url,
+                            platform=scraped_platform,
+                            scrape_result=scrape_result,
+                            analysis_result=result,
+                        )
+
                         yield f"event: result\ndata: {json.dumps(result, ensure_ascii=False)}\n\n"
             else:
                 if is_yt and scrape_error:
