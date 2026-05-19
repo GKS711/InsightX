@@ -28,8 +28,8 @@ import {
 import { useAnalyzeStream } from "./hooks/useAnalyzeStream.js";
 
 const IX = Object.freeze({
-  // 版本
-  version: "4.0.0",
+  // 版本 (bumped v4 → v6 alpha)
+  version: "6.0.0-alpha",
 
   // core/
   Async,

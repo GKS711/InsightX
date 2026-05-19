@@ -86,7 +86,10 @@ export function createInitialState() {
     },
     alerts: { items: [] },
     meta: {
-      appVersion: "4.0.0",
+      // v6 fix: was "4.0.0" — but the real bug was reduceMeta reading the
+      // wrong keys from /api/meta (see fix below). Initial value bumped
+      // defensively in case meta fetch never lands (offline / dev / race).
+      appVersion: "6.0.0-alpha",
       availablePlatforms: ["google", "youtube"],
       availableYtRoles: ["creator", "shop", "brand"],
       featureFlags: { sse_v4: true },
@@ -413,12 +416,23 @@ function reduceMeta(meta, action) {
   switch (action.type) {
     case "FETCH_META_SUCCEEDED":
       if (!action.data) return meta;
+      // v6 fix: backend /api/meta returns camelCase keys (appVersion,
+      // availablePlatforms, availableYtRoles, featureFlags) but this
+      // reducer used to read snake_case (version, platforms, yt_roles,
+      // feature_flags). Every meta field was silently falling through
+      // to the initial-state default — which is why "V4.0.0 · LIVE"
+      // showed forever even after backend bumped to v6.0.0-alpha.
+      //
+      // For backward compat we still accept the snake_case keys too.
       return {
         ...meta,
-        appVersion: action.data.version ?? meta.appVersion,
-        availablePlatforms: action.data.platforms ?? meta.availablePlatforms,
-        availableYtRoles: action.data.yt_roles ?? meta.availableYtRoles,
-        featureFlags: { ...meta.featureFlags, ...(action.data.feature_flags || {}) },
+        appVersion: action.data.appVersion ?? action.data.version ?? meta.appVersion,
+        availablePlatforms: action.data.availablePlatforms ?? action.data.platforms ?? meta.availablePlatforms,
+        availableYtRoles: action.data.availableYtRoles ?? action.data.yt_roles ?? meta.availableYtRoles,
+        featureFlags: {
+          ...meta.featureFlags,
+          ...(action.data.featureFlags || action.data.feature_flags || {}),
+        },
       };
     default:
       return meta;
