@@ -102,6 +102,21 @@ def _get_or_create_user_for_session(session: Session, sid: str) -> User:
     v6.1 Codex round 1 MINOR fix: catches IntegrityError from concurrent
     same-cookie races (two parallel requests arriving with the same
     brand-new sid before either has committed the User row).
+
+    v6.1 Codex round 2 NEEDS-FIX: commit the new User row immediately.
+    `get_session_dep()` does NOT auto-commit (callers control commits),
+    and the v4→workspace bridge in `routes._persist_v4_analyze_to_workspace`
+    opens its OWN `SessionLocal()` to write Store/Reviews. A merely-flushed
+    User row in the request session is invisible to that separate session
+    (different transaction snapshot) → first-visit `/api/v4/analyze-stream`
+    hit `FOREIGN KEY constraint failed`. Plus when the request session
+    closes without explicit commit, the flushed-but-uncommitted user row
+    is silently rolled back.
+
+    `get_current_user` is the first Depends to touch the session, so the
+    session is fresh at this point — committing here doesn't accidentally
+    flush other route-level pending changes. A new transaction starts
+    implicitly on subsequent session operations.
     """
     email = _email_for_session(sid)
     user = session.scalar(select(User).where(User.email == email))
@@ -112,10 +127,26 @@ def _get_or_create_user_for_session(session: Session, sid: str) -> User:
     session.add(user)
     try:
         session.flush()
+        session.commit()  # v6.1 R2: persist user before bridge / SSE worker reads it
         return user
     except IntegrityError:
+        # Concurrent same-sid request committed first. Roll back our flush
+        # and reselect — the conflicting row IS now committed (the other
+        # side won the race, otherwise no IntegrityError).
         session.rollback()
-        return session.scalar(select(User).where(User.email == email))
+        existing = session.scalar(select(User).where(User.email == email))
+        if existing is not None:
+            return existing
+        # Extremely rare: IntegrityError fired but reselect found nothing
+        # (e.g. the conflicting tx also rolled back between events). Retry
+        # once with a fresh INSERT. If THAT fails we let the exception
+        # propagate — never return None, the route would crash on `.id`
+        # with a less helpful stack.
+        retry = User(email=email, plan="free")
+        session.add(retry)
+        session.flush()
+        session.commit()
+        return retry
 
 
 # ════════════════════════════════════════════════════════════════════

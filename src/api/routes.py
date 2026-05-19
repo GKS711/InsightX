@@ -60,7 +60,7 @@ router = APIRouter()
 scraper = ScraperService()
 llm = LLMService()
 
-APP_VERSION = "6.0.0-alpha"
+APP_VERSION = "6.1.0-alpha"
 
 # Route-level budgets (sync edition — service-level timeouts enforce
 # per-call limits; these are advisory ceilings for the route as a whole.
