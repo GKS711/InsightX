@@ -246,6 +246,11 @@ def _persist_v4_analyze_to_workspace(
 
             # 5. Reviews with v6.1 #4 sha256 dedupe — if we already have
             # a Review row with same (source_id, external_id) we skip.
+            #
+            # v6.1 Codex round 1 SERIOUS fix: use session.begin_nested() so
+            # an IntegrityError on a single duplicate review only rolls back
+            # that one INSERT (via SAVEPOINT), not the whole bridge
+            # transaction (Store / Source / Job / earlier Reviews).
             structured = scrape_result.get("reviews_structured") or []
             new_reviews = 0
             if isinstance(structured, list):
@@ -256,7 +261,6 @@ def _persist_v4_analyze_to_workspace(
                     if not text:
                         continue
                     ext_id = _review_external_id(src.id, r)
-                    # Try insert; if duplicate, skip silently.
                     rev = Review(
                         source_id=src.id,
                         scrape_job_id=job.id,
@@ -265,20 +269,16 @@ def _persist_v4_analyze_to_workspace(
                         rating=r.get("rating") if isinstance(r.get("rating"), int) else None,
                         text=text,
                     )
-                    session.add(rev)
                     try:
-                        session.flush()
+                        with session.begin_nested():
+                            session.add(rev)
+                            session.flush()
                         new_reviews += 1
                     except IntegrityError:
-                        # uq_reviews_source_external rejection → seen this
-                        # review before. Roll back this row but keep transaction.
-                        session.rollback()
-                        # Need to re-fetch Store/Source/Job after rollback
-                        store = session.get(Store, store.id)
-                        src = session.get(ReviewSource, src.id)
-                        job = session.get(ScrapeJob, job.id)
-                        if store is None or src is None or job is None:
-                            return  # something else cascade-deleted; bail
+                        # uq_reviews_source_external rejection — duplicate
+                        # review. SAVEPOINT rollback already happened; outer
+                        # bridge transaction intact. Just skip this row.
+                        continue
 
             # 6. AnalysisRun with v6.1 #5 — store the actual post-fallback model
             if isinstance(analysis_result, dict):

@@ -10,9 +10,15 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from src.api.routes import router as v4_router
 from src.api.v5 import router as v5_router
+from src.auth import SessionCookieMiddleware
 import uvicorn
 
-app = FastAPI(title="InsightX API", version="6.0.0-alpha")
+app = FastAPI(title="InsightX API", version="6.1.0-alpha")
+
+# v6.1: cookie-based anonymous session scoping — registered as middleware
+# (not Depends) so Set-Cookie applies uniformly to StreamingResponse /
+# FileResponse / static-file responses, not just JSON.
+app.add_middleware(SessionCookieMiddleware)
 
 # API first (important) — v5 router has its own /api/v5 prefix; v4 mounts at /api
 app.include_router(v5_router)  # /api/v5/*

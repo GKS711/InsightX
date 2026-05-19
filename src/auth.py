@@ -13,6 +13,19 @@ This module is the proper v6.1 fix. Each visitor gets:
   - Their own anon-{sid}@insightx.local user row in the DB
   - Workspace + stores + analyses scoped to that user
 
+## Why middleware (not Depends(get_current_user) cookie minting)
+
+v6.1 Codex round 1 review (task 7e98b9ab6b41) caught: a FastAPI-injected
+`Response` mutation inside `Depends(get_current_user)` does NOT propagate
+when the route returns a concrete `StreamingResponse` (used by all SSE
+endpoints). Fresh visitors hitting `/api/v4/analyze-stream` first would
+never get a `Set-Cookie` header → next request mints another fresh user →
+the landing analysis appears lost when they open `/workspace/`.
+
+The fix is middleware: it owns cookie generation and applies `Set-Cookie`
+to whatever response object FastAPI actually returns (regular or
+StreamingResponse). Dependencies just read `request.state.session_id`.
+
 No password / login / OAuth — completely anonymous. The cookie IS the
 identity. Clearing cookies = losing access to your workspace (acceptable
 for an alpha demo; v6.2 can add real auth if/when needed).
@@ -34,9 +47,12 @@ import os
 import re
 import uuid
 
-from fastapi import Depends, Request, Response
+from fastapi import Depends, Request
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.types import ASGIApp
 
 from src.db import get_session_dep
 from src.models import User
@@ -81,43 +97,91 @@ def _email_for_session(sid: str) -> str:
 
 
 def _get_or_create_user_for_session(session: Session, sid: str) -> User:
-    """Look up the anon user for this session; create on first request."""
+    """Look up the anon user for this session; create on first request.
+
+    v6.1 Codex round 1 MINOR fix: catches IntegrityError from concurrent
+    same-cookie races (two parallel requests arriving with the same
+    brand-new sid before either has committed the User row).
+    """
     email = _email_for_session(sid)
     user = session.scalar(select(User).where(User.email == email))
-    if user is None:
-        user = User(email=email, plan="free")
-        session.add(user)
-        session.flush()  # populate user.id within the same transaction
-    return user
+    if user is not None:
+        return user
+    # Try to create. If we lose the race, reselect.
+    user = User(email=email, plan="free")
+    session.add(user)
+    try:
+        session.flush()
+        return user
+    except IntegrityError:
+        session.rollback()
+        return session.scalar(select(User).where(User.email == email))
 
 
-# ────────────────────────────────────────────────────────────────────
-# FastAPI dependency
-# ────────────────────────────────────────────────────────────────────
+# ════════════════════════════════════════════════════════════════════
+#  Middleware — owns cookie lifecycle
+# ════════════════════════════════════════════════════════════════════
+class SessionCookieMiddleware(BaseHTTPMiddleware):
+    """Ensures every request has an ix_session UUID + sets Set-Cookie on
+    the outgoing response.
+
+    Why middleware: works uniformly for JSONResponse / StreamingResponse /
+    FileResponse / static files. The previous Depends-on-Response approach
+    only worked for routes that returned a serialised payload (FastAPI
+    rewrites the response then) — StreamingResponse bypassed it.
+
+    Reads + writes use `request.state.ix_session_id` so the downstream
+    `get_current_user` dependency just looks at request.state.
+    """
+
+    async def dispatch(self, request: Request, call_next):
+        existing = request.cookies.get(COOKIE_NAME)
+        is_new = not existing or not _SID_PATTERN.match(existing)
+        sid = _new_session_id() if is_new else existing
+        # Stash on request.state so downstream Depends() can read it
+        request.state.ix_session_id = sid
+        request.state.ix_session_is_new = is_new
+
+        response = await call_next(request)
+
+        # On a brand-new session, bake Set-Cookie onto whatever response
+        # type the route returned (StreamingResponse included — its
+        # set_cookie() method exists via starlette.responses.Response base).
+        if is_new:
+            response.set_cookie(
+                key=COOKIE_NAME,
+                value=sid,
+                max_age=COOKIE_MAX_AGE_SECS,
+                path=COOKIE_PATH,
+                secure=COOKIE_SECURE,
+                httponly=COOKIE_HTTPONLY,
+                samesite=COOKIE_SAMESITE,
+            )
+        return response
+
+
+# ════════════════════════════════════════════════════════════════════
+#  FastAPI dependency
+# ════════════════════════════════════════════════════════════════════
 def get_current_user(
     request: Request,
-    response: Response,
     session: Session = Depends(get_session_dep),
 ) -> User:
     """FastAPI Depends — returns the User for this visitor's session.
 
-    Reads `ix_session` cookie. If missing or malformed, mints a new UUID
-    and sets the cookie on the outgoing response (FastAPI propagates
-    Response mutations to the actual HTTP response even when the route
-    returns a different type like JSONResponse or StreamingResponse).
+    The cookie has already been read / created by `SessionCookieMiddleware`,
+    which stored the sid on `request.state.ix_session_id`. This dependency
+    just looks up / creates the matching User row.
+
+    No Response parameter needed — the middleware handles Set-Cookie for
+    every response type uniformly (StreamingResponse included).
     """
-    sid = request.cookies.get(COOKIE_NAME)
+    sid = getattr(request.state, "ix_session_id", None)
     if not sid or not _SID_PATTERN.match(sid):
+        # Should never happen if middleware is registered; defensive fallback.
         sid = _new_session_id()
-        response.set_cookie(
-            key=COOKIE_NAME,
-            value=sid,
-            max_age=COOKIE_MAX_AGE_SECS,
-            path=COOKIE_PATH,
-            secure=COOKIE_SECURE,
-            httponly=COOKIE_HTTPONLY,
-            samesite=COOKIE_SAMESITE,
-        )
+        request.state.ix_session_id = sid
+        request.state.ix_session_is_new = True
     return _get_or_create_user_for_session(session, sid)
 
 
@@ -125,11 +189,9 @@ def get_current_user_id_from_request(request: Request, session: Session) -> int 
     """Plain-function variant for code paths that don't use FastAPI Depends
     (e.g. background jobs / inside `event_generator` closures).
 
-    Returns the user's id if a valid session cookie is present, else None.
-    NEVER mints a new cookie (no Response to set it on) — that has to
-    happen on a real request edge via get_current_user().
+    Returns the user's id if a valid session is present, else None.
     """
-    sid = request.cookies.get(COOKIE_NAME)
+    sid = getattr(request.state, "ix_session_id", None)
     if not sid or not _SID_PATTERN.match(sid):
         return None
     user = session.scalar(
