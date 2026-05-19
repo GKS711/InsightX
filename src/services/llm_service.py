@@ -32,7 +32,23 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-MODEL = "gemma-4-31b-it"
+# Multi-model fallback chain — try primary, fall through to alternatives on
+# 5xx / RESOURCE_EXHAUSTED. Empirically necessary: Google AI free-tier has
+# occasional model-specific outages (we hit one during HF Spaces deploy where
+# gemma-4-31b-it + gemini-2.5-flash were both returning 500/503 but
+# gemini-2.5-flash-lite was up). Each model gets its own retry budget;
+# total worst-case calls = max_attempts × len(MODEL_CHAIN).
+#
+# Order:
+#   1. gemma-4-31b-it      — primary, free quality/cost sweet spot
+#   2. gemini-2.5-flash    — Google GA fallback (higher quota, sometimes spikes)
+#   3. gemini-2.5-flash-lite — last-resort lighter model
+MODEL_CHAIN = [
+    "gemma-4-31b-it",
+    "gemini-2.5-flash",
+    "gemini-2.5-flash-lite",
+]
+MODEL = MODEL_CHAIN[0]  # backward-compat alias
 
 # P3.10-2-R2（Codex peer review 後重設計）：
 # 前端 per-endpoint timeoutMs 已細分（adapters.js 定義）：
@@ -100,22 +116,75 @@ class LLMService:
         max_attempts: int = _DEFAULT_MAX_ATTEMPTS,
         total_timeout_s: float = _DEFAULT_TOTAL_BUDGET_S,
     ) -> str:
-        """Sync Gemini API call with budget-controlled retry.
+        """Sync Gemini API call with multi-model fallback + budget-controlled retry.
 
-        Args:
-            prompt: LLM input
-            json_mode: 走 application/json response
-            max_attempts: 最大嘗試次數（含第一次），預設 2
-            total_timeout_s: wall-clock budget across all retries. Codex round 2
-                fix (S1): the remaining budget is also passed to each individual
-                generate_content() call via config.http_options.timeout, so a
-                single attempt cannot exceed the budget. v5 had asyncio.wait_for
-                per attempt; v6 uses per-call httpOptions which the genai SDK
-                propagates to the underlying httpx request.
+        Tries models in MODEL_CHAIN one by one. Each model gets a shared
+        budget (the remaining wall-clock time from `total_timeout_s`).
+        Falls through to next model on ServerError (5xx), 429 RESOURCE_EXHAUSTED,
+        or transport-class errors. ClientError 4xx (non-429) — i.e. our bug —
+        raises immediately without trying other models.
+
+        Empirical motivation: deploy to HF Spaces hit a Google AI free-tier
+        outage where gemma-4-31b-it and gemini-2.5-flash both returned 5xx
+        while gemini-2.5-flash-lite was still serving. Without fallback the
+        entire app went red for what was a transient model-side issue.
         """
         if not self.client:
             raise Exception("Gemini client not initialized - check GEMINI_API_KEY")
 
+        started = time.monotonic()
+        last_exc: BaseException | None = None
+
+        for model_idx, model in enumerate(MODEL_CHAIN):
+            elapsed = time.monotonic() - started
+            remaining_budget = total_timeout_s - elapsed
+            if remaining_budget <= 1.0:
+                logger.warning(
+                    "LLM _generate budget exhausted before model %s (%.1fs/%.1fs used)",
+                    model, elapsed, total_timeout_s,
+                )
+                break
+
+            try:
+                return self._generate_one_model(
+                    model, prompt, json_mode,
+                    max_attempts=max_attempts,
+                    total_timeout_s=remaining_budget,
+                )
+            except genai_errors.ClientError as e:
+                # 4xx non-429 = our bug (bad prompt, invalid args, auth). Don't
+                # waste time trying other models — raise immediately.
+                if not _is_retryable_client_error(e):
+                    raise
+                last_exc = e
+            except Exception as e:
+                last_exc = e
+
+            if model_idx < len(MODEL_CHAIN) - 1:
+                logger.warning(
+                    "LLM model %s exhausted (%s), falling back to %s",
+                    model, type(last_exc).__name__ if last_exc else "?",
+                    MODEL_CHAIN[model_idx + 1],
+                )
+
+        # All models in MODEL_CHAIN failed
+        raise (last_exc or RuntimeError("MODEL_CHAIN exhausted with no exception"))
+
+    def _generate_one_model(
+        self,
+        model: str,
+        prompt: str,
+        json_mode: bool = False,
+        *,
+        max_attempts: int = _DEFAULT_MAX_ATTEMPTS,
+        total_timeout_s: float = _DEFAULT_TOTAL_BUDGET_S,
+    ) -> str:
+        """Single-model variant of _generate (the original retry loop).
+
+        Called by _generate per model in MODEL_CHAIN. Same budget/retry
+        semantics as before — only difference is the model is a parameter
+        instead of the module-level MODEL constant.
+        """
         start = time.monotonic()
         last_exc: BaseException | None = None
 
@@ -123,11 +192,11 @@ class LLMService:
             remaining = total_timeout_s - (time.monotonic() - start)
             if remaining <= 0:
                 logger.warning(
-                    "LLM _generate budget exhausted before attempt %d (budget=%.1fs)",
-                    attempt, total_timeout_s,
+                    "LLM %s budget exhausted before attempt %d (budget=%.1fs)",
+                    model, attempt, total_timeout_s,
                 )
                 raise (last_exc or TimeoutError(
-                    f"_generate budget {total_timeout_s:.1f}s exhausted after {attempt - 1} attempts"
+                    f"_generate_one_model({model}) budget {total_timeout_s:.1f}s exhausted after {attempt - 1} attempts"
                 ))
 
             # Per-call http timeout = min(remaining budget, client-level ceiling).
@@ -149,7 +218,7 @@ class LLMService:
             try:
                 # v6: sync call instead of `await self.client.aio.models...`
                 response = self.client.models.generate_content(
-                    model=MODEL, contents=prompt, config=config,
+                    model=model, contents=prompt, config=config,
                 )
                 if attempt > 1:
                     logger.info(
