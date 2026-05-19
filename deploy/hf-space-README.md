@@ -18,7 +18,7 @@ Live demo of [InsightX v6.0.0-alpha](https://github.com/GKS711/InsightX) — tur
 
 - **Backend**: FastAPI 0.109+ on Python 3.10 (sync stack, sqlalchemy-libsql 0.2)
 - **DB**: Turso (libsql, serverless SQLite) — `DATABASE_URL` and `TURSO_AUTH_TOKEN` are set as Space secrets
-- **LLM**: Google Gemini API (gemma-4-31b-it)
+- **LLM**: Google Gemini API — multi-model fallback chain `gemma-4-26b-a4b-it` → `gemma-4-31b-it` → `gemini-2.5-flash` → `gemini-2.5-flash-lite`
 - **Scrapers**: Serper API (Google Maps) + YouTube Data API v3 / youtube-comment-downloader fallback
 
 The container runs `alembic upgrade head` on every boot to ensure the v5 schema is materialized on the Turso DB. After that, uvicorn serves on port 7860 (mapped to the Space's public URL).

@@ -6,7 +6,7 @@ This walks you through deploying InsightX v6.0.0-alpha as a **free** live demo u
 
 - **Hugging Face Spaces (Free, Docker SDK)** — hosting (16GB RAM, 2 vCPU, no request timeout, 48h sleep after inactivity)
 - **Turso (Starter Free)** — serverless SQLite DB (500 DB, 5GB total, 1B row reads/mo)
-- **Google Gemini Free Tier** — LLM (10 RPM / 1500 RPD on `gemma-4-31b-it`)
+- **Google Gemini Free Tier** — LLM (10 RPM / 1500 RPD on `gemma-4-26b-a4b-it`, the v6 primary model; multi-model fallback chain auto-rotates to `gemma-4-31b-it` → `gemini-2.5-flash` → `gemini-2.5-flash-lite` on 5xx/quota errors)
 - **Serper Free Tier** — Google Maps scraping (2500 free credits one-time + 100 free queries one-time on signup; ~50 queries/day budget)
 
 Total cost: **$0/month** as long as you stay under free tier limits.
@@ -201,7 +201,7 @@ HF Space auto-rebuilds on push.
 |---|---|---|
 | HF Spaces | unlimited (free hardware, 48h auto-sleep) | none |
 | Turso | 5GB storage, 1B row reads/mo | unlikely to hit unless you store every scrape result long-term |
-| Gemini | 1500 req/day, 10 RPM (`gemma-4-31b-it` free) | hit `429 RESOURCE_EXHAUSTED` if a demo session burns >10 calls in 60s — the retry logic in `llm_service.py` handles this |
+| Gemini | 1500 req/day, 10 RPM (`gemma-4-26b-a4b-it` primary, free) | hit `429 RESOURCE_EXHAUSTED` if a demo session burns >10 calls in 60s — `_generate()` multi-model fallback rotates through `MODEL_CHAIN` automatically |
 | Serper | 2500 free credits one-time + 100 free queries one-time | runs out fast in dev; add their $50/mo plan only when promoting publicly |
 | YouTube Data API | 10,000 units/day | comments costs ~3-10 units per video, so ~1000+ videos/day |
 

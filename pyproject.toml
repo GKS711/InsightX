@@ -15,10 +15,11 @@ dependencies = [
     "certifi>=2024.0",
     "youtube-comment-downloader>=0.1.76",
     # v6: sync persistence + Turso/libsql
+    # libsql pair exact-pinned (0.x stability) — must stay in sync with requirements.txt
     "sqlalchemy>=2.0",
     "alembic>=1.13",
-    "sqlalchemy-libsql>=0.2.0",      # Turso dialect (sync only as of 2026-05)
-    "libsql-experimental>=0.0.55",
+    "sqlalchemy-libsql==0.2.0",      # Turso dialect (sync only as of 2026-05)
+    "libsql-experimental==0.0.55",   # underlying libsql Python bindings
     "redis>=5.0",
     "rq>=1.15",
     "reportlab>=4.0",
