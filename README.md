@@ -4,10 +4,13 @@
 
 **Turn customer reviews — Google Maps stores or YouTube videos — into AI-powered business strategy**
 
+[![Live demo](https://img.shields.io/badge/live--demo-Jordan711--insightx__demo.hf.space-FF9D00.svg)](https://Jordan711-insightx-demo.hf.space)
 [![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.109+-green.svg)](https://fastapi.tiangolo.com/)
-[![React](https://img.shields.io/badge/React-18+-61DAFB.svg?logo=react)](https://reactjs.org/)
-[![Version](https://img.shields.io/badge/version-4.0.0-orange.svg)](#changelog)
+[![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0+sync-D71F00.svg)](https://www.sqlalchemy.org/)
+[![Turso](https://img.shields.io/badge/DB-Turso%20libsql-4FF8D2.svg)](https://turso.tech/)
+[![HF Spaces](https://img.shields.io/badge/deploy-HF%20Spaces-FFD21E.svg?logo=huggingface)](https://huggingface.co/spaces/Jordan711/insightx_demo)
+[![Version](https://img.shields.io/badge/version-6.0.0--alpha-E25A45.svg)](#changelog)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 **Language:** 🇺🇸 English | [🇹🇼 繁體中文](README_zh-TW.md)
@@ -29,13 +32,29 @@ InsightX takes a **Google Maps store URL** or a **YouTube video URL**, scrapes t
 
 **Zero browser, zero headless Chrome** — everything runs through HTTP APIs. No Playwright, no Selenium.
 
+> 🚀 **Try the live demo**: <https://Jordan711-insightx-demo.hf.space> — runs on **Hugging Face Spaces Free** + **Turso (libsql)** at $0/month.
+
+---
+
+## What's new in v6.0.0-alpha (2026-05-19)
+
+- **Full async → sync rewrite** of the FastAPI + SQLAlchemy + jobs stack so Turso/libsql (sync-only) can back the DB. See [`CHANGELOG.md`](CHANGELOG.md) for the migration rationale.
+- **Codex img2 magazine-cover hero illustration** replacing the procedural neural-map (cream paper + risograph + Saul Bass × New Yorker references; multi-source convergence concept covers Maps + YouTube + future platforms).
+- **Multi-model LLM fallback chain**: `gemma-4-26b-a4b-it` → `gemma-4-31b-it` → `gemini-2.5-flash` → `gemini-2.5-flash-lite`. Falls through on 5xx / quota errors without breaking the user-facing response.
+- **HF Spaces deploy** — single-stage `python:3.10-slim` Dockerfile, port 7860, HEALTHCHECK, alembic-on-boot, non-root user. See [`docs/DEPLOY_HF.md`](docs/DEPLOY_HF.md) for the full Turso + HF setup.
+- **v4 → v5 workspace bridge** — landing-page analyses can auto-persist into the `/workspace/` view when `IX_ENABLE_V4_WORKSPACE_PERSIST=1` (self-hosted only; off by default for multi-tenant safety).
+
+8 rounds of Codex peer review across 3 phases (sync refactor, deploy, pre-freeze) reached APPROVE consensus before tagging. See [`HANDOFF.md`](HANDOFF.md) for the review history.
+
 ---
 
 ## See it in action
 
+> Screenshots below are from the v4 UI shipped in `src/static/v2/`. The visual design carries over to v6 — only the hero illustration was replaced with a Codex img2-generated editorial image.
+
 ### 1 · Landing — pick your source
 ![Landing](docs/screenshots/v4/01-landing.png)
-Magazine-grade hero with a live neural-map animation showing topics being detected. One headline, one CTA, no clutter.
+Magazine-grade hero with the new "universal listening post" illustration. One headline, one CTA, no clutter.
 
 ### 2 · Two platforms, one button
 ![Platforms](docs/screenshots/v4/02-platforms.png)
@@ -59,62 +78,64 @@ Strengths / Weaknesses / Opportunities / Threats, every bullet tagged `evidence-
 
 ### 7 · §04 Original material — never lose the source
 ![Reviews](docs/screenshots/v4/07-reviews.png)
-Up to 50 raw reviews with star ratings (or `♥ N` likes for YouTube), filtered by sentiment. Caption is honest: "本次分析了 57 則含文字評論 · 下方顯示其中精選的 50 則樣本 · Google Maps 共 110 則評分（含未寫文字者）" — no faking that the slice equals the full dataset.
+Up to 50 raw reviews with star ratings (or `♥ N` likes for YouTube), filtered by sentiment. Caption is honest about how many reviews were analyzed vs. displayed.
 
 ### 8 · §07 Toolbox — actionable, this week
 ![Weekly Plan](docs/screenshots/v4/08-week-plan.png)
-The toolbox bundles 5 LLM-powered generators: review-reply drafts, marketing copy, **weekly action plan** (shown), staff training scripts, and internal team emails. Every item is grounded in your actual review data.
+The toolbox bundles 5 LLM-powered generators: review-reply drafts, marketing copy, **weekly action plan** (shown), staff training scripts, and internal team emails.
 
 ### 9 · §07 Reply drafts — per-complaint, never generic
 ![Replies](docs/screenshots/v4/09-replies.png)
-Pick any negative theme on the left (`店員態度惡劣`, `衛生環境髒亂`, `服務效率與品質不佳`...), get a complete reply draft on the right with a built-in self-critique panel ("為什麼這樣寫" / "要避開的寫法"). One-click 換一版 / 複製.
+Pick any negative theme on the left, get a complete reply draft on the right with a built-in self-critique panel.
 
 ### 10 · §AI Advisor — chat with a consultant who read everything
 ![AI Advisor](docs/screenshots/v4/10-ai-advisor.png)
-Ask anything about your store. The advisor only has your data in context — not generic ChatGPT — and surfaces follow-up questions on the right (份量被稱讚但有人嫌貴、停車資訊怎麼讓更多人看到、etc).
+Ask anything about your store. The advisor only has your data in context — not generic ChatGPT — and surfaces follow-up questions on the right.
 
 ---
 
-## Quick Start (3 steps)
+## Quick Start
 
-### 1. Clone & configure
+### Option A · Live demo (recommended for trying it out)
+
+<https://Jordan711-insightx-demo.hf.space> — no install, no signup. Paste a Google Maps URL into the "Google 評論" card and hit 開始分析.
+
+### Option B · Local development
 
 ```bash
+# Clone
 git clone https://github.com/GKS711/InsightX.git
 cd InsightX
+
+# Env
 cp .env.example .env
-```
+# Edit .env: GEMINI_API_KEY, SERPER_API_KEY, optionally YOUTUBE_API_KEY
+# Leave DATABASE_URL unset for local SQLite (defaults to sqlite:///./insightx.db)
 
-Edit `.env` — minimum required:
-
-```
-GEMINI_API_KEY=your_key_here          # https://aistudio.google.com/app/apikey
-SERPER_API_KEY=your_key_here          # Required for Google Maps mode (https://serper.dev)
-YOUTUBE_API_KEY=your_key_here         # Recommended for YouTube mode (https://console.cloud.google.com → YouTube Data API v3)
-```
-
-If `YOUTUBE_API_KEY` is missing, YouTube mode auto-falls back to a free library (no key, no quota).
-
-### 2. Install
-
-```bash
-# Python (pick one)
+# Python
+python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-# or: uv sync
 
-# Frontend (only if you want to rebuild assets — pre-built bundle ships in src/static/v2/)
-npm install && npm run build
+# DB schema
+alembic upgrade head
+
+# Run
+uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-### 3. Run
+Open <http://localhost:8000>. Frontend is in `src/static/v2/` (Babel-standalone React, no build step). Workspace at `/workspace/`. API docs at `/docs`.
 
-```bash
-python -m uvicorn src.main:app --host 0.0.0.0 --port 8000
-```
+### Option C · Self-host on Hugging Face Spaces + Turso
 
-Open **http://localhost:8000**, paste a Google Maps URL **or** a YouTube video URL, click **開始分析 / Analyze** — done.
+Step-by-step guide: **[`docs/DEPLOY_HF.md`](docs/DEPLOY_HF.md)**. Highlights:
 
-> The v4 React UI is mounted at `/`. The previous v3 HTML build is kept at `/legacy` as a fallback (read-only).
+1. `turso db create insightx-demo --location nrt` (Tokyo)
+2. Create HF Space (Docker SDK, CPU basic free)
+3. Set 5 secrets (`DATABASE_URL`, `TURSO_AUTH_TOKEN`, `GEMINI_API_KEY`, `SERPER_API_KEY`, optional `YOUTUBE_API_KEY`)
+4. `git clone https://huggingface.co/spaces/<user>/<space>`, `cp` over the source, `git push`
+5. First build ~3min; subsequent rebuilds ~30s
+
+Total cost: **$0/month** while you stay inside Gemini's free tier (1500 req/day) and Serper's free credits.
 
 ---
 
@@ -127,13 +148,12 @@ After analysis, the dashboard renders an editorial-style report (think *The Econ
 | §01 Hero | Store / video name, address (or category), rating / like-count, sentiment donut |
 | §02 Themes | Top positive & negative themes with quotes |
 | §03 SWOT | Strategic posture (Strengths / Weaknesses / Opportunities / Threats) |
-| §04 Original Material | Up to 50 raw reviews / comments with sentiment color-coding (or 「♥ N」 likes for YouTube) |
+| §04 Original Material | Up to 50 raw reviews / comments with sentiment color-coding (or `♥ N` likes for YouTube) |
 | §05 Weekly Action Plan | Concrete 7-day to-do list per persona (store owner / creator) |
 | §06 Marketing | IG/FB-style copy aligned with your strengths |
 | §07 Tools | Per-topic reply drafts, root-cause deep-dives, training scripts, internal staff emails |
 | §08 AI Consultant | Chat with an AI advisor that knows your data |
-
-**Bonus: Manager Decision Simulator** — interactive game with 10 real-world management scenarios (separate React mini-app).
+| `/workspace/` | Optional persistent multi-store workspace (v5/v6 — requires Turso DB + bridge env flag) |
 
 ---
 
@@ -141,103 +161,103 @@ After analysis, the dashboard renders an editorial-style report (think *The Econ
 
 ```
    Google Maps URL  ─────┐
-                         ├─▶ Auto-detect platform ─▶ Scraper ─▶ Gemini analyze ─▶ SSE stream ─▶ Dashboard
-   YouTube video URL ────┘                              │
-                                                        │
-                                              ┌─────────┴─────────┐
-                                              │ Serper /reviews   │ (Google Maps)
-                                              │ YouTube Data v3   │ (with library fallback)
-                                              └───────────────────┘
+                         ├─▶ detect platform ─▶ Scraper ─▶ Gemini analyze ─▶ SSE stream ─▶ Dashboard
+   YouTube video URL ────┘                          │                            │
+                                                    │                            │
+                                      ┌─────────────┴──────────────┐             │
+                                      │ Serper /maps + /reviews    │             ▼
+                                      │ YouTube Data API v3        │   IX_ENABLE_V4_WORKSPACE_PERSIST=1
+                                      │  (+ library fallback)      │   ─▶ Turso persist + /workspace/
+                                      └────────────────────────────┘
 
-   Once analysis is "ready", 9 downstream LLM endpoints fire on-demand
-   (SWOT, reply, marketing, weekly-plan, root-cause, training, internal-email, chat)
+   Once "ready", 9 downstream LLM endpoints fire on-demand (SWOT, reply, marketing,
+   weekly-plan, root-cause, training-script, internal-email, chat).
 ```
 
-The whole pipeline is **zero-browser** — no Chrome, no Playwright, just HTTP.
+**v6 stack**: FastAPI (sync) + SQLAlchemy 2.0 (sync) + alembic + `sqlalchemy-libsql` + threading.Thread workers + Babel-standalone React. Zero-browser scraping, multi-model LLM fallback chain. Full architecture diagram in [`HANDOFF.md`](HANDOFF.md).
 
 ---
 
 ## API Reference
 
-All endpoints are listed at `http://localhost:8000/docs` (Swagger UI). Every endpoint accepts an optional `platform: "google" | "youtube"` field; defaults to `"google"`.
+All endpoints are listed at `<your-host>/docs` (Swagger UI). Two API surfaces:
 
-### Bootstrap & Analysis
+### v4 (stateless analysis — used by the landing page)
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | `GET` | `/api/meta` | App metadata (version, available platforms, feature flags) |
-| `GET` | `/api/v4/analyze-stream?url=...` | **Recommended.** Structured SSE stream with `progress` / `result` / `failed` events |
-| `GET` | `/api/analyze-stream?url=...` | Legacy SSE (kept for backwards compatibility) |
+| `GET` | `/api/v4/analyze-stream?url=...` | **Recommended.** Structured SSE with `progress` / `result` / `failed` events |
 | `POST` | `/api/analyze` | Non-SSE fallback for the main analyze flow |
+| `POST` | `/api/swot`, `/api/reply`, `/api/analyze-issue`, `/api/marketing`, `/api/weekly-plan`, `/api/training-script`, `/api/internal-email`, `/api/chat` | 8 platform-aware LLM feature endpoints |
 
-### LLM Feature Endpoints (9)
+### v5/v6 (persistent workspace — used by `/workspace/`)
 
-All POST, all platform-aware, all return JSON:
-
-| Endpoint | Output |
-|----------|--------|
-| `/api/swot` | SWOT 4-quadrant analysis |
-| `/api/reply` | Reply draft for a specific complaint |
-| `/api/analyze-issue` | Root-cause deep dive |
-| `/api/marketing` | Social-media copy |
-| `/api/weekly-plan` | 7-day action plan |
-| `/api/training-script` | Staff / editor coaching script |
-| `/api/internal-email` | Internal team email |
-| `/api/chat` | AI consultant turn |
-| `/api/debug-scrape` | Scraper output only (no LLM) — for diagnostics |
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` `GET` | `/api/v5/workspaces` | Create / list user workspaces |
+| `POST` `GET` `DELETE` | `/api/v5/stores`, `/api/v5/stores/{id}` | Per-store CRUD with cascade-delete + 409 race guard |
+| `POST` | `/api/v5/stores/{id}/scrape`, `/api/v5/stores/{id}/analyze` | Trigger background scrape / analyze jobs |
+| `GET` | `/api/v5/jobs/{id}/stream`, `/api/v5/runs/{id}/stream` | SSE progress streams (heartbeat-driven) |
+| `POST` `GET` `GET` | `/api/v5/stores/{id}/reports`, `/api/v5/reports/{id}`, `/api/v5/reports/{id}/download` | PDF / DOCX report generation + lazy regenerate on cold restart |
 
 ---
 
-## Architecture
+## Architecture (the files you'll touch)
 
 ```
 InsightX/
 ├── src/
-│   ├── main.py                  # FastAPI entry; mounts /, /legacy, static
-│   ├── api/routes.py            # All HTTP + SSE endpoints
+│   ├── main.py                  # FastAPI entry; mounts /, /workspace/, /legacy
+│   ├── db.py                    # sync create_engine + Turso URL normalize
+│   ├── models.py                # 9-table v5 ORM schema (passive_deletes=True on cascades)
+│   ├── schemas.py               # Pydantic request/response shapes
+│   ├── jobs.py                  # threading.Thread bg workers + progress_stream SSE generator
+│   ├── api/
+│   │   ├── routes.py            # v4 stateless endpoints + v4→v5 workspace bridge
+│   │   └── v5.py                # v5 persistent endpoints
 │   ├── services/
 │   │   ├── scraper_service.py   # Serper /maps + /reviews + URL dispatcher
-│   │   ├── youtube_scraper.py   # YouTube Data API v3 + downloader fallback
-│   │   ├── llm_service.py       # 9 Gemini calls (platform-aware persona)
+│   │   ├── youtube_scraper.py   # YouTube Data API v3 + library fallback
+│   │   ├── llm_service.py       # 9 Gemini calls + MODEL_CHAIN multi-model fallback
+│   │   ├── reports.py           # PDF / DOCX generation
 │   │   └── canonicalizer.py     # yt_role canonicalize + metadata wrapper
-│   ├── config/
-│   │   ├── prompts.py           # AI prompt templates
-│   │   └── mock_responses.py    # Demo fallback data (legacy /legacy use only)
 │   └── static/
-│       ├── v2/                  # ★ v4.0.0 main UI (current) — React 18 + Babel single-file
-│       │   ├── index.html       # 3550-line single-file SPA
+│       ├── v2/                  # ★ v4/v6 main UI — React 18 + Babel single-file
+│       │   ├── index.html       # ~3500-line single-file SPA
+│       │   ├── assets/hero-listening.png  # Codex img2 hero (LFS-tracked)
 │       │   ├── bootstrap.js     # ES module → window.IX bridge
 │       │   ├── core/            # adapters / api / async / ids
-│       │   └── hooks/           # useAppReducer / useAnalyzeStream / useLocalStorage
+│       │   ├── hooks/           # useAppReducer / useAnalyzeStream / useLocalStorage
+│       │   └── workspace/       # Sidecar workspace UI (mounted at /workspace/)
 │       └── index.html           # Legacy v3 HTML (mounted at /legacy)
+├── alembic/                     # DB migrations (sync; Turso-aware via src.db._engine_kwargs)
 ├── docs/
+│   ├── DEPLOY_HF.md             # ★ Step-by-step HF Spaces + Turso deployment
 │   ├── v4-api-contract.md       # API contract spec
 │   ├── v4-sse-events.md         # SSE event types
 │   ├── v4-view-model.md         # Frontend view-model spec
-│   └── v4-smoke-test.md         # Manual E2E checklist
+│   ├── v4-smoke-test.md         # Manual E2E checklist
+│   └── archive/                 # Historical: v3 migration plan, Codex review notes, V5_NOTES
+├── deploy/hf-space-README.md    # HF Space repo README template with YAML frontmatter
 ├── outputs/test_reducer.mjs     # 48-case reducer + adapter regression test
 ├── validate_jsx.cjs             # @babel/parser JSX validator
-├── pyproject.toml               # Python deps (uv)
-├── requirements.txt             # Python deps (pip, for Docker)
-├── package.json                 # Frontend deps
-├── Dockerfile / compose.yaml    # Docker deployment
-└── .env.example                 # Environment template
+├── pyproject.toml + requirements.txt   # Python deps (libsql pair pinned)
+├── Dockerfile                   # Single-stage py3.10-slim for HF Spaces
+└── HANDOFF.md                   # ★ Architecture deep-dive for the next maintainer
 ```
-
-### Frontend (v4)
-
-The v4 UI is a **single-file React 18 SPA** at `src/static/v2/index.html`, compiled in-browser with `@babel/standalone` — no build step required to ship. Core logic lives in ES modules under `core/` + `hooks/` and is bridged into `window.IX` by `bootstrap.js`.
 
 ### Locked invariants
 
-Four rules codified across backend + frontend that any future change must preserve. Concise version:
+Rules codified across backend + frontend that any future change must preserve:
 
-1. **Frontend `timeoutMs` ≥ Backend `total_timeout_s` + 5s buffer**
-2. **Service layer raises on failure** (no silent fallback dict)
-3. **Retry by exception type**, never string-match
-4. **Prompt skeletons match the `<pre>` renderer** (no markdown — use `【】 ◆　▸` plain-text structure)
+1. **Frontend `timeoutMs` ≥ Backend `total_timeout_s` + 5s buffer** — otherwise frontend abort leaves backend burning quota
+2. **Service layer raises on failure** (no silent fallback dict) — mock fallback only at route layer behind `_fallback:true` flag
+3. **Retry by exception type**, never string-match — `genai_errors.ServerError` / `429` / `httpx.NetworkError`
+4. **Prompt skeletons match the `<pre>` renderer** — no markdown; use `【】 ◆　▸` plain-text structure
+5. **Backend uncapped scrape, frontend display cap** — `MAX_REVIEWS_DISPLAY = 50` with honest "本次分析了 N · 顯示 50 則樣本" caption
 
-Full rationale + historical bug fixes that locked these: [`HANDOFF.md`](HANDOFF.md). API contract / SSE event shapes / view-model: [`docs/v4-*.md`](docs/).
+Full rationale + the historical bug fixes that locked these: [`HANDOFF.md`](HANDOFF.md).
 
 ---
 
@@ -262,10 +282,13 @@ The frontend `HeroStat` / `Masthead` / `TopNav` / `ReviewCard` are **platform-aw
 
 | Variable | Required | Notes |
 |----------|----------|-------|
-| `GEMINI_API_KEY` | **Yes** | [aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey) — used for all 10 LLM calls |
+| `GEMINI_API_KEY` | **Yes** | [aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey) — drives all LLM calls |
 | `SERPER_API_KEY` | Store mode | [serper.dev](https://serper.dev/) — Google Maps `/maps` + `/reviews` |
-| `YOUTUBE_API_KEY` | YouTube mode (recommended) | [console.cloud.google.com](https://console.cloud.google.com) → enable **YouTube Data API v3** → create API key. Free quota 10,000 units/day. Without it, the library fallback runs (no key, no quota cap, but no `like_count` / `view_count`). |
+| `YOUTUBE_API_KEY` | YouTube mode (recommended) | [console.cloud.google.com](https://console.cloud.google.com) → enable **YouTube Data API v3**. Free quota 10,000 units/day. Without it, the library fallback runs (no key, no quota cap, but no `like_count` / `view_count`). |
 | `YOUTUBE_FALLBACK_MODE` | No | `auto` (default) / `force-ytdlp` (force library) / `off` (disable fallback) |
+| `DATABASE_URL` | Production | Turso libsql URL (`libsql://...`) for production; default `sqlite:///./insightx.db` for local |
+| `TURSO_AUTH_TOKEN` | Production w/ Turso | JWT from `turso db tokens create <db>` |
+| `IX_ENABLE_V4_WORKSPACE_PERSIST` | No | Set `=1` for self-hosted single-user to auto-persist landing analyses into `/workspace/`. **Leave unset on public/multi-tenant demos** until cookie session scoping ships in v6.1. |
 | `ENVIRONMENT` | No | `development` or `production` |
 
 ---
@@ -278,11 +301,18 @@ Three commands cover all automated checks (no API keys needed):
 # Frontend JSX integrity
 node validate_jsx.cjs
 
-# Reducer + adapter regression
+# Reducer + adapter regression (48 cases)
 node outputs/test_reducer.mjs
 
 # Python syntax
 python3 -m py_compile src/services/*.py src/api/*.py src/main.py
+```
+
+Smoke test the live deploy:
+
+```bash
+SPACE=https://Jordan711-insightx-demo.hf.space
+curl -s $SPACE/api/meta | jq .appVersion       # → "6.0.0-alpha"
 ```
 
 Manual E2E (requires real API keys + uvicorn): see [`docs/v4-smoke-test.md`](docs/v4-smoke-test.md).
@@ -294,41 +324,22 @@ Manual E2E (requires real API keys + uvicorn): see [`docs/v4-smoke-test.md`](doc
 ```bash
 # Backend with hot reload
 python -m uvicorn src.main:app --reload --port 8000
-
-# (Optional) Frontend dev with Vite HMR — only if you're modifying React component files
-npm run dev
 ```
 
-The current v4 UI is **single-file** + Babel standalone, so most front-end edits to `src/static/v2/index.html` go live with just a browser hard-reload. No webpack / Vite rebuild needed unless you touch `core/` or `hooks/` ES modules.
-
----
-
-## Docker
-
-```bash
-cp .env.example .env
-# Edit .env with your API keys
-docker compose up -d
-# → http://localhost:8080
-```
+The v4 UI is **single-file** + Babel standalone, so most front-end edits to `src/static/v2/index.html` go live with just a browser hard-reload. No webpack / Vite rebuild needed unless you touch `core/` or `hooks/` ES modules.
 
 ---
 
 ## Changelog
 
-### v4.0.0 (2026-04-23)
+See [`CHANGELOG.md`](CHANGELOG.md) for the full version history. Highlights:
 
-UI migrated to a single-file React 18 + `@babel/standalone` SPA at `src/static/v2/`. Added structured `/api/v4/analyze-stream` SSE endpoint, 9 platform-aware LLM feature endpoints, slice reducer with `requestId` stale-discard, four locked invariants spanning backend+frontend, and a 48-case regression test for the reducer/adapter contract. Old v3 HTML kept at `/legacy`.
-
-### v3.0.0 — Mode lineup simplified
-
-Codebase consolidated to two operating modes (Google Maps + YouTube). Version metadata aligned across `package.json` / `pyproject.toml`.
-
-### v2.0.0 — Add YouTube channel mode
-
-Dual-path comment scraper: official YouTube Data API v3 (with quota) + `youtube-comment-downloader` library fallback (no key required).
-
-### v1.x — Initial Google Maps analyzer
+- **v6.0.0-alpha (2026-05-19)** — Full sync rewrite for Turso/libsql compatibility. Multi-model LLM fallback chain. Codex img2 magazine-cover hero. HF Spaces single-stage Dockerfile. v4→v5 workspace bridge (env-gated). 8 rounds of Codex peer review.
+- **v5.0.0 (2026-05-19)** — Persistent multi-store workspace. 9-table v5 schema. async SQLAlchemy 2.0 ORM. Store deletion with cascade integrity. Codex Round 3 race-window fixes.
+- **v4.0.0 (2026-04-23)** — Single-file React 18 + `@babel/standalone` SPA. Structured `/api/v4/analyze-stream` SSE. 9 platform-aware LLM endpoints. 48-case reducer regression test.
+- **v3.0.0** — Codebase consolidated to Google Maps + YouTube. Shopee mode formally abandoned.
+- **v2.0.0** — YouTube channel mode with dual-path scraper.
+- **v1.x** — Initial Google Maps analyzer.
 
 ---
 
@@ -340,4 +351,4 @@ MIT — see [LICENSE](LICENSE).
 
 ## Acknowledgments
 
-[Google Gemini](https://ai.google.dev/) · [Serper API](https://serper.dev/) · [YouTube Data API v3](https://developers.google.com/youtube/v3) · [youtube-comment-downloader](https://pypi.org/project/youtube-comment-downloader/) · [FastAPI](https://fastapi.tiangolo.com/) · [React](https://react.dev/) · [@babel/standalone](https://babeljs.io/docs/babel-standalone)
+[Google Gemini](https://ai.google.dev/) · [Serper API](https://serper.dev/) · [YouTube Data API v3](https://developers.google.com/youtube/v3) · [youtube-comment-downloader](https://pypi.org/project/youtube-comment-downloader/) · [FastAPI](https://fastapi.tiangolo.com/) · [SQLAlchemy](https://www.sqlalchemy.org/) · [Turso](https://turso.tech/) · [Hugging Face Spaces](https://huggingface.co/docs/hub/spaces) · [React](https://react.dev/) · [@babel/standalone](https://babeljs.io/docs/babel-standalone)
