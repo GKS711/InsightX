@@ -77,7 +77,7 @@ In the Space settings → **Variables and secrets**:
 | `SERPER_API_KEY` | from <https://serper.dev/api-key> |
 | `YOUTUBE_API_KEY` | (optional) Google Cloud Console |
 
-All five should be marked as **Secret** (not Variable) so they don't appear in logs.
+Mark each provided key as **Secret** (not Variable) so they're masked in logs. `YOUTUBE_API_KEY` is optional — omit it entirely if you don't have one (the YouTube path will fall back to `youtube-comment-downloader` which needs no API key).
 
 ---
 
@@ -96,6 +96,7 @@ cd insightx-demo
 # Copy needed files from your InsightX repo
 INSIGHTX=/Users/gankaisheng/VScode/Claude實作/InsightX
 cp $INSIGHTX/Dockerfile .
+cp $INSIGHTX/.dockerignore .
 cp $INSIGHTX/requirements.txt .
 cp $INSIGHTX/alembic.ini .
 cp -r $INSIGHTX/src .
@@ -176,12 +177,16 @@ cd /tmp/insightx-demo
 INSIGHTX=/Users/gankaisheng/VScode/Claude實作/InsightX
 cp $INSIGHTX/Dockerfile .
 cp $INSIGHTX/requirements.txt .
+cp $INSIGHTX/alembic.ini .
+cp $INSIGHTX/.dockerignore .
 cp -r $INSIGHTX/src .
 cp -r $INSIGHTX/alembic .
 git add .
 git commit -m "Update to ..."
 git push origin main
 ```
+
+> Codex deploy-review fix (MINOR): added `alembic.ini` and `.dockerignore` to the update recipe — they were missing in the initial draft, so future Alembic config or build-context changes would silently fall behind.
 
 HF Space auto-rebuilds on push.
 
@@ -217,7 +222,7 @@ If any service hits its quota during a demo, the user-facing UI shows a friendly
 
 - **Why Docker SDK over Gradio SDK**: InsightX is FastAPI + custom React UI, not a Gradio app. Docker SDK is the only way to keep that stack intact on HF Spaces Free.
 - **Why Turso over Neon**: Turso's libsql is SQLite-compatible (matches the local dev DB), zero-config, and v6 already targets it. Neon would require a Postgres dialect switch (asyncpg/psycopg) which we explicitly avoided in v6.
-- **Why port 7860**: HF Spaces Docker SDK default; saves an `app_port` override in the README frontmatter.
+- **Why port 7860**: HF Spaces Docker SDK default. The `deploy/hf-space-README.md` template includes `app_port: 7860` explicitly as documentation — the Space would auto-detect this even without the line, but pinning it makes the contract obvious.
 - **Why CMD-based alembic upgrade vs entrypoint**: simpler, no extra script file; failed migration kills the container which surfaces in Space Logs.
 
 For the v5 → v6 sync refactor reasoning (asyncpg → sqlalchemy-libsql), see `CHANGELOG.md` v6.0.0-alpha section.

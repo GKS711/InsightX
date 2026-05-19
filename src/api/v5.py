@@ -492,11 +492,39 @@ def download_report(
     report_id: int,
     session: Session = Depends(get_session_dep),
 ) -> FileResponse:
+    """Download generated report (PDF or DOCX).
+
+    Codex deploy-review fix (CRITICAL): on HF Spaces free tier the container
+    is ephemeral — after the 48h auto-sleep + restart cycle, the Report row
+    still exists in Turso but `outputs/reports/store{id}_*.{ext}` is gone.
+    Instead of returning 410, regenerate the file lazily on download. The
+    cost is one extra LLM run per stale report (slow first download), but
+    the alternative would be a 410 with no recovery path.
+
+    Long-term proper fix: store report bytes in Turso (BLOB column) or use
+    persistent object storage. Tracked as a v6 GA followup.
+    """
     rpt = session.get(Report, report_id)
-    if rpt is None or rpt.file_path is None:
+    if rpt is None:
+        raise HTTPException(404, detail="report not found")
+    if rpt.file_path is None:
         raise HTTPException(404, detail="report file not ready")
+
     if not os.path.isfile(rpt.file_path):
-        raise HTTPException(410, detail="report file missing on disk")
+        # Cold-restart fallback: file vanished with the ephemeral container.
+        store = session.get(Store, rpt.store_id)
+        if store is None:
+            raise HTTPException(
+                410, detail="report file missing and source store deleted"
+            )
+        generate_report(session, store, rpt)
+        session.commit()
+        session.refresh(rpt)
+        if rpt.status != "succeeded" or not rpt.file_path or not os.path.isfile(rpt.file_path):
+            raise HTTPException(
+                500, detail="report regeneration failed; see server logs"
+            )
+
     media = "application/pdf" if rpt.format == "pdf" else (
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     )

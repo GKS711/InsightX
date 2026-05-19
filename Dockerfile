@@ -19,12 +19,11 @@
 
 FROM python:3.10-slim
 
-# Build deps for sqlalchemy-libsql + libsql-experimental wheels (needs gcc for
-# rare arch fallback paths). On amd64 wheels are usually prebuilt; this keeps
-# the build resilient.
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    && rm -rf /var/lib/apt/lists/*
+# Codex deploy-review fix (SERIOUS): build-essential removed. amd64 binary
+# wheels exist for libsql-experimental (cp310 manylinux2014); --only-binary
+# below forces wheel-only install and fails fast if a wheel goes missing
+# upstream (better than silently switching to a Rust-toolchain source build
+# that would need build-essential + maturin + cargo).
 
 # HF Spaces runs containers as user `user` (uid 1000). We need a writable
 # WORKDIR. /home/user is conventional. Important: chown the workdir BEFORE
@@ -38,7 +37,7 @@ WORKDIR /home/user/app
 # Install Python deps first for layer caching (as root, system-wide install)
 COPY --chown=user:user requirements.txt ./
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+    pip install --no-cache-dir --only-binary=:all: -r requirements.txt
 
 # Copy backend source + alembic + static UI
 COPY --chown=user:user src ./src
@@ -52,6 +51,13 @@ USER user
 ENV PORT=7860
 ENV PYTHONUNBUFFERED=1
 EXPOSE 7860
+
+# Codex deploy-review fix (SERIOUS): HEALTHCHECK so docker / HF can tell
+# uvicorn is actually serving requests, not just listening. start-period 60s
+# gives alembic upgrade head time to finish on first boot before the probe
+# starts counting failures.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+    CMD python -c "import os, urllib.request; urllib.request.urlopen(f'http://127.0.0.1:{os.getenv(\"PORT\",\"7860\")}/api/meta', timeout=3)" || exit 1
 
 # Entrypoint: migrate DB schema before serving. Failing migrate = container
 # exits, HF Spaces will show the log; better than starting a broken app.

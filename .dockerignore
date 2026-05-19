@@ -18,3 +18,29 @@ coverage/
 .agent/
 .vscode/
 .idea/
+
+# Codex deploy-review fix (MINOR): exclude runtime/dev artifacts that
+# weren't in the original ignore list but bloat the build context.
+video/
+outputs/
+public/
+ppt/
+unpacked/
+*.db
+*.sqlite
+*.sqlite3
+*.tmp
+*.backup.*
+*.pptx
+*.docx
+*.pdf
+
+# Frontend snapshots (Vite v3 dist artifacts; main UI is single-file Babel)
+!src/static/v2/
+
+# Dot files & caches
+.DS_Store
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
