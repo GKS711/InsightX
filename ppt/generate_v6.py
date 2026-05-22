@@ -1,18 +1,16 @@
 """
-InsightX v6.0.0-alpha Release-notes PPT generator
+InsightX 簡報 generator
 
 執行：
     cd ppt && /path/to/.venv/bin/python generate_v6.py
 
 產出：
-    ppt/InsightX_v6.0.0-alpha.pptx
+    ppt/InsightX.pptx
 
 設計：
-- 共用 ppt/generate.py 的色票 + 排版 helper 思路（直接內聯，因為 generate.py
-  不是 module-shaped）
-- 16:9 sandwich：dark cover/closing + light editorial content
-- 配色（與 v4/v6 UI 一致）
-- 14 張，磁石卡片風（左 §編號 + kicker，右大標 + 內文）
+- 9 張 slide，magazine 風 (cream paper + ink + coral + forest)
+- 16:9 widescreen
+- 不是版本進化敘事，是「InsightX 是什麼 / 解什麼問題」的 portfolio 介紹
 """
 from pptx import Presentation
 from pptx.util import Inches, Pt, Emu
@@ -43,7 +41,8 @@ HEIGHT = 7.5
 
 HERE = Path(__file__).resolve().parent
 HERO_IMG = HERE.parent / "src" / "static" / "v2" / "assets" / "hero-listening.png"
-V4_SCREENSHOTS = HERE.parent / "docs" / "screenshots" / "v4"
+GAME_IMG = HERE.parent / "docs" / "screenshots" / "game-question.png"
+LANDING_IMG = HERE.parent / "docs" / "screenshots" / "v4" / "01-landing.png"
 
 
 # ─── Helpers ───────────────────────────────────────────
@@ -79,10 +78,10 @@ def add_kicker(slide, num, label, x=0.5, y=0.4):
 
 
 def add_title(slide, text, x=0.5, y=0.85, w=12, h=1.2, color=INK):
-    add_text(slide, text, x, y, w, h, size=44, bold=True, color=color, font=SERIF)
+    add_text(slide, text, x, y, w, h, size=40, bold=True, color=color, font=SERIF)
 
 
-def add_subtitle(slide, text, x=0.5, y=2.1, w=12, h=0.5, color=INK_2):
+def add_subtitle(slide, text, x=0.5, y=2.0, w=12, h=0.6, color=INK_2):
     add_text(slide, text, x, y, w, h, size=15, color=color, font=SANS)
 
 
@@ -95,7 +94,6 @@ def add_rule_line(slide, x, y, w, color=RULE):
 
 def add_image(slide, path, x, y, w, h):
     if not Path(path).exists():
-        # Fallback: a paper-toned placeholder rect
         rect = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(x), Inches(y), Inches(w), Inches(h))
         rect.fill.solid(); rect.fill.fore_color.rgb = PAPER_2
         rect.line.color.rgb = INK_4
@@ -103,6 +101,16 @@ def add_image(slide, path, x, y, w, h):
                  x, y + h/2 - 0.2, w, 0.4, size=11, color=INK_3, font=MONO, align=PP_ALIGN.CENTER)
         return
     slide.shapes.add_picture(str(path), Inches(x), Inches(y), Inches(w), Inches(h))
+
+
+def card(slide, x, y, w, h, *, fill=PAPER_2, border=None):
+    rect = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(x), Inches(y), Inches(w), Inches(h))
+    rect.fill.solid(); rect.fill.fore_color.rgb = fill
+    if border is None:
+        rect.line.fill.background()
+    else:
+        rect.line.color.rgb = border
+    return rect
 
 
 # ─── Build deck ─────────────────────────────────────────
@@ -117,441 +125,275 @@ blank = prs.slide_layouts[6]
 # ╚══════════════════════════════════════════════════════════════╝
 s = prs.slides.add_slide(blank)
 add_bg(s, BLACK)
+# Brand dot
 dot = s.shapes.add_shape(MSO_SHAPE.OVAL, Inches(0.5), Inches(0.5), Inches(0.45), Inches(0.45))
 dot.fill.solid(); dot.fill.fore_color.rgb = CORAL; dot.line.fill.background()
 add_text(s, "i", 0.5, 0.43, 0.45, 0.45, size=22, bold=True, color=WHITE,
          font=SERIF, align=PP_ALIGN.CENTER, valign=MSO_ANCHOR.MIDDLE)
 add_text(s, "insightx", 1.05, 0.5, 3, 0.5, size=20, bold=True, color=WHITE, font=SERIF)
-add_text(s, "V 6 . 0 . 0 - A L P H A   ·   L I V E", 9.5, 0.55, 3.5, 0.3,
+add_text(s, "A I   顧 客 意 見 洞 察 平 台   ·   L I V E", 8.0, 0.55, 5, 0.3,
          size=10, color=INK_3, font=MONO, align=PP_ALIGN.RIGHT)
 
-add_text(s, "RELEASE NOTES · 2026-05-19", 0.7, 2.5, 8, 0.3,
+# Top kicker
+add_text(s, "INSIGHTX · PROJECT INTRO · 2026", 0.7, 2.5, 8, 0.3,
          size=11, color=CORAL, font=MONO)
-add_text(s, "從 async 到 sync，", 0.7, 3.0, 12, 1.4, size=72, bold=True, color=WHITE, font=SERIF)
-add_text(s, "從本地到雲端。", 0.7, 4.4, 12, 1.4, size=72, bold=True, color=WHITE, font=SERIF)
-add_text(s, "v5 → v6 — 工作區持久化、Turso 雲端 DB、HF Spaces 部署、Codex img2 雜誌封面",
-         0.7, 6.0, 12, 0.5, size=15, color=INK_4, font=SANS)
+
+# Hero text — 兩行
+add_text(s, "讀完所有評論，", 0.7, 3.0, 12, 1.4, size=72, bold=True, color=WHITE, font=SERIF)
+add_text(s, "再給你一份報告。", 0.7, 4.4, 12, 1.4, size=72, bold=True, color=WHITE, font=SERIF)
+
+# Subtitle
+add_text(s,
+         "輸入一個 Google Maps 或 YouTube 連結 ── AI 自動整理成情緒分析、SWOT、回覆草稿、行銷貼文、週行動計畫。",
+         0.7, 6.0, 12, 0.6, size=15, color=INK_4, font=SANS)
+
+# Footer rule + meta
 add_rule_line(s, 0.7, 6.8, 11.9, color=RGBColor(0x44, 0x4d, 0x49))
-add_text(s, "INSIGHTX  ·  v6.0.0-ALPHA  ·  MIT", 0.7, 6.95, 12, 0.3,
+add_text(s, "INSIGHTX  ·  MIT", 0.7, 6.95, 6, 0.3,
          size=10, color=INK_4, font=MONO)
 add_text(s, "Jordan711-insightx-demo.hf.space", 8, 6.95, 5, 0.3,
          size=10, color=INK_4, font=MONO, align=PP_ALIGN.RIGHT)
 
 
 # ╔══════════════════════════════════════════════════════════════╗
-# ║ Slide 2: The journey                                          ║
+# ║ Slide 2: 痛點                                                 ║
 # ╚══════════════════════════════════════════════════════════════╝
 s = prs.slides.add_slide(blank)
 add_bg(s, PAPER)
-add_kicker(s, "01", "the journey")
-add_title(s, "四個版本，半年。")
-add_subtitle(s, "從一次性的店家分析 demo，到雲端部署的持久工作區。")
+add_kicker(s, "01", "痛點")
+add_title(s, "顧客每天在留言，但意見很少變成決策。")
+add_subtitle(s, "管理者每天打開後台看到一堆五星評論，但下一步要做什麼？沒人說得出來。")
 
-versions = [
-    ("v3", "2026-04", "Google Maps + YouTube 雙模式", INK_3),
-    ("v4", "2026-04", "single-file React + magazine UI", INK_2),
-    ("v5", "2026-05", "持久工作區 + 9-table schema", FOREST),
-    ("v6", "2026-05", "Turso + HF Spaces + sync 重寫", CORAL),
+pains = [
+    ("太碎了", "意見散在 Google Maps、YouTube、IG、LINE 各處，\n沒人有時間全部讀完。"),
+    ("太多了", "50 則留言已經是負擔，500 則直接放棄。看得到「很多人說\n好吃」，看不到「冷氣太強客人不想久坐」這種真正的細節。"),
+    ("回應壓力大", "負評上線，店長被情緒帶著走，回覆要嘛太硬要嘛太軟，\n反而失去挽回客人的機會。"),
+    ("新店長沒練習場", "剛升上店長的人沒處理過真正的危機，\n學費全部是用真實客人賠的。"),
 ]
-for i, (ver, when, what, color) in enumerate(versions):
-    y = 3.5 + i * 0.65
-    # dot
-    d = s.shapes.add_shape(MSO_SHAPE.OVAL, Inches(0.7), Inches(y + 0.15), Inches(0.18), Inches(0.18))
-    d.fill.solid(); d.fill.fore_color.rgb = color; d.line.fill.background()
-    add_text(s, ver, 1.1, y, 0.8, 0.4, size=20, bold=True, color=color, font=SERIF)
-    add_text(s, when, 2.1, y + 0.05, 1.5, 0.35, size=10, color=INK_3, font=MONO)
-    add_text(s, what, 3.6, y, 9, 0.4, size=15, color=INK, font=SANS)
-
-# subtle vertical line connecting dots
-line = s.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0.78), Inches(3.7), Emu(9525), Inches(2.0))
-line.fill.solid(); line.fill.fore_color.rgb = INK_4; line.line.fill.background()
+# 2x2 grid
+positions = [(0.7, 3.0), (7.0, 3.0), (0.7, 5.1), (7.0, 5.1)]
+for (title, body), (x, y) in zip(pains, positions):
+    card(s, x, y, 5.7, 1.9, fill=PAPER_2)
+    # coral accent bar
+    bar = s.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(x), Inches(y), Inches(0.08), Inches(1.9))
+    bar.fill.solid(); bar.fill.fore_color.rgb = CORAL; bar.line.fill.background()
+    add_text(s, title, x + 0.3, y + 0.25, 5.2, 0.5, size=20, bold=True, color=INK, font=SERIF)
+    add_text(s, body, x + 0.3, y + 0.85, 5.2, 1.0, size=13, color=INK_2, font=SANS)
 
 
 # ╔══════════════════════════════════════════════════════════════╗
-# ║ Slide 3: v5 — persistent workspace                            ║
+# ║ Slide 3: 解決方案                                              ║
 # ╚══════════════════════════════════════════════════════════════╝
 s = prs.slides.add_slide(blank)
 add_bg(s, PAPER)
-add_kicker(s, "02", "v5 — workspace")
-add_title(s, "從一次性分析，變成你的店家檔案。")
-add_subtitle(s, "v5 加了 9-table schema、cascade-delete、SSE job streaming。")
+add_kicker(s, "02", "解決方案")
+add_title(s, "一個 URL 換一份完整報告。")
+add_subtitle(s, "把「讀評論 → 想策略 → 寫回覆 → 練手」串成同一條流水線。")
 
 bullets = [
-    ("9 張資料表", "User · Workspace · Store · ReviewSource · ScrapeJob · Review · AnalysisRun · GeneratedAsset · Report"),
-    ("Async SQLAlchemy 2.0", "FastAPI + asyncpg / aiosqlite，全 ORM"),
-    ("Cascade 刪除完整性", "DELETE /stores 連帶清掉 sources / jobs / reviews / runs / reports"),
-    ("3 輪 Codex peer review", "Round 3 加上 passive_deletes + _safe_commit_or_log race-window 保護"),
+    ("跨平台抓料，不用開瀏覽器",
+     "Google Maps 用 Serper API 抓店家評論，YouTube 用官方 Data API 抓影片留言。\n速度快、也不容易被反爬擋掉。"),
+    ("9 個 AI 功能共用一份資料",
+     "情緒分析、SWOT、回覆草稿、行銷文案、根源分析、週計畫、培訓劇本、內部信、AI 對話顧問。\n依平台切換語氣（餐廳 / 零售 / YouTuber）。"),
+    ("多店家工作區",
+     "每位使用者有自己的工作區，可以新增多個店家、保留完整歷史紀錄。\n隨時回看上個月對某家分店的分析。"),
+    ("管理者決策模擬遊戲",
+     "把真實負評倒進小遊戲，AI 當你的虛擬顧問即時給回饋。\n練手不用拿真客人試刀。"),
 ]
 for i, (title, body) in enumerate(bullets):
-    y = 3.3 + i * 0.95
-    # bullet bar
-    bar = s.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0.7), Inches(y + 0.05), Inches(0.05), Inches(0.65))
+    y = 2.85 + i * 1.15
+    bar = s.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0.7), Inches(y + 0.05), Inches(0.05), Inches(1.0))
     bar.fill.solid(); bar.fill.fore_color.rgb = FOREST; bar.line.fill.background()
-    add_text(s, title, 0.95, y, 4, 0.4, size=18, bold=True, color=INK, font=SERIF)
-    add_text(s, body, 0.95, y + 0.4, 11.5, 0.5, size=13, color=INK_2, font=SANS)
+    add_text(s, title, 0.95, y, 11, 0.45, size=18, bold=True, color=INK, font=SERIF)
+    add_text(s, body, 0.95, y + 0.5, 11.5, 0.7, size=13, color=INK_2, font=SANS)
 
 
 # ╔══════════════════════════════════════════════════════════════╗
-# ║ Slide 4: Why sync? (the Turso pivot)                          ║
+# ║ Slide 4: 9 個 AI 功能                                          ║
 # ╚══════════════════════════════════════════════════════════════╝
 s = prs.slides.add_slide(blank)
 add_bg(s, PAPER)
-add_kicker(s, "03", "the turso pivot")
-add_title(s, "為什麼 v6 把整個 stack 改 sync？")
-add_subtitle(s, "因為 Turso 的 Python driver 只支援 sync — async 路根本走不通。")
+add_kicker(s, "03", "ai 功能")
+add_title(s, "9 個 AI 功能，共用一份原始評論。")
+add_subtitle(s, "依平台切換語氣 ── 餐廳老闆看到的是門市建議，YouTuber 看到的是頻道策略。")
 
-# Two boxes side by side
-def stack_box(x, y, w, h, header, header_color, lines, base_color):
-    rect = s.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(x), Inches(y), Inches(w), Inches(h))
-    rect.fill.solid(); rect.fill.fore_color.rgb = base_color
-    rect.line.color.rgb = INK
-    add_text(s, header, x + 0.2, y + 0.15, w - 0.4, 0.4, size=14, bold=True, color=header_color, font=MONO)
-    for i, ln in enumerate(lines):
-        add_text(s, ln, x + 0.2, y + 0.7 + i * 0.4, w - 0.4, 0.4, size=12, color=INK, font=SANS)
-
-stack_box(0.7, 3.0, 5.5, 3.5, "v5 ASYNC ✗", CORAL, [
-    "FastAPI 0.109 + async routes",
-    "SQLAlchemy 2.0 + asyncpg / aiosqlite",
-    "asyncio.create_task() bg workers",
-    "asyncio.Queue + Event",
-    "─",
-    "create_async_engine('sqlite+libsql://...')",
-    "→ InvalidRequestError",
-    "sqlalchemy-libsql 0.2 不支援 async",
-], PAPER_2)
-
-stack_box(7.1, 3.0, 5.5, 3.5, "v6 SYNC ✓", FOREST, [
-    "FastAPI 0.109 + sync routes (threadpool)",
-    "SQLAlchemy 2.0 + sqlalchemy-libsql",
-    "threading.Thread(daemon=True) workers",
-    "queue.Queue + threading.Event",
-    "─",
-    "create_engine('sqlite+libsql://...')",
-    "→ works",
-    "Turso libsql 完全可用",
-], PAPER_2)
-
-add_text(s, "Turso 是 SQLite-compatible 的 serverless DB；libsql 是它的 Rust 實作，",
-         0.7, 6.7, 12, 0.3, size=11, color=INK_3, font=SANS)
-add_text(s, "Python binding 還沒做 async wrapper — sync 是唯一路。",
-         0.7, 7.0, 12, 0.3, size=11, color=INK_3, font=SANS)
-
-
-# ╔══════════════════════════════════════════════════════════════╗
-# ║ Slide 5: v6 stack diagram                                     ║
-# ╚══════════════════════════════════════════════════════════════╝
-s = prs.slides.add_slide(blank)
-add_bg(s, PAPER)
-add_kicker(s, "04", "v6 stack")
-add_title(s, "整條鏈，全部 sync。")
-add_subtitle(s, "Web 層、ORM、background worker、alembic migration — 都不再有 async/await。")
-
-# Stack layers (top to bottom)
-layers = [
-    ("FRONTEND", "Babel-standalone React · single-file SPA", CORAL, PAPER_2),
-    ("WEB", "FastAPI sync routes · uvicorn threadpool", INK, PAPER_2),
-    ("LLM", "google-genai · MODEL_CHAIN multi-fallback · per-call timeout", CORAL, PAPER_2),
-    ("JOBS", "threading.Thread daemons · queue.Queue · threading.Semaphore", INK, PAPER_2),
-    ("ORM", "SQLAlchemy 2.0 sync · sqlalchemy-libsql + libsql-experimental", CORAL, PAPER_2),
-    ("DB", "Turso (libsql, serverless SQLite) · ~30ms 日本機房 latency", FOREST, PAPER_2),
+functions = [
+    ("01", "情緒分析", "正負向 + 主題分布"),
+    ("02", "SWOT", "自動生成戰略矩陣"),
+    ("03", "回覆草稿", "每則負評一個對應草稿"),
+    ("04", "行銷文案", "門市活動 / 影片宣傳"),
+    ("05", "根源分析", "找出真正的痛點"),
+    ("06", "週行動計畫", "一週要做哪些具體事項"),
+    ("07", "培訓劇本", "員工 / 剪輯師訓練教材"),
+    ("08", "內部信", "門市 / 團隊週報"),
+    ("09", "AI 顧問", "隨時可問的虛擬導師"),
 ]
-for i, (label, desc, label_color, bg_color) in enumerate(layers):
-    y = 3.0 + i * 0.6
-    rect = s.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0.7), Inches(y), Inches(11.9), Inches(0.55))
-    rect.fill.solid(); rect.fill.fore_color.rgb = bg_color
-    rect.line.color.rgb = INK
-    add_text(s, label, 0.9, y + 0.1, 2, 0.4, size=12, bold=True, color=label_color, font=MONO)
-    add_text(s, desc, 3.0, y + 0.1, 9.5, 0.4, size=12, color=INK, font=SANS)
+# 3x3 grid
+for i, (num, title, body) in enumerate(functions):
+    row = i // 3
+    col = i % 3
+    x = 0.7 + col * 4.2
+    y = 3.0 + row * 1.4
+    card(s, x, y, 3.9, 1.2, fill=PAPER_2)
+    add_text(s, num, x + 0.25, y + 0.2, 1, 0.3, size=10, color=CORAL, font=MONO)
+    add_text(s, title, x + 0.25, y + 0.45, 3.5, 0.4, size=18, bold=True, color=INK, font=SERIF)
+    add_text(s, body, x + 0.25, y + 0.85, 3.5, 0.4, size=12, color=INK_2, font=SANS)
 
 
 # ╔══════════════════════════════════════════════════════════════╗
-# ║ Slide 6: v6 hero illustration                                 ║
+# ║ Slide 5: 管理者決策模擬                                        ║
 # ╚══════════════════════════════════════════════════════════════╝
 s = prs.slides.add_slide(blank)
 add_bg(s, PAPER)
-add_kicker(s, "05", "v6 — hero illustration")
-add_title(s, "Codex img2 重新繪製 hero。")
-add_subtitle(s, "Saul Bass × 新雜誌 × risograph — 不是程式畫的，是 AI 算的編輯級插圖。")
+add_kicker(s, "04", "決策模擬")
+add_title(s, "用真實負評，練決策。")
+add_subtitle(s, "新任店長最痛的事 ── 第一次處理客訴。這個遊戲讓你在真實負評上練手。")
 
-# Hero image on left
-add_image(s, HERO_IMG, 0.7, 2.7, 4.5, 4.5)
+# Left: game screenshot
+add_image(s, GAME_IMG, 0.7, 3.1, 6.0, 3.8)
 
-# Description on right
-add_text(s, "概念：universal listening post", 5.7, 3.0, 7, 0.5, size=18, bold=True, color=INK, font=SERIF)
-add_text(s, "中央 sonar 接收器 + 周圍 7 個 source emitter：",
-         5.7, 3.7, 7, 0.4, size=13, color=INK_2, font=SANS)
-emitters = [
-    "⭐ Google Maps 星等 pin",
-    "🎙 麥克風 + 聲波（廣義 audio）",
-    "▶ YouTube play + comment stack",
-    "💬 chat bubble",
-    "❤ heart + comment count (IG-like)",
-    "☰ scroll/list (Threads/TikTok-like)",
-    "✉ quote envelope（任何書面意見）",
-]
-for i, em in enumerate(emitters):
-    add_text(s, em, 5.7, 4.2 + i * 0.35, 7, 0.3, size=12, color=INK_2, font=SANS)
-add_text(s, "Dotted arrows 從各 source 指向中心 — 多源匯流。負空間留給未來 platform。",
-         5.7, 6.85, 7, 0.4, size=11, color=INK_3, font=SANS)
-
-
-# ╔══════════════════════════════════════════════════════════════╗
-# ║ Slide 7: LLM resilience — multi-model fallback chain          ║
-# ╚══════════════════════════════════════════════════════════════╝
-s = prs.slides.add_slide(blank)
-add_bg(s, PAPER)
-add_kicker(s, "06", "v6 — llm resilience")
-add_title(s, "Gemini 掛了，使用者不該知道。")
-add_subtitle(s, "MODEL_CHAIN 自動切換 — 5xx / 429 / transport 錯誤都會 fall through 到下一個 model。")
-
-# 4 models in horizontal flow
-models = [
-    ("gemma-4-26b-a4b-it", "MoE Active 4B\n推論快", CORAL, "PRIMARY"),
-    ("gemma-4-31b-it", "Dense 31B\nthinking on", INK, "FALLBACK 1"),
-    ("gemini-2.5-flash", "Google GA\n高 quota", INK, "FALLBACK 2"),
-    ("gemini-2.5-flash-lite", "輕量備援\n最後保險", INK_3, "FALLBACK 3"),
-]
-for i, (name, desc, color, role) in enumerate(models):
-    x = 0.5 + i * 3.15
-    rect = s.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(x), Inches(3.3), Inches(3.0), Inches(2.5))
-    rect.fill.solid(); rect.fill.fore_color.rgb = PAPER_2
-    rect.line.color.rgb = color
-    add_text(s, role, x + 0.15, 3.45, 2.7, 0.3, size=10, color=color, font=MONO)
-    add_text(s, name, x + 0.15, 3.85, 2.7, 0.5, size=14, bold=True, color=INK, font=MONO)
-    add_text(s, desc, x + 0.15, 4.5, 2.7, 1.1, size=12, color=INK_2, font=SANS)
-    # arrow
-    if i < 3:
-        add_text(s, "→", x + 3.0, 4.3, 0.2, 0.5, size=20, color=INK_3, font=SANS, align=PP_ALIGN.CENTER)
-
-add_text(s, "ClientError 4xx 非 429（我們的 bug）→ 立即 raise，不浪費時間試其他 model",
-         0.7, 6.2, 12, 0.4, size=12, color=INK_3, font=SANS)
-add_text(s, "ServerError 5xx / RESOURCE_EXHAUSTED / NetworkError → 下一個 model",
-         0.7, 6.6, 12, 0.4, size=12, color=INK_3, font=SANS)
-add_text(s, "Per-call http_options.timeout 用剩餘 budget 算 → 單次 attempt 不會超過總 budget",
-         0.7, 7.0, 12, 0.4, size=12, color=INK_3, font=SANS)
-
-
-# ╔══════════════════════════════════════════════════════════════╗
-# ║ Slide 8: HF Spaces deploy                                     ║
-# ╚══════════════════════════════════════════════════════════════╝
-s = prs.slides.add_slide(blank)
-add_bg(s, PAPER)
-add_kicker(s, "07", "v6 — deploy")
-add_title(s, "$0/月跑在 Hugging Face Spaces。")
-add_subtitle(s, "單階段 Docker、Turso libsql、Codex 3 輪 deploy review APPROVE。")
-
-# Left: deploy steps
-add_text(s, "5 個步驟", 0.7, 3.0, 5, 0.5, size=18, bold=True, color=INK, font=SERIF)
+# Right: 3-step explanation
 steps = [
-    ("1.", "turso db create insightx-demo --location nrt"),
-    ("2.", "huggingface.co/new-space → Docker SDK"),
-    ("3.", "設 5 個 Space secrets"),
-    ("4.", "git clone Space repo → cp 原始碼 → git push"),
-    ("5.", "等 build (~3min) → 上線"),
+    ("1.", "AI 出題", "把真實負評變成情境問句"),
+    ("2.", "你選回應", "從多個策略選一個你會做的"),
+    ("3.", "AI 給回饋", "評估你的選擇，給情商分數 + 建議"),
 ]
-for i, (num, txt) in enumerate(steps):
-    y = 3.7 + i * 0.6
-    add_text(s, num, 0.7, y, 0.4, 0.5, size=14, bold=True, color=CORAL, font=MONO)
-    add_text(s, txt, 1.1, y, 5.5, 0.5, size=12, color=INK, font=MONO)
+for i, (num, title, body) in enumerate(steps):
+    y = 3.2 + i * 1.1
+    add_text(s, num, 7.2, y, 0.6, 0.5, size=28, bold=True, color=CORAL, font=SERIF)
+    add_text(s, title, 7.9, y, 5, 0.45, size=20, bold=True, color=INK, font=SERIF)
+    add_text(s, body, 7.9, y + 0.5, 5, 0.45, size=13, color=INK_2, font=SANS)
 
-# Right: stack
-add_text(s, "Dockerfile 重點", 7.5, 3.0, 5, 0.5, size=18, bold=True, color=INK, font=SERIF)
-highlights = [
-    "FROM python:3.10-slim · 單階段",
-    "port 7860（HF default）",
-    "non-root uid=1000 user",
-    "alembic upgrade head 開機時跑",
-    "HEALTHCHECK /api/meta",
-    "JSON-form CMD + exec → uvicorn IS PID 1",
-    "image size 408 MB（移掉 build-essential 後）",
-]
-for i, h in enumerate(highlights):
-    add_text(s, "·  " + h, 7.5, 3.7 + i * 0.45, 5.5, 0.4, size=12, color=INK_2, font=SANS)
+# Bottom note
+add_text(s, "── 學費，不用拿真客人賠。", 7.2, 6.6, 6, 0.4, size=14, color=FOREST, font=SERIF)
 
 
 # ╔══════════════════════════════════════════════════════════════╗
-# ║ Slide 9: v4 → v5 workspace bridge                             ║
+# ║ Slide 6: 3 個技術選擇 (白話)                                   ║
 # ╚══════════════════════════════════════════════════════════════╝
 s = prs.slides.add_slide(blank)
 add_bg(s, PAPER)
-add_kicker(s, "08", "v6 — bridge")
-add_title(s, "Landing 分析 → 工作區持久化。")
-add_subtitle(s, "v4 stateless + v5 持久 schema 之間的橋，default OFF（多租戶安全）。")
+add_kicker(s, "05", "技術選擇")
+add_title(s, "3 個決定，影響使用體驗。")
+add_subtitle(s, "不堆技術名詞 ── 講為什麼這樣做、解了什麼問題。")
 
-# Flow diagram
-add_text(s, "Before v6 →", 0.7, 3.2, 2, 0.5, size=14, color=INK_3, font=MONO)
-add_text(s, "v4 /api/analyze · 一次性 ·  ✗ 不寫 DB", 2.7, 3.2, 10, 0.5, size=14, color=INK, font=SANS)
-add_text(s, "→ /workspace/ 永遠空空的", 2.7, 3.6, 10, 0.5, size=12, color=INK_3, font=SANS)
-
-add_rule_line(s, 0.7, 4.3, 11.9)
-
-add_text(s, "v6 fix →", 0.7, 4.7, 2, 0.5, size=14, color=CORAL, font=MONO)
-add_text(s, "_persist_v4_analyze_to_workspace() bridge", 2.7, 4.7, 10, 0.5, size=14, color=INK, font=SANS)
-bullets = [
-    "✓ 寫入 Store · ReviewSource · ScrapeJob · Review · AnalysisRun",
-    "✓ Dedupe by ReviewSource.external_url（同 URL 重分析 = 更新）",
-    "✓ 非 fatal（失敗 log + 吞，user 看到的 API 回應不受影響）",
-    "✓ Gate: IX_ENABLE_V4_WORKSPACE_PERSIST=1 才開",
+tech_choices = [
+    ("多人也能安全使用",
+     "最初版本所有人共用一個帳號，任何人打開都看到別人的資料。\n"
+     "現在每位訪客一進站，自動拿到一個身分（用 cookie 記下來），\n"
+     "所有資料綁在這身分上。沒有註冊、沒有密碼，但每個人的工作區完全分開。"),
+    ("不會因為 AI 抖一下就掛",
+     "免費版 Gemini 半夜常常會卡。我做了一個自動換模型的機制：\n"
+     "主用快的，失敗就降到大的，再不行換 Google 的旗艦，最後 lite 版兜底。\n"
+     "同一次請求一路 fallback，使用者完全感覺不到。"),
+    ("雙 AI 寫 code",
+     "改動比較大的時候，我習慣讓 Codex（另一個 AI 助手）幫我看一遍程式碼。\n"
+     "一個 AI 寫、另一個 AI 挑毛病。抓出來的問題比自己看更多 ──\n"
+     "等於多了一個免費的 reviewer。"),
 ]
-for i, b in enumerate(bullets):
-    add_text(s, b, 2.7, 5.15 + i * 0.4, 10, 0.4, size=12, color=INK_2, font=SANS)
-
-add_text(s, "⚠️ 為什麼 default OFF：v5α 用 hardcoded default user，公開 demo 開了會讓 visitor 互看資料。",
-         0.7, 6.9, 12, 0.3, size=11, color=CORAL, font=SANS)
-add_text(s, "Cookie-based session scoping 在 v6.1 路線上。",
-         0.7, 7.2, 12, 0.3, size=11, color=INK_3, font=SANS)
+for i, (title, body) in enumerate(tech_choices):
+    y = 3.0 + i * 1.45
+    # Small green dot
+    d = s.shapes.add_shape(MSO_SHAPE.OVAL, Inches(0.7), Inches(y + 0.18), Inches(0.2), Inches(0.2))
+    d.fill.solid(); d.fill.fore_color.rgb = FOREST; d.line.fill.background()
+    add_text(s, title, 1.1, y, 11, 0.5, size=20, bold=True, color=INK, font=SERIF)
+    add_text(s, body, 1.1, y + 0.55, 11.5, 0.9, size=13, color=INK_2, font=SANS)
 
 
 # ╔══════════════════════════════════════════════════════════════╗
-# ║ Slide 10: Codex peer review                                   ║
+# ║ Slide 7: 技術棧 + 系統架構                                     ║
 # ╚══════════════════════════════════════════════════════════════╝
 s = prs.slides.add_slide(blank)
 add_bg(s, PAPER)
-add_kicker(s, "09", "consensus")
-add_title(s, "8 輪 Codex peer review，全部 APPROVE。")
-add_subtitle(s, "雙 AI 共識才打 v6.0.0-alpha tag。")
+add_kicker(s, "06", "系統架構")
+add_title(s, "從一張圖看整個系統。")
+add_subtitle(s, "後端 FastAPI，AI 是 Gemini，部署在 Hugging Face Spaces ── 全部用免費方案組起來。")
 
-reviews = [
-    ("Phase 1: Sync refactor", [
-        ("R1", "BLOCK", "per-call LLM timeout, queue cleanup, SSE worker cancel"),
-        ("R2", "NEEDS-WORK", "needed producer-pop + idle reset"),
-        ("R3", "APPROVE", "consensus"),
-    ], CORAL),
-    ("Phase 2: HF Spaces deploy", [
-        ("R1", "NEEDS-FIXES", "report regen, build-essential, HEALTHCHECK"),
-        ("R2", "WITH-NOTES", "initial recipe missing .dockerignore"),
-        ("R3", "APPROVE", "clean"),
-    ], FOREST),
-    ("Phase 3: Pre-freeze full project", [
-        ("R1", "BLOCK", "multi-tenant privacy via bridge"),
-        ("R2", "APPROVE", "env-gate + deferred items doc'd"),
-    ], INK),
+# Left: tech stack
+add_text(s, "TECH STACK", 0.7, 3.0, 5, 0.3, size=11, color=CORAL, font=MONO)
+stack_items = [
+    ("後端", "FastAPI · Python 3.10+"),
+    ("資料庫", "Turso · SQLite (libsql)"),
+    ("AI", "Google Gemini (多模型 fallback)"),
+    ("爬蟲", "Serper API + YouTube Data API"),
+    ("前端", "React 18 + Tailwind CSS"),
+    ("部署", "Docker on HF Spaces ($0/月)"),
 ]
+for i, (k, v) in enumerate(stack_items):
+    y = 3.45 + i * 0.55
+    add_text(s, k, 0.7, y, 1.5, 0.4, size=13, bold=True, color=INK, font=SANS)
+    add_text(s, v, 2.2, y, 4.5, 0.4, size=13, color=INK_2, font=MONO)
 
-y_offset = 3.0
-for phase_name, rounds, color in reviews:
-    add_text(s, phase_name, 0.7, y_offset, 6, 0.4, size=14, bold=True, color=color, font=SERIF)
-    for j, (rnd, verdict, note) in enumerate(rounds):
-        y = y_offset + 0.4 + j * 0.35
-        add_text(s, rnd, 0.9, y, 0.6, 0.3, size=11, bold=True, color=color, font=MONO)
-        add_text(s, verdict, 1.5, y, 1.5, 0.3, size=10, color=INK, font=MONO)
-        add_text(s, note, 3.2, y, 9, 0.3, size=10, color=INK_3, font=SANS)
-    y_offset += 0.4 + len(rounds) * 0.35 + 0.1
+# Right: architecture diagram (boxes + arrows)
+arch_x = 7.3
+arch_y = 3.0
+add_text(s, "DATA FLOW", arch_x, arch_y, 5, 0.3, size=11, color=CORAL, font=MONO)
+
+def box(x, y, w, h, label, *, fill=PAPER_2, color=INK, font_size=12, bold=True):
+    rect = s.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(x), Inches(y), Inches(w), Inches(h))
+    rect.fill.solid(); rect.fill.fore_color.rgb = fill
+    rect.line.color.rgb = INK_4
+    add_text(s, label, x, y, w, h, size=font_size, bold=bold, color=color, font=SANS,
+             align=PP_ALIGN.CENTER, valign=MSO_ANCHOR.MIDDLE)
+
+def arrow(x, y, w, h):
+    add_text(s, "↓", x, y, w, h, size=14, color=INK_3, font=SANS, align=PP_ALIGN.CENTER)
+
+# Browser
+box(arch_x, arch_y + 0.5, 5.3, 0.5, "使用者瀏覽器", fill=PAPER)
+arrow(arch_x, arch_y + 1.05, 5.3, 0.3)
+# FastAPI
+box(arch_x, arch_y + 1.4, 5.3, 0.5, "FastAPI 後端", fill=PAPER_2)
+# v4 / v5 split
+box(arch_x, arch_y + 2.0, 2.5, 0.45, "/api/v4 (一次性)", fill=PAPER, font_size=11)
+box(arch_x + 2.8, arch_y + 2.0, 2.5, 0.45, "/api/v5 (持久工作區)", fill=PAPER, font_size=11)
+arrow(arch_x, arch_y + 2.5, 5.3, 0.3)
+# 4 externals
+ext_y = arch_y + 2.95
+ext_w = 1.25
+ext_gap = 0.05
+for i, (label, color) in enumerate([
+    ("Gemini AI", FOREST),
+    ("Turso DB", CORAL),
+    ("Serper API", INK_2),
+    ("YouTube API", INK_2),
+]):
+    x = arch_x + i * (ext_w + ext_gap)
+    box(x, ext_y, ext_w, 0.55, label, fill=PAPER_2, color=color, font_size=11)
 
 
 # ╔══════════════════════════════════════════════════════════════╗
-# ║ Slide 11: Live demo screenshot                                ║
+# ║ Slide 8: 開發過程學到的                                        ║
 # ╚══════════════════════════════════════════════════════════════╝
 s = prs.slides.add_slide(blank)
 add_bg(s, PAPER)
-add_kicker(s, "10", "live demo")
-add_title(s, "現在就試。")
-add_subtitle(s, "Jordan711-insightx-demo.hf.space — 不用註冊、不用安裝、月費 $0。")
+add_kicker(s, "07", "學習心得")
+add_title(s, "做這個專案學到的事。")
+add_subtitle(s, "從第一版 demo 到能上線給人用的版本，學到幾件之前沒想過的事。")
 
-# Landing screenshot
-add_image(s, V4_SCREENSHOTS / "01-landing.png", 0.7, 2.9, 8.5, 4.5)
-
-# URL callout box
-url_box_x = 9.6
-url_box_y = 3.0
-rect = s.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(url_box_x), Inches(url_box_y), Inches(3.2), Inches(2.0))
-rect.fill.solid(); rect.fill.fore_color.rgb = INK
-rect.line.fill.background()
-add_text(s, "DEMO URL", url_box_x + 0.2, url_box_y + 0.15, 3, 0.3, size=10, color=CORAL, font=MONO)
-add_text(s, "Jordan711-", url_box_x + 0.2, url_box_y + 0.55, 3, 0.4, size=14, bold=True, color=WHITE, font=MONO)
-add_text(s, "insightx-demo", url_box_x + 0.2, url_box_y + 0.9, 3, 0.4, size=14, bold=True, color=WHITE, font=MONO)
-add_text(s, ".hf.space", url_box_x + 0.2, url_box_y + 1.25, 3, 0.4, size=14, bold=True, color=WHITE, font=MONO)
-add_text(s, "貼 Google Maps URL", url_box_x + 0.2, url_box_y + 1.7, 3, 0.3, size=10, color=INK_4, font=MONO)
-
-# Stack pill
-add_text(s, "STACK", 9.7, 5.5, 1.5, 0.3, size=10, color=CORAL, font=MONO)
-stack_items = ["HF Spaces Free", "Turso libsql", "Gemini × 4 models", "FastAPI sync"]
-for i, it in enumerate(stack_items):
-    add_text(s, "·  " + it, 9.7, 5.85 + i * 0.3, 4, 0.3, size=11, color=INK_2, font=SANS)
-
-
-# ╔══════════════════════════════════════════════════════════════╗
-# ║ Slide 12: Architecture diagram                                ║
-# ╚══════════════════════════════════════════════════════════════╝
-s = prs.slides.add_slide(blank)
-add_bg(s, PAPER)
-add_kicker(s, "11", "architecture")
-add_title(s, "整個系統，一張圖。")
-add_subtitle(s, "HF Spaces Docker container 接 Turso DB · Gemini API · Serper + YouTube Data API。")
-
-# Outer box: HF container
-container_x, container_y, container_w, container_h = 0.7, 3.0, 7.5, 4.0
-rect = s.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(container_x), Inches(container_y), Inches(container_w), Inches(container_h))
-rect.fill.solid(); rect.fill.fore_color.rgb = PAPER_2
-rect.line.color.rgb = INK
-add_text(s, "HF SPACES (DOCKER, port 7860)", container_x + 0.2, container_y + 0.15, 5, 0.3, size=10, color=INK_3, font=MONO)
-
-# Inner: FastAPI
-fast_x, fast_y = container_x + 0.5, container_y + 0.7
-fast_w, fast_h = 6.5, 1.0
-rect = s.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(fast_x), Inches(fast_y), Inches(fast_w), Inches(fast_h))
-rect.fill.solid(); rect.fill.fore_color.rgb = WHITE; rect.line.color.rgb = INK
-add_text(s, "FastAPI sync", fast_x + 0.2, fast_y + 0.1, 4, 0.3, size=12, bold=True, color=INK, font=MONO)
-add_text(s, "/api/* (v4 stateless)   ·   /api/v5/* (persistent)   ·   /workspace/", fast_x + 0.2, fast_y + 0.5, 6, 0.3, size=10, color=INK_3, font=MONO)
-
-# Inner: services row
-svc_y = container_y + 2.0
-services = [("LLMService", "MODEL_CHAIN"), ("SessionLocal", "sync ORM"), ("Threads", "bg workers")]
-for i, (n, sub) in enumerate(services):
-    x = container_x + 0.5 + i * 2.25
-    rect = s.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(x), Inches(svc_y), Inches(2.0), Inches(0.9))
-    rect.fill.solid(); rect.fill.fore_color.rgb = WHITE; rect.line.color.rgb = INK
-    add_text(s, n, x + 0.15, svc_y + 0.1, 1.8, 0.3, size=11, bold=True, color=INK, font=MONO)
-    add_text(s, sub, x + 0.15, svc_y + 0.5, 1.8, 0.3, size=9, color=INK_3, font=MONO)
-
-# Inner: scraper
-scr_y = container_y + 3.2
-rect = s.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(fast_x), Inches(scr_y), Inches(fast_w), Inches(0.6))
-rect.fill.solid(); rect.fill.fore_color.rgb = WHITE; rect.line.color.rgb = INK
-add_text(s, "ScraperService (Serper + YouTube Data v3 + library fallback)", fast_x + 0.2, scr_y + 0.15, 6, 0.3, size=11, color=INK, font=MONO)
-
-# External services on right
-ext_x = 9.0
-externals = [
-    ("Turso", "libsql, nrt region\n5GB free", FOREST),
-    ("Gemini API", "4-model chain\nfree tier", CORAL),
-    ("Serper", "Google Maps\nreviews", INK),
-    ("YouTube API", "Data v3\n10k units/day", INK),
+lessons = [
+    ("早期選錯路徑代價很大",
+     "最初用 Playwright 自動瀏覽器抓 Google Maps，後來 Google 改了反爬機制只好整段砍掉換成 Serper API。\n"
+     "如果一開始先試 API，會省下大概兩個月。"),
+    ("API 抖動比 prompt 寫不好還麻煩",
+     "免費版 Gemini 半夜會 500，再怎麼調 prompt 都救不了。做了多模型 fallback 之後，\n"
+     "可用率從大概 85% 拉到 99%。"),
+    ("同步反而比較好 debug",
+     "原本後端是 async 寫的，後來為了搭 Turso 改回同步。原本以為是退步，\n"
+     "結果發現用 threading 反而出問題比較好追，效能也沒掉。"),
+    ("多一個 AI 幫忙看 code 真的有差",
+     "自己寫自己看很容易漏掉邊角，找 Codex 一起 review 後抓到不少會炸的 bug ──\n"
+     "多花一點時間，少踩很多坑。"),
 ]
-for i, (name, desc, color) in enumerate(externals):
-    y = container_y + i * 1.05
-    rect = s.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(ext_x), Inches(y), Inches(3.5), Inches(0.9))
-    rect.fill.solid(); rect.fill.fore_color.rgb = PAPER_2
-    rect.line.color.rgb = color
-    add_text(s, name, ext_x + 0.2, y + 0.1, 3.2, 0.3, size=12, bold=True, color=color, font=MONO)
-    add_text(s, desc, ext_x + 0.2, y + 0.45, 3.2, 0.4, size=10, color=INK_2, font=SANS)
+for i, (title, body) in enumerate(lessons):
+    y = 2.9 + i * 1.05
+    add_text(s, f"0{i+1}", 0.7, y + 0.1, 0.8, 0.5, size=24, bold=True, color=CORAL, font=SERIF)
+    add_text(s, title, 1.6, y, 11, 0.5, size=17, bold=True, color=INK, font=SERIF)
+    add_text(s, body, 1.6, y + 0.5, 11.5, 0.7, size=12, color=INK_2, font=SANS)
 
 
 # ╔══════════════════════════════════════════════════════════════╗
-# ║ Slide 13: v6.1 roadmap                                        ║
-# ╚══════════════════════════════════════════════════════════════╝
-s = prs.slides.add_slide(blank)
-add_bg(s, PAPER)
-add_kicker(s, "12", "v6.1 roadmap")
-add_title(s, "已知限制，5 條全交給 v6.1。")
-add_subtitle(s, "Codex 在 pre-freeze review 找到的；alpha 階段可接受，正式版必修。")
-
-items = [
-    ("1.", "Cookie-based session scoping", "目前 hardcoded default user；v6.1 用 HttpOnly cookie + per-visitor anonymous user"),
-    ("2.", "v5 by-id endpoints 加 ownership scoping", "_get_owned_store(session, store_id) helper + 12+ 端點 audit"),
-    ("3.", "Store UniqueConstraint(workspace_id, primary_url)", "alembic migration + IntegrityError retry → 防 concurrent dup"),
-    ("4.", "Review dedupe via external_id", "sha256(source_id|author|date|text)[:32]，配合既有的 UniqueConstraint"),
-    ("5.", "AnalysisRun.model_id 記真實 post-fallback model", "_generate() 改回 (text, model_used) tuple"),
-]
-for i, (num, title, desc) in enumerate(items):
-    y = 3.0 + i * 0.85
-    add_text(s, num, 0.7, y, 0.5, 0.4, size=20, bold=True, color=CORAL, font=SERIF)
-    add_text(s, title, 1.3, y, 11, 0.4, size=15, bold=True, color=INK, font=SERIF)
-    add_text(s, desc, 1.3, y + 0.4, 11, 0.4, size=12, color=INK_2, font=SANS)
-
-
-# ╔══════════════════════════════════════════════════════════════╗
-# ║ Slide 14: Closing                                             ║
+# ║ Slide 9: 線上試用 (closing, 黑底)                              ║
 # ╚══════════════════════════════════════════════════════════════╝
 s = prs.slides.add_slide(blank)
 add_bg(s, BLACK)
@@ -560,24 +402,27 @@ dot.fill.solid(); dot.fill.fore_color.rgb = CORAL; dot.line.fill.background()
 add_text(s, "i", 0.5, 0.43, 0.45, 0.45, size=22, bold=True, color=WHITE,
          font=SERIF, align=PP_ALIGN.CENTER, valign=MSO_ANCHOR.MIDDLE)
 add_text(s, "insightx", 1.05, 0.5, 3, 0.5, size=20, bold=True, color=WHITE, font=SERIF)
+add_text(s, "T H A N K   Y O U", 9.5, 0.55, 3.5, 0.3,
+         size=10, color=INK_3, font=MONO, align=PP_ALIGN.RIGHT)
 
-add_text(s, "FROZEN · 2026-05-19", 0.7, 2.5, 8, 0.3,
-         size=11, color=CORAL, font=MONO)
-add_text(s, "v6.0.0-alpha", 0.7, 3.0, 12, 1.4, size=72, bold=True, color=WHITE, font=SERIF)
-add_text(s, "is live.", 0.7, 4.4, 12, 1.4, size=72, bold=True, color=WHITE, font=SERIF)
+add_text(s, "現在就試。", 0.7, 2.5, 8, 0.5, size=11, color=CORAL, font=MONO)
+add_text(s, "免註冊。", 0.7, 3.0, 12, 1.4, size=84, bold=True, color=WHITE, font=SERIF)
+add_text(s, "免安裝。月費 $0。", 0.7, 4.4, 12, 1.4, size=72, bold=True, color=WHITE, font=SERIF)
 
-add_text(s, "Try it: https://Jordan711-insightx-demo.hf.space", 0.7, 6.0, 12, 0.5, size=15, color=INK_4, font=MONO)
-add_text(s, "Source: github.com/GKS711/InsightX", 0.7, 6.4, 12, 0.5, size=13, color=INK_4, font=MONO)
-add_text(s, "Tag: v6.0.0-alpha · Branch: claude/v6-sync-refactor", 0.7, 6.7, 12, 0.5, size=13, color=INK_4, font=MONO)
+add_text(s,
+         "Demo 跑在 Hugging Face Spaces 免費方案。48 小時沒人用會睡眠，第一次點要等 30 秒醒過來。",
+         0.7, 5.9, 12, 0.5, size=13, color=INK_4, font=SANS)
 
-add_rule_line(s, 0.7, 7.1, 11.9, color=RGBColor(0x44, 0x4d, 0x49))
-add_text(s, "BUILT WITH Codex peer review · auto-debug skill · 雙 AI 共識", 0.7, 7.25, 12, 0.3,
-         size=10, color=INK_4, font=MONO)
+add_rule_line(s, 0.7, 6.5, 11.9, color=RGBColor(0x44, 0x4d, 0x49))
+add_text(s, "🌐  線上 Demo", 0.7, 6.7, 4, 0.3, size=11, color=INK_3, font=MONO)
+add_text(s, "Jordan711-insightx-demo.hf.space", 0.7, 7.0, 6, 0.4,
+         size=14, bold=True, color=WHITE, font=MONO)
+add_text(s, "📦  GitHub", 7.5, 6.7, 4, 0.3, size=11, color=INK_3, font=MONO)
+add_text(s, "github.com/GKS711/InsightX", 7.5, 7.0, 6, 0.4,
+         size=14, bold=True, color=WHITE, font=MONO)
 
 
-# ─── Save ────────────────────────────────────────────
-out_path = HERE / "InsightX_v6.0.0-alpha.pptx"
-prs.save(str(out_path))
-print(f"Saved: {out_path}")
-print(f"Slides: {len(prs.slides)}")
-print(f"File size: {out_path.stat().st_size:,} bytes")
+# ─── Save ───────────────────────────────────────────────
+output_path = HERE / "InsightX.pptx"
+prs.save(str(output_path))
+print(f"✓ Saved {output_path} ({len(prs.slides)} slides)")
